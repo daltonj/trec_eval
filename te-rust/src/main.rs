@@ -262,6 +262,10 @@ fn main() {
         }
     };
 
+    if !config.average_complete_flag && output.num_queries_evaluated == 0 {
+        eprintln!("te-rust: no topic has both results and judgments; -c evaluates each qrels topic missing from the run as an empty ranking");
+        process::exit(1);
+    }
 
     // 7. Print query results
     if config.query_flag {
