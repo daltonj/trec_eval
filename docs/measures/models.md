@@ -31,7 +31,9 @@ Models a user browsing a ranked list who examines the document at rank $k$ with 
 
 $$\text{RBP} = (1 - p) \sum_{k=1}^N \text{rel}(k) \cdot p^{k-1}$$
 
-where $\text{rel}(k) \in [0, 1]$ is the normalized relevance grade ($\text{rel}(k) = \text{grade} / \text{max\_grade}$).
+where $\text{rel}(k)$ is the gain for the document's relevance level. A measure-specific gain map takes precedence over `--global-gains`; otherwise the gain is the relevance level. If the gain table has minimum $g_{\min} < 0$ or maximum $g_{\max} > 1$, each table entry $g$ becomes $(g - g_{\min}) / (g_{\max} - g_{\min})$, or 0 if the range is zero. Gains already in $[0, 1]$ are unchanged.
+
+- Usage: `-m rbp`, `-m rbp.p=0.8`, or with a gain map, `-m rbp.p=0.8,1=1,2=3`.
 
 ### RBP Residual (`rbp_resid`)
 
@@ -40,7 +42,7 @@ Upper bound on the potential unobserved score due to unjudged documents:
 $$\text{RBP}_{\text{resid}} = \text{RBP} + p^N$$
 
 - Parameter: `p` (persistence parameter, default `0.9`).
-- Usage: `-m rbp` or `-m rbp.p=0.8`
+- Usage: `-m rbp_resid` or `-m rbp_resid.p=0.8`.
 - Reference: Moffat, A., & Zobel, J. (2008). "Rank-biased precision for measurement of retrieval effectiveness." *ACM Transactions on Information Systems (TOIS)*, 27(1): Article 2.
 
 ---
