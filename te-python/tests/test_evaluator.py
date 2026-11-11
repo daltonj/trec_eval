@@ -165,7 +165,9 @@ def test_config_switches(sample_qrels_dict, sample_run_dict):
 
 def test_numerical_parity_against_known_run():
     # Evaluate official measure set on test data
-    evaluator = Evaluator(QRELS_FILE, measures=["map", "Rprec", "recip_rank", "bpref", "P_5", "P_10"])
+    evaluator = Evaluator(
+        QRELS_FILE, measures=["map", "Rprec", "recip_rank", "bpref", "P.5,10"]
+    )
     res = evaluator.evaluate(RESULTS_FILE)
     agg = res.aggregate()
 

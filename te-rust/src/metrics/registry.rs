@@ -13,6 +13,7 @@ use crate::metrics::common::{
     MeasureParseError,
 };
 use crate::metrics::{self, Measure};
+use std::collections::{HashMap, HashSet};
 
 /// Development/support status of a measure (ISSUES #24).
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -330,7 +331,20 @@ pub fn resolve_measures(requested: &[String]) -> Result<Vec<Box<dyn Measure>>, M
         }
     }
 
-    // 2. Build each measure from its root and parameter string.
+    // 2. Build each measure once. trec_eval keeps the first explicit parameter
+    // list for a measure, even when a group or a request without parameters
+    // names the measure first.
+    let mut parameters = HashMap::new();
+    for arg in &expanded {
+        let (root, params) = canonicalize_measure_spec(arg);
+        if let Some(spec) = find_spec(&root) {
+            if !params.is_empty() {
+                parameters.entry(spec.name).or_insert(params);
+            }
+        }
+    }
+
+    let mut built = HashSet::new();
     let mut measures: Vec<Box<dyn Measure>> = Vec::with_capacity(expanded.len());
     for arg in &expanded {
         if has_empty_param_list(arg) {
@@ -339,7 +353,11 @@ pub fn resolve_measures(requested: &[String]) -> Result<Vec<Box<dyn Measure>>, M
         let (root, params) = canonicalize_measure_spec(arg);
         let spec = find_spec(&root)
             .ok_or_else(|| MeasureParseError::new(format!("unknown measure '{}'", arg)))?;
-        let measure = (spec.factory)(&params)
+        if !built.insert(spec.name) {
+            continue;
+        }
+        let selected = parameters.get(spec.name).unwrap_or(&params);
+        let measure = (spec.factory)(selected)
             .map_err(|e| MeasureParseError::new(format!("measure '{}': {}", arg, e)))?;
         measures.push(measure);
     }
@@ -399,7 +417,8 @@ mod tests {
             "mrr".to_string(),
             "recip_rank".to_string(),
         ]).unwrap();
-        assert_eq!(measures.len(), 5);
+        // mrr and recip_rank print the same row, so recip_rank is evaluated once.
+        assert_eq!(measures.len(), 4);
         assert_eq!(measures[0].name(), "ndcg_cut");
         assert_eq!(measures[0].sub_metrics(), vec!["ndcg_cut_10"]);
         assert_eq!(measures[1].name(), "map_cut");
@@ -407,7 +426,6 @@ mod tests {
         assert_eq!(measures[2].name(), "P");
         assert_eq!(measures[2].sub_metrics(), vec!["P_5", "P_10"]);
         assert_eq!(measures[3].name(), "recip_rank");
-        assert_eq!(measures[4].name(), "recip_rank");
     }
 
 

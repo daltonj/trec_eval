@@ -84,13 +84,29 @@ class RelevanceEvaluator:
         relevance_level: int = 1,
         judged_docs_only_flag : bool = True,
     ):
+        measure_names = [measures] if isinstance(measures, str) else list(measures)
+        native_measures = []
+        measure_cutoffs: Dict[str, Set[str]] = collections.defaultdict(set)
+        for measure in measure_names:
+            root, _, parameters = measure.rpartition("_")
+            if (
+                root in supported_measures
+                and parameters
+                and all(char in "0123456789," for char in parameters)
+            ):
+                measure_cutoffs[root].update(parameters.split(","))
+            else:
+                native_measures.append(measure)
+        for name, cutoffs in measure_cutoffs.items():
+            native_measures.append(f"{name}.{','.join(sorted(cutoffs))}")
+
         self._evaluator = Evaluator(
             qrels=qrel,
-            measures=measures,
+            measures=native_measures,
             relevance_level=relevance_level,
             judged_docs_only=judged_docs_only_flag,
         )
-        self.measures = set(measures) if not isinstance(measures, str) else {measures}
+        self.measures = set(measure_names)
 
     def evaluate(self, run: Any) -> Dict[str, Dict[str, float]]:
         """Evaluate run and return nested dict matching pytrec_eval output format."""

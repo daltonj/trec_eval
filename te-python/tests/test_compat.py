@@ -30,6 +30,22 @@ def test_pytrec_eval_drop_in_relevance_evaluator():
     assert res["q1"]["ndcg"] == pytest.approx(0.5)
 
 
+@pytest.mark.parametrize(
+    "measures, expected",
+    [
+        (["P_5", "P_10"], {"P_5": 0.2, "P_10": 0.1}),
+        (["P_10", "P_5"], {"P_5": 0.2, "P_10": 0.1}),
+        ({"P_5", "P_10"}, {"P_5": 0.2, "P_10": 0.1}),
+        (["ndcg_cut_5", "ndcg_cut_10"], {"ndcg_cut_5": 1.0, "ndcg_cut_10": 1.0}),
+        (["ndcg_cut_10", "ndcg_cut_5"], {"ndcg_cut_5": 1.0, "ndcg_cut_10": 1.0}),
+        ({"ndcg_cut_5", "ndcg_cut_10"}, {"ndcg_cut_5": 1.0, "ndcg_cut_10": 1.0}),
+    ],
+)
+def test_pytrec_eval_retains_requested_cutoffs(measures, expected):
+    evaluator = pytrec_eval.RelevanceEvaluator({"1": {"a": 1}}, measures)
+    assert evaluator.evaluate({"1": {"a": 1.0}}) == {"1": expected}
+
+
 def test_pytrec_eval_parse_helpers():
     assert os.path.exists(QRELS_FILE)
     assert os.path.exists(RESULTS_FILE)
