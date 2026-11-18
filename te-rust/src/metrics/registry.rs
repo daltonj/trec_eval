@@ -330,6 +330,15 @@ fn has_empty_param_list(arg: &str) -> bool {
     arg.ends_with(['@', '_']) || arg.split_once('.').is_some_and(|(_, params)| params.is_empty())
 }
 
+/// The spec that `arg` names, or the error for an illegal name.
+fn named_spec(arg: &str) -> Result<&'static MeasureSpec, MeasureParseError> {
+    if has_empty_param_list(arg) {
+        return Err(MeasureParseError::illegal_name(format!("empty parameter list in measure '{}'", arg)));
+    }
+    let (root, _) = canonicalize_measure_spec(arg);
+    find_spec(&root).ok_or_else(|| MeasureParseError::illegal_name(format!("unknown measure '{}'", arg)))
+}
+
 /// Resolve a list of requested measure arguments into constructed measures.
 ///
 /// Each request is either a group name (expanded via [`expand_group`]) or a
@@ -346,9 +355,14 @@ pub fn resolve_measures(requested: &[String]) -> Result<Vec<Box<dyn Measure>>, M
         }
     }
 
-    // 2. Build each measure once. trec_eval keeps the first explicit parameter
-    // list for a measure, even when a group or a request without parameters
-    // names the measure first.
+    // trec_eval refuses an illegal name while it reads its options, before it
+    // reads any parameter, so every name is checked before any measure is built.
+    for arg in &expanded {
+        named_spec(arg)?;
+    }
+
+    // trec_eval keeps the first explicit parameter list for a measure, even
+    // when a group or a request without parameters names the measure first.
     let mut parameters = HashMap::new();
     for arg in &expanded {
         let (root, params) = canonicalize_measure_spec(arg);
@@ -362,12 +376,8 @@ pub fn resolve_measures(requested: &[String]) -> Result<Vec<Box<dyn Measure>>, M
     let mut built = HashSet::new();
     let mut measures: Vec<Box<dyn Measure>> = Vec::with_capacity(expanded.len());
     for arg in &expanded {
-        if has_empty_param_list(arg) {
-            return Err(MeasureParseError::illegal_name(format!("empty parameter list in measure '{}'", arg)));
-        }
-        let (root, params) = canonicalize_measure_spec(arg);
-        let spec = find_spec(&root)
-            .ok_or_else(|| MeasureParseError::illegal_name(format!("unknown measure '{}'", arg)))?;
+        let spec = named_spec(arg)?;
+        let (_, params) = canonicalize_measure_spec(arg);
         if !built.insert(spec.name) {
             continue;
         }

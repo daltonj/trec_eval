@@ -237,17 +237,20 @@ fn main() {
         }
     };
 
-    // 3. Ingest run results
-    let run_data = match parse_trec_run(&run_filename) {
-        Ok(data) => data,
+    // 3. Read the run only when the evaluation below dereferences it, so that
+    // problems are reported in trec_eval's order: measures, qrels, then run.
+    let run_data = std::cell::LazyCell::new(|| match parse_trec_run(&run_filename) {
+        Ok(data) => {
+            for warning in &data.warnings {
+                eprintln!("Warning in run file '{}': {}", run_filename, warning);
+            }
+            data
+        }
         Err(e) => {
             eprintln!("Error parsing run file '{}': {}", run_filename, e);
             process::exit(EXIT_INPUT);
         }
-    };
-    for warning in &run_data.warnings {
-        eprintln!("Warning in run file '{}': {}", run_filename, warning);
-    }
+    });
 
     // 4. Resolve measures (groups + parameters) via the central registry.
     let default_group = match args.rel_format.to_ascii_lowercase().as_str() {
