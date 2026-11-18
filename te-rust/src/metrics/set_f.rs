@@ -7,6 +7,7 @@ pub struct SetFMeasure {
 
 impl SetFMeasure {
     pub fn new(beta: f64, params_str: &str) -> Self {
+        crate::metrics::common::set_f_weight(beta).expect("invalid set_F weight");
         let name = if params_str.is_empty() {
             "set_F".to_string()
         } else {

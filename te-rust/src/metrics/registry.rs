@@ -58,12 +58,13 @@ const DEFAULT_RECALL_LEVELS: &[f64] = &[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 
 const DEFAULT_RPREC_MULT: &[f64] = &[0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0];
 const DEFAULT_UTILITY_COEFFS: &[f64] = &[1.0, -1.0, 0.0, 0.0];
 
-/// Extract the RBP-style `p=<float>` parameter, defaulting to 0.9.
+/// Extract the RBP-style `p=<float>` parameter, defaulting to 0.9. `p` must lie in [0, 1).
 fn parse_rbp_p(params: &str) -> Result<f64, MeasureParseError> {
     let mut p = 0.9;
     for (k, v) in parse_key_values(params)? {
         if k == "p" {
             p = metrics::common::parse_finite_float(&v)?;
+            metrics::common::rbp_persistence(p)?;
         }
     }
     Ok(p)
@@ -178,6 +179,7 @@ pub fn registry() -> &'static [MeasureSpec] {
                 } else {
                     metrics::common::parse_finite_float(p)?
                 };
+                metrics::common::set_f_weight(beta)?;
                 Ok(Box::new(metrics::set_f::SetFMeasure::new(beta, p)))
             },
         },

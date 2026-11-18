@@ -8,6 +8,7 @@ pub struct RbpResidMeasure {
 
 impl RbpResidMeasure {
     pub fn new(p: f64, params_str: &str) -> Self {
+        crate::metrics::common::rbp_persistence(p).expect("invalid persistence");
         let name = if params_str.is_empty() {
             "rbp_resid".to_string()
         } else {

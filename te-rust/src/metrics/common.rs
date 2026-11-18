@@ -317,6 +317,28 @@ pub(crate) fn r_multiples(multiples: &[f64]) -> Result<(), MeasureParseError> {
     Ok(())
 }
 
+pub(crate) fn rbp_persistence(p: f64) -> Result<(), MeasureParseError> {
+    finite_float(p)?;
+    if !(0.0..1.0).contains(&p) {
+        return Err(MeasureParseError::new(format!(
+            "persistence p {} is outside [0, 1)",
+            p
+        )));
+    }
+    Ok(())
+}
+
+pub(crate) fn set_f_weight(weight: f64) -> Result<(), MeasureParseError> {
+    finite_float(weight)?;
+    if weight < 0.0 {
+        return Err(MeasureParseError::new(format!(
+            "set_F weight {} is negative",
+            weight
+        )));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 pub(crate) fn make_mock_state(results_rel_list: Vec<i64>, num_rel: i64) -> crate::eval::alignment::QueryEvalState {
     let num_ret = results_rel_list.len();

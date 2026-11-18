@@ -10,6 +10,7 @@ pub struct RbpMeasure {
 
 impl RbpMeasure {
     pub fn new(p: f64, params_str: &str) -> Result<Self, MeasureParseError> {
+        crate::metrics::common::rbp_persistence(p)?;
         let name = if params_str.is_empty() {
             "rbp".to_string()
         } else {

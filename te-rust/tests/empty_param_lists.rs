@@ -78,7 +78,7 @@ fn trailing_dot_in_a_number_is_not_an_empty_list() {
         "1.0000"
     );
     assert_eq!(rows(&eval("Rprec_mult.1.,2.")).len(), 2);
-    assert!(eval("rbp.p=1.").status.success());
+    assert!(eval("rbp.p=0.").status.success());
     assert!(eval("ndcg.1=2.").status.success());
 }
 
