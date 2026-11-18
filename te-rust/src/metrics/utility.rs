@@ -57,22 +57,20 @@ impl Measure for UtilityMeasure {
             None => return self.initial_values(),
         };
 
-        let num_ret = q_state.results_rel_list.len();
-
-        // Count total relevant retrieved
-        let mut num_rel_ret = 0;
-        for &rel in &q_state.results_rel_list {
-            if rel >= config.relevance_level {
-                num_rel_ret += 1;
-            }
-        }
+        // Signed cells allow a collection size smaller than the documents counted.
+        // num_rel_ret counts judged documents only, as trec_eval's does: at a negative -l,
+        // unjudged documents (RELVALUE_NONPOOL, RELVALUE_UNJUDGED) pass the level too.
+        let num_ret = q_state.results_rel_list.len() as i64;
+        let num_rel_ret = q_state.num_rel_ret as i64;
+        let num_rel = q_state.num_rel as i64;
 
         let a = num_rel_ret as f64;
         let b = (num_ret - num_rel_ret) as f64;
-        let c = (q_state.num_rel - num_rel_ret) as f64;
-        
-        // d = num_docs_in_coll + num_rel_ret - num_ret - num_rel
-        let d = (config.num_docs_in_coll as i64 + num_rel_ret as i64 - num_ret as i64 - q_state.num_rel as i64) as f64;
+        let c = (num_rel - num_rel_ret) as f64;
+
+        // Subtract counts of at least 0 from num_docs_in_coll, so that no step can wrap.
+        let num_docs_in_coll = i64::try_from(config.num_docs_in_coll).unwrap_or(i64::MAX);
+        let d = (num_docs_in_coll - num_ret - (num_rel - num_rel_ret)) as f64;
 
         let score = self.params[0] * a +
                     self.params[1] * b +
@@ -115,5 +113,16 @@ mod tests {
         // score = 1.0 * 0 + (-1.0) * 2 = -2.0
         let actual = measure.calc(&config, &EvalState::Standard(state));
         assert_eq!(actual, vec![MetricValue::Float(-2.0)]);
+    }
+
+    #[test]
+    fn utility_counts_each_cell_once() {
+        // retrieved [1, 0, 0], num_rel = 2, 10 documents in the collection:
+        // a = 1, b = 2, c = 1 and d = 10 - 3 - 1 = 6.
+        let measure = UtilityMeasure::new(vec![1000.0, 100.0, 10.0, 1.0], "1000,100,10,1");
+        let config = EvalConfig { num_docs_in_coll: 10, ..EvalConfig::default() };
+        let state = make_mock_state(vec![1, 0, 0], 2);
+        let actual = measure.calc(&config, &EvalState::Standard(state));
+        assert_eq!(actual, vec![MetricValue::Float(1216.0)]);
     }
 }
