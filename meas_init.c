@@ -512,7 +512,8 @@ static int get_param_pairs(PARAMS * params, char *param_string)
     return (UNDEF);
 }
 
-/* Convert a string to a double, with the error checking of str_to_long */
+/* Convert a string to a finite double, with the error checking of
+   str_to_long */
 static double str_to_double(const char *str, int *error)
 {
     char *endptr = NULL;
@@ -529,6 +530,9 @@ static double str_to_double(const char *str, int *error)
         *error = 1;
     } else if (endptr == str) {
         fprintf(stderr, "Error: value `%s' could not be parsed.\n", str);
+        *error = 1;
+    } else if (!isfinite(value)) {
+        fprintf(stderr, "Error: value `%s' is not a finite number.\n", str);
         *error = 1;
     } else if (*endptr != '\0') {
         fprintf(stderr, "Warning, value `%s' partially read as `%.*s'.\n",
