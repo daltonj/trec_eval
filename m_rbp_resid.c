@@ -9,6 +9,7 @@
 #include "functions.h"
 #include "trec_format.h"
 
+static int te_init_rbp_resid(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval);
 static int
 te_calc_rbp_resid(const EPI * epi, const REL_INFO * rel_info,
                   const RESULTS * results, const TREC_MEAS * tm,
@@ -32,7 +33,7 @@ TREC_MEAS te_meas_rbp_resid = { "rbp_resid",
     Measurement of Retrieval Effectiveness.\"  ACM Transactions on\n\
     Information Systems, vol. 27, no. 1, article 2, publication date\n\
     December, 2008.  http://doi.acm.org/10.1145/1416950.1416952\n",
-    te_init_meas_s_double_p_pair,
+    te_init_rbp_resid,
     te_calc_rbp_resid,
     te_acc_meas_s,
     te_calc_avg_meas_s,
@@ -40,6 +41,15 @@ TREC_MEAS te_meas_rbp_resid = { "rbp_resid",
     te_print_final_meas_s_double_p,
     &default_rbp_params, -1
 };
+
+/* Every parameter other than the persistence p names a relevance level */
+static int
+te_init_rbp_resid(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
+{
+    if (UNDEF == te_init_meas_s_double_p_pair(epi, tm, eval))
+        return (UNDEF);
+    return (check_gain_params(tm, "p"));
+}
 
 static int
 te_calc_rbp_resid(const EPI * epi, const REL_INFO * rel_info,

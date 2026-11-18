@@ -19,7 +19,7 @@ static PARAMS default_ndcg_gains = { NULL, 0, NULL };
 
 TREC_MEAS te_meas_dcg = { "dcg",
     "    Discounted Cumulative Gain",
-    te_init_meas_s_double_p_pair,
+    te_init_meas_s_double_p_gain,
     te_calc_ndcg,
     te_acc_meas_s,
     te_calc_avg_meas_s,
@@ -30,7 +30,7 @@ TREC_MEAS te_meas_dcg = { "dcg",
 
 TREC_MEAS te_meas_ideal_dcg = { "ideal_dcg",
     "    Ideal Discounted Cumulative Gain",
-    te_init_meas_s_double_p_pair,
+    te_init_meas_s_double_p_gain,
     te_calc_ndcg,
     te_acc_meas_s,
     te_calc_avg_meas_s,
@@ -53,7 +53,7 @@ TREC_MEAS te_meas_ndcg = { "ndcg",
     Gains are allowed to be 0 or negative, and relevance level 0\n\
     can be given a gain.\n\
     Based on an implementation by Ian Soboroff\n",
-    te_init_meas_s_double_p_pair,
+    te_init_meas_s_double_p_gain,
     te_calc_ndcg,
     te_acc_meas_s,
     te_calc_avg_meas_s,

@@ -36,6 +36,56 @@ static int valid_int(const char *str)
     return 1;
 }
 
+int check_gain_params(const TREC_MEAS * tm, const char *named_param)
+{
+    DOUBLE_PARAM_PAIR *pairs =
+        (DOUBLE_PARAM_PAIR *) tm->meas_params->param_values;
+    long i, j, level_i = 0, level_j;
+    int error = 0;
+    int is_named;
+
+    for (i = 0; i < tm->meas_params->num_params; i++) {
+        is_named = named_param && 0 == strcmp(pairs[i].name, named_param);
+        if (!is_named) {
+            if (valid_int(pairs[i].name))
+                level_i = str_to_long(pairs[i].name, &error);
+            else
+                error = 1;
+            if (error) {
+                fprintf(stderr, "trec_eval: Unusable relevance level '%s'\n",
+                        pairs[i].name);
+                return (UNDEF);
+            }
+        }
+        for (j = 0; j < i; j++) {
+            if (is_named) {
+                if (0 == strcmp(pairs[i].name, pairs[j].name)) {
+                    fprintf(stderr,
+                            "trec_eval: parameter '%s' of measure '%s' is given more than once\n",
+                            pairs[i].name, tm->name);
+                    return (UNDEF);
+                }
+            } else if (!named_param || strcmp(pairs[j].name, named_param)) {
+                level_j = str_to_long(pairs[j].name, &error);
+                if (level_i == level_j) {
+                    fprintf(stderr,
+                            "trec_eval: relevance level %ld of measure '%s' is given more than once\n",
+                            level_i, tm->name);
+                    return (UNDEF);
+                }
+            }
+        }
+    }
+    return (1);
+}
+
+int te_init_meas_s_double_p_gain(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
+{
+    if (UNDEF == te_init_meas_s_double_p_pair(epi, tm, eval))
+        return (UNDEF);
+    return check_gain_params(tm, NULL);
+}
+
 int setup_gains(const TREC_MEAS * tm, const RES_RELS * res_rels, GAINS * gains)
 {
     DOUBLE_PARAM_PAIR *pairs = NULL;
