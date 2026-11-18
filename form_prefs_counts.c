@@ -805,7 +805,7 @@ static int form_prefs_and_ranks(const EPI * epi,
     }
     /* Sort results by sim, breaking ties lexicographically using docno */
     qsort((char *) docno_results,
-          (int) num_results, sizeof(DOCNO_RESULTS), comp_sim_docno);
+          num_results, sizeof(DOCNO_RESULTS), comp_sim_docno);
 
     if (epi->debug_level >= 5)
         debug_print_docno_results(docno_results, num_results,
@@ -820,7 +820,7 @@ static int form_prefs_and_ranks(const EPI * epi,
     }
     /* Sort docno_results by increasing docno */
     qsort((char *) docno_results,
-          (int) num_results, sizeof(DOCNO_RESULTS), comp_docno);
+          num_results, sizeof(DOCNO_RESULTS), comp_docno);
     /* Error checking for duplicates */
     for (i = 1; i < num_results; i++) {
         if (0 == strcmp(docno_results[i].docno, docno_results[i - 1].docno)) {
@@ -842,7 +842,7 @@ static int form_prefs_and_ranks(const EPI * epi,
         prefs_and_ranks[i].docno = trec_prefs->text_prefs[i].docno;
     }
     qsort((char *) prefs_and_ranks,
-          (int) num_prefs, sizeof(PREFS_AND_RANKS), comp_prefs_and_ranks_docno);
+          num_prefs, sizeof(PREFS_AND_RANKS), comp_prefs_and_ranks_docno);
 
     if (epi->debug_level >= 5)
         debug_print_prefs_and_ranks(prefs_and_ranks, num_prefs,
@@ -870,7 +870,7 @@ static int form_prefs_and_ranks(const EPI * epi,
     /* sort docno_results[0..i] by increasing rank */
     num_results = i;
     qsort((char *) docno_results,
-          (int) num_results, sizeof(DOCNO_RESULTS), comp_results_inc_rank);
+          num_results, sizeof(DOCNO_RESULTS), comp_results_inc_rank);
 
     if (epi->debug_level >= 5)
         debug_print_docno_results(docno_results, num_results,
@@ -888,7 +888,7 @@ static int form_prefs_and_ranks(const EPI * epi,
     num_results = lnum_judged_ret;
     /* Sort docno_results by increasing docno */
     qsort((char *) docno_results,
-          (int) num_results, sizeof(DOCNO_RESULTS), comp_docno);
+          num_results, sizeof(DOCNO_RESULTS), comp_docno);
 
     if (epi->debug_level >= 5)
         debug_print_docno_results(docno_results, num_results,

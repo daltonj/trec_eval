@@ -54,6 +54,16 @@ SRCOTHER = README Makefile test bpref_bug CHANGELOG
 trec_eval: $(SRCS) Makefile $(SRCH)
 	$(CC) $(CFLAGS)  -o trec_eval $(SRCS) -lm
 
+.PHONY: qsort-counts-test
+qsort-counts-test:
+	@for source in get_qrels.c get_qrels_jg.c get_qrels_prefs.c get_prefs.c \
+	              get_trec_results.c get_zscores.c form_res_rels.c \
+	              form_res_rels_jg.c form_prefs_counts.c; do \
+	    $(CC) $(CFLAGS) -std=c11 -D_DEFAULT_SOURCE \
+	        -include test/regress/qsort-counts/counts.h \
+	        -fsyntax-only $$source || exit 1; \
+	done
+
 install: $(BIN)/trec_eval
 
 quicktest: trec_eval

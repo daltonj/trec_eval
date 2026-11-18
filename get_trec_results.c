@@ -211,7 +211,7 @@ te_get_trec_results(EPI * epi, char *text_results_file,
     }
 
     /* Sort all lines by qid, then docno */
-    qsort((char *) lines, (int) num_lines, sizeof(LINES), comp_lines_qid_docno);
+    qsort((char *) lines, num_lines, sizeof(LINES), comp_lines_qid_docno);
 
     /* Go through lines and count number of qid */
     num_qid = 1;

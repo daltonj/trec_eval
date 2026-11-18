@@ -119,7 +119,7 @@ te_form_res_rels_jg(const EPI * epi, const REL_INFO * rel_info,
 
     /* Sort results by sim, breaking ties lexicographically using docno */
     qsort((char *) docno_info,
-          (int) num_results, sizeof(DOCNO_INFO), comp_sim_docno);
+          num_results, sizeof(DOCNO_INFO), comp_sim_docno);
 
     /* Only look at epi->max_num_docs_per_topic (not normally an issue) */
     if (num_results > epi->max_num_docs_per_topic)
@@ -132,7 +132,7 @@ te_form_res_rels_jg(const EPI * epi, const REL_INFO * rel_info,
 
     /* Sort trec_top lexicographically */
     qsort((char *) docno_info,
-          (int) num_results, sizeof(DOCNO_INFO), comp_docno);
+          num_results, sizeof(DOCNO_INFO), comp_docno);
 
     /* Error checking for duplicates */
     for (i = 1; i < num_results; i++) {
@@ -214,7 +214,7 @@ te_form_res_rels_jg(const EPI * epi, const REL_INFO * rel_info,
             long rrl;
             /* Sort tuples by increasing rank among judged docs */
             qsort((char *) docno_info,
-                  (int) num_results, sizeof(DOCNO_INFO), comp_rank_judged);
+                  num_results, sizeof(DOCNO_INFO), comp_rank_judged);
             rrl = 0;
             i = 0;
             while (i < num_results && docno_info[i].rel >= 0) {
@@ -226,7 +226,7 @@ te_form_res_rels_jg(const EPI * epi, const REL_INFO * rel_info,
             /* resort by docno for next jg */
             if (jg != num_jgs - 1)
                 qsort((char *) docno_info,
-                      (int) num_results, sizeof(DOCNO_INFO), comp_docno);
+                      num_results, sizeof(DOCNO_INFO), comp_docno);
         } else {
             /* Normal path.  Assign rel value to appropriate rank */
             for (i = 0; i < num_results; i++) {
