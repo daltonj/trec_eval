@@ -22,7 +22,7 @@ fn utility(qrels: PathBuf, run: PathBuf, coeffs: [f64; 4], level: i64, num_docs:
         num_docs_in_coll: num_docs,
         ..EvalConfig::default()
     };
-    let out = evaluate_run(&qrels, &run, &measures, &config, None);
+    let out = evaluate_run(&qrels, &run, &measures, &config, None).unwrap();
     match out.summary_results[0].value {
         MetricValue::Float(v) => format!("{v:.4}"),
         ref other => panic!("{other:?}"),

@@ -2,8 +2,8 @@ use clap::Parser;
 use std::process;
 
 use te_rust::eval::bootstrap::BootstrapConfig;
-use te_rust::eval::{evaluate_run, evaluate_run_jg};
-use te_rust::io::{parse_trec_qrels, parse_trec_qrels_jg, parse_trec_run, IOError, ParseError};
+use te_rust::eval::{evaluate_run, evaluate_run_jg, ScoredDuplicate};
+use te_rust::io::{parse_trec_qrels, parse_trec_qrels_jg, parse_trec_run};
 use te_rust::metrics::{EvalConfig, MetricValue, ValueFormat};
 use te_rust::metrics;
 
@@ -99,11 +99,19 @@ const EXIT_USAGE: i32 = 1;
 const EXIT_INPUT: i32 = 2;
 const EXIT_TOPIC: i32 = 4;
 
-fn input_exit_status(e: &IOError) -> i32 {
-    match e {
-        IOError::FormatError(ParseError::DuplicateDocument { .. }) => EXIT_TOPIC,
-        _ => EXIT_INPUT,
-    }
+/// Reports an evaluation error with trec_eval's exit status.
+fn refuse_evaluation_error(
+    duplicate: ScoredDuplicate,
+    qrels_kind: &str,
+    qrels_file: &str,
+    run_file: &str,
+) -> ! {
+    let (kind, file) = match duplicate {
+        ScoredDuplicate::Qrels { .. } => (qrels_kind, qrels_file),
+        ScoredDuplicate::Run { .. } => ("run", run_file),
+    };
+    eprintln!("Error in {} file '{}': {}", kind, file, duplicate);
+    process::exit(EXIT_TOPIC);
 }
 
 /// Reads an integer option as trec_eval's `str_to_long` does: the leading integer, so `1.5` reads
@@ -219,7 +227,7 @@ fn main() {
         Ok(data) => data,
         Err(e) => {
             eprintln!("Error parsing run file '{}': {}", run_filename, e);
-            process::exit(input_exit_status(&e));
+            process::exit(EXIT_INPUT);
         }
     };
     for warning in &run_data.warnings {
@@ -286,20 +294,38 @@ fn main() {
             for warning in &qrels_jg_data.warnings {
                 eprintln!("Warning in qrels_jg file '{}': {}", qrels_filename, warning);
             }
-            evaluate_run_jg(&qrels_jg_data, &run_data, &active_measures, &config, ci_config.as_ref())
+            evaluate_run_jg(
+                &qrels_jg_data,
+                &run_data,
+                &active_measures,
+                &config,
+                ci_config.as_ref(),
+            )
+            .unwrap_or_else(|duplicate| {
+                refuse_evaluation_error(duplicate, "qrels_jg", &qrels_filename, &run_filename);
+            })
         }
         "qrels" => {
             let qrels_data = match parse_trec_qrels(&qrels_filename) {
                 Ok(data) => data,
                 Err(e) => {
                     eprintln!("Error parsing qrels file '{}': {}", qrels_filename, e);
-                    process::exit(input_exit_status(&e));
+                    process::exit(EXIT_INPUT);
                 }
             };
             for warning in &qrels_data.warnings {
                 eprintln!("Warning in qrels file '{}': {}", qrels_filename, warning);
             }
-            evaluate_run(&qrels_data, &run_data, &active_measures, &config, ci_config.as_ref())
+            evaluate_run(
+                &qrels_data,
+                &run_data,
+                &active_measures,
+                &config,
+                ci_config.as_ref(),
+            )
+            .unwrap_or_else(|duplicate| {
+                refuse_evaluation_error(duplicate, "qrels", &qrels_filename, &run_filename);
+            })
         }
         other => {
             eprintln!("te-rust: Unsupported relevance judgments format '{}'", other);

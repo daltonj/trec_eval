@@ -1,4 +1,7 @@
-use crate::io::{QrelsJGQuery, QrelsQuery, RunQuery};
+use std::collections::{HashMap, HashSet};
+
+use crate::eval::ScoredDuplicate;
+use crate::io::{QrelsJGQuery, QrelsQuery, RunQuery, RunRecord};
 
 pub const RELVALUE_NONPOOL: i64 = -1;
 
@@ -44,11 +47,6 @@ pub struct QueryEvalState {
     pub rel_levels: Vec<usize>,
 }
 
-struct DocInfo {
-    docno: String,
-    sim: f64,
-}
-
 /// Aligns standard run results with qrels judgments for a single query.
 pub fn align_query(
     run_query: Option<&RunQuery>,
@@ -57,10 +55,105 @@ pub fn align_query(
     relevance_level_cutoff: i64,
     max_docs_per_topic: usize,
     judged_docs_only_flag: bool,
-) -> QueryEvalState {
+) -> Result<QueryEvalState, ScoredDuplicate> {
+    align_query_with_validation(
+        run_query,
+        qrels_query,
+        run_id,
+        relevance_level_cutoff,
+        max_docs_per_topic,
+        judged_docs_only_flag,
+        true,
+    )
+}
+
+pub(crate) fn align_query_with_validation(
+    run_query: Option<&RunQuery>,
+    qrels_query: &QrelsQuery,
+    run_id: &str,
+    relevance_level_cutoff: i64,
+    max_docs_per_topic: usize,
+    judged_docs_only_flag: bool,
+    reads_ranking: bool,
+) -> Result<QueryEvalState, ScoredDuplicate> {
+    let doc_infos = rank_documents(
+        run_query,
+        &qrels_query.qid,
+        max_docs_per_topic,
+        reads_ranking,
+    )?;
+    align_ranked_query(
+        &doc_infos,
+        qrels_query,
+        run_id,
+        relevance_level_cutoff,
+        judged_docs_only_flag,
+        reads_ranking,
+    )
+}
+
+fn rank_documents<'a>(
+    run_query: Option<&'a RunQuery>,
+    qid: &str,
+    max_docs_per_topic: usize,
+    reads_ranking: bool,
+) -> Result<Vec<&'a RunRecord>, ScoredDuplicate> {
+    // Sort run records by sim descending, and docno descending lexicographically
+    let mut doc_infos: Vec<_> = run_query.into_iter().flat_map(|q| &q.records).collect();
+
+    doc_infos.sort_by(|a, b| {
+        // Sort sim descending
+        match b.sim.partial_cmp(&a.sim) {
+            Some(std::cmp::Ordering::Equal) => {
+                // Tie breaker: docno descending lexicographically
+                b.docno.cmp(&a.docno)
+            }
+            Some(other) => other,
+            None => std::cmp::Ordering::Equal, // The parsers refuse NaN, so None won't happen
+        }
+    });
+
+    // Truncate to max_docs_per_topic
+    if doc_infos.len() > max_docs_per_topic {
+        doc_infos.truncate(max_docs_per_topic);
+    }
+
+    if reads_ranking {
+        let mut seen = HashSet::with_capacity(doc_infos.len());
+        for doc in &doc_infos {
+            if !seen.insert(&doc.docno) {
+                return Err(ScoredDuplicate::Run {
+                    qid: qid.to_string(),
+                    docno: doc.docno.clone(),
+                });
+            }
+        }
+    }
+
+    Ok(doc_infos)
+}
+
+fn align_ranked_query(
+    doc_infos: &[&RunRecord],
+    qrels_query: &QrelsQuery,
+    run_id: &str,
+    relevance_level_cutoff: i64,
+    judged_docs_only_flag: bool,
+    reads_ranking: bool,
+) -> Result<QueryEvalState, ScoredDuplicate> {
     let qid = qrels_query.qid.clone();
 
-    // 1. Calculate max relevance grade and populate rel_levels counts
+    let mut qrels_map = HashMap::with_capacity(qrels_query.records.len());
+    for record in &qrels_query.records {
+        if qrels_map.insert(&record.docno, record.rel).is_some() && reads_ranking {
+            return Err(ScoredDuplicate::Qrels {
+                qid,
+                docno: record.docno.clone(),
+            });
+        }
+    }
+
+    // Calculate max relevance grade and populate rel_levels counts
     let mut max_rel_grade = 0;
     for record in &qrels_query.records {
         if record.rel > max_rel_grade {
@@ -81,65 +174,15 @@ pub fn align_query(
         }
     }
 
-    // 2. If run query is missing, return a native empty state
-    let run_records = match run_query {
-        Some(rq) => &rq.records,
-        None => {
-            return QueryEvalState {
-                qid,
-                run_id: run_id.to_string(),
-                results_rel_list: Vec::new(),
-                num_ret: 0,
-                num_rel,
-                num_rel_ret: 0,
-                num_nonpool: 0,
-                num_unjudged_in_pool: 0,
-                rel_levels,
-            };
-        }
-    };
-
-    // 3. Copy and sort run records by sim descending, and docno descending lexicographically
-    let mut doc_infos: Vec<DocInfo> = run_records
-        .iter()
-        .map(|r| DocInfo {
-            docno: r.docno.clone(),
-            sim: r.sim,
-        })
-        .collect();
-
-    doc_infos.sort_by(|a, b| {
-        // Sort sim descending
-        match b.sim.partial_cmp(&a.sim) {
-            Some(std::cmp::Ordering::Equal) => {
-                // Tie breaker: docno descending lexicographically
-                b.docno.cmp(&a.docno)
-            }
-            Some(other) => other,
-            None => std::cmp::Ordering::Equal, // The parsers refuse NaN, so None won't happen
-        }
-    });
-
-    // 4. Truncate to max_docs_per_topic
-    if doc_infos.len() > max_docs_per_topic {
-        doc_infos.truncate(max_docs_per_topic);
-    }
-
     let raw_num_ret = doc_infos.len();
 
-    // 5. Build lookup map of qrels judgments for fast O(1) matching
-    let mut qrels_map = std::collections::HashMap::with_capacity(qrels_query.records.len());
-    for record in &qrels_query.records {
-        qrels_map.insert(&record.docno, record.rel);
-    }
-
-    // 6. Construct results_rel_list and count metrics
+    // Construct results_rel_list and count metrics
     let mut results_rel_list = Vec::with_capacity(raw_num_ret);
     let mut num_rel_ret = 0;
     let mut num_nonpool = 0;
     let mut num_unjudged_in_pool = 0;
 
-    for doc in &doc_infos {
+    for doc in doc_infos {
         match qrels_map.get(&doc.docno) {
             Some(&rel) => {
                 if rel < 0 {
@@ -159,7 +202,7 @@ pub fn align_query(
         }
     }
 
-    // 7. If judged_docs_only_flag is set, throw out all unjudged docs
+    // If judged_docs_only_flag is set, throw out all unjudged docs
     if judged_docs_only_flag {
         results_rel_list.retain(|&rel| rel >= 0);
         // Recalculate num_rel_ret from the filtered set
@@ -173,7 +216,7 @@ pub fn align_query(
 
     let num_ret = results_rel_list.len();
 
-    QueryEvalState {
+    Ok(QueryEvalState {
         qid,
         run_id: run_id.to_string(),
         results_rel_list,
@@ -183,7 +226,7 @@ pub fn align_query(
         num_nonpool,
         num_unjudged_in_pool,
         rel_levels,
-    }
+    })
 }
 
 /// Aligns standard run results with judgment group relevance judgments for a single query.
@@ -194,7 +237,33 @@ pub fn align_query_jg(
     relevance_level_cutoff: i64,
     max_docs_per_topic: usize,
     judged_docs_only_flag: bool,
-) -> Vec<QueryEvalState> {
+) -> Result<Vec<QueryEvalState>, ScoredDuplicate> {
+    align_query_jg_with_validation(
+        run_query,
+        qrels_jg_query,
+        run_id,
+        relevance_level_cutoff,
+        max_docs_per_topic,
+        judged_docs_only_flag,
+        true,
+    )
+}
+
+pub(crate) fn align_query_jg_with_validation(
+    run_query: Option<&RunQuery>,
+    qrels_jg_query: &QrelsJGQuery,
+    run_id: &str,
+    relevance_level_cutoff: i64,
+    max_docs_per_topic: usize,
+    judged_docs_only_flag: bool,
+    reads_ranking: bool,
+) -> Result<Vec<QueryEvalState>, ScoredDuplicate> {
+    let doc_infos = rank_documents(
+        run_query,
+        &qrels_jg_query.qid,
+        max_docs_per_topic,
+        reads_ranking,
+    )?;
     qrels_jg_query
         .groups
         .iter()
@@ -203,13 +272,13 @@ pub fn align_query_jg(
                 qid: qrels_jg_query.qid.clone(),
                 records: group.records.clone(),
             };
-            align_query(
-                run_query,
+            align_ranked_query(
+                &doc_infos,
                 &single_q,
                 run_id,
                 relevance_level_cutoff,
-                max_docs_per_topic,
                 judged_docs_only_flag,
+                reads_ranking,
             )
         })
         .collect()

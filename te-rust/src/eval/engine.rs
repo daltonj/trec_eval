@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use crate::eval::alignment::{align_query, align_query_jg};
+use crate::eval::alignment::{align_query_jg_with_validation, align_query_with_validation};
 use crate::eval::bootstrap::{bootstrap_ci_with_aggregator, bootstrap_mean_ci, BootstrapConfig, ConfidenceInterval};
+use crate::eval::ScoredDuplicate;
 use crate::io::{QrelsData, QrelsJGData, QrelsJGQuery, QrelsQuery, RunData, RunQuery};
 use crate::metrics::{EvalConfig, EvalState, Measure, MetricValue, ValueFormat};
 
@@ -38,7 +39,7 @@ pub fn evaluate_run(
     measures: &[Box<dyn Measure>],
     config: &EvalConfig,
     ci_config: Option<&BootstrapConfig>,
-) -> EvaluationOutput {
+) -> Result<EvaluationOutput, ScoredDuplicate> {
     let mut qrels_by_qid: HashMap<String, &QrelsQuery> = HashMap::with_capacity(qrels.queries.len());
     for qrels_q in &qrels.queries {
         qrels_by_qid.insert(qrels_q.qid.clone(), qrels_q);
@@ -80,18 +81,20 @@ pub fn evaluate_run(
 
     let mut query_results = Vec::with_capacity(if config.query_flag { eval_qids.len() } else { 0 });
 
+    let reads_ranking = measures.iter().any(|m| m.reads_ranking());
     for qid in &eval_qids {
         let qrels_q = qrels_by_qid.get(qid).unwrap();
         let run_q = run_by_qid.get(qid).copied();
 
-        let q_state = align_query(
+        let q_state = align_query_with_validation(
             run_q,
             qrels_q,
             &run.run_id,
             config.relevance_level,
             config.max_num_docs_per_topic,
             config.judged_docs_only_flag,
-        );
+            reads_ranking,
+        )?;
 
         let eval_state = EvalState::Standard(q_state);
         let mut q_eval_scores = Vec::new();
@@ -165,12 +168,12 @@ pub fn evaluate_run(
         }
     }
 
-    EvaluationOutput {
+    Ok(EvaluationOutput {
         query_results,
         summary_results,
         num_queries_evaluated,
         total_qrels_queries,
-    }
+    })
 }
 
 /// Evaluates a run against judgment group relevance judgments using the supplied active measures.
@@ -180,7 +183,7 @@ pub fn evaluate_run_jg(
     measures: &[Box<dyn Measure>],
     config: &EvalConfig,
     ci_config: Option<&BootstrapConfig>,
-) -> EvaluationOutput {
+) -> Result<EvaluationOutput, ScoredDuplicate> {
     let mut qrels_by_qid: HashMap<String, &QrelsJGQuery> =
         HashMap::with_capacity(qrels.queries.len());
     for qrels_q in &qrels.queries {
@@ -223,18 +226,20 @@ pub fn evaluate_run_jg(
     let mut query_results =
         Vec::with_capacity(if config.query_flag { eval_qids.len() } else { 0 });
 
+    let reads_ranking = measures.iter().any(|m| m.reads_ranking());
     for qid in &eval_qids {
         let qrels_q = qrels_by_qid.get(qid).unwrap();
         let run_q = run_by_qid.get(qid).copied();
 
-        let q_states = align_query_jg(
+        let q_states = align_query_jg_with_validation(
             run_q,
             qrels_q,
             &run.run_id,
             config.relevance_level,
             config.max_num_docs_per_topic,
             config.judged_docs_only_flag,
-        );
+            reads_ranking,
+        )?;
 
         let eval_state = EvalState::JudgmentGroups(q_states);
         let mut q_eval_scores = Vec::new();
@@ -313,11 +318,11 @@ pub fn evaluate_run_jg(
         }
     }
 
-    EvaluationOutput {
+    Ok(EvaluationOutput {
         query_results,
         summary_results,
         num_queries_evaluated,
         total_qrels_queries,
-    }
+    })
 }
 

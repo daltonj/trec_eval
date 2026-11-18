@@ -3,7 +3,10 @@ use pyo3::exceptions::{PyTypeError, PyUserWarning, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PySequence, PySet, PyString};
 use te_rust::eval::alignment::align_query;
-use te_rust::eval::{evaluate_run, EvaluationOutput, QueryEvaluation, SummaryEvaluation};
+use te_rust::eval::{
+    evaluate_run, EvaluationOutput, QueryEvaluation, ScoredDuplicate,
+    SummaryEvaluation,
+};
 use te_rust::io::{QrelsData, QrelsQuery, RunData, RunQuery};
 use te_rust::metrics::{registry::resolve_measures, EvalConfig, MetricValue, ValueFormat};
 
@@ -124,9 +127,11 @@ impl Evaluator {
         let config_ref = &self.config;
 
         // 1. Run built-in measures with GIL released
-        let mut output = py.allow_threads(|| {
-            evaluate_run(qrels_ref, &run_data, &active_measures, config_ref, None)
-        });
+        let mut output = py
+            .allow_threads(|| {
+                evaluate_run(qrels_ref, &run_data, &active_measures, config_ref, None)
+            })
+            .map_err(evaluation_error)?;
 
 
         // 2. Run custom measures with exception sandboxing
@@ -165,9 +170,11 @@ impl Evaluator {
         let qrels_ref = &self.qrels;
         let config_ref = &self.config;
 
-        let mut output = py.allow_threads(|| {
-            evaluate_run(qrels_ref, &run_data, &active_measures, config_ref, None)
-        });
+        let mut output = py
+            .allow_threads(|| {
+                evaluate_run(qrels_ref, &run_data, &active_measures, config_ref, None)
+            })
+            .map_err(evaluation_error)?;
 
 
         if !self.custom_measures.is_empty() {
@@ -183,6 +190,14 @@ impl Evaluator {
 
         Ok(EvalResult::from_output(output))
     }
+}
+
+fn evaluation_error(duplicate: ScoredDuplicate) -> PyErr {
+    let kind = match duplicate {
+        ScoredDuplicate::Qrels { .. } => "qrels",
+        ScoredDuplicate::Run { .. } => "run",
+    };
+    PyValueError::new_err(format!("{}: {}", kind, duplicate))
 }
 
 fn parse_measures_arg(
@@ -308,7 +323,8 @@ fn evaluate_custom_measures(
             config.relevance_level,
             config.max_num_docs_per_topic,
             config.judged_docs_only_flag,
-        );
+        )
+        .map_err(evaluation_error)?;
 
         let py_query_state = QueryState::from_eval_state(&q_state, config.relevance_level);
 

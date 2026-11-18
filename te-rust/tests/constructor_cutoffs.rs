@@ -25,7 +25,7 @@ fn fixture(name: &str) -> PathBuf {
 fn summary(name: &str, measure: Box<dyn Measure>) -> Vec<(String, String)> {
     let qrels = parse_trec_qrels(fixture(&format!("{name}.qrels"))).unwrap();
     let run = parse_trec_run(fixture(&format!("{name}.run"))).unwrap();
-    let out = evaluate_run(&qrels, &run, &[measure], &EvalConfig::default(), None);
+    let out = evaluate_run(&qrels, &run, &[measure], &EvalConfig::default(), None).unwrap();
     out.summary_results
         .into_iter()
         .map(|row| match row.value {

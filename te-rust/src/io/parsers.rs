@@ -378,7 +378,6 @@ struct RawQrels {
     qid: String,
     docno: String,
     rel: i64,
-    line_num: usize,
 }
 
 struct RawRun {
@@ -386,7 +385,6 @@ struct RawRun {
     docno: String,
     sim: f64,
     run_id: String,
-    line_num: usize,
 }
 
 /// True for the field separators of trec_eval's parsers: C `isspace` in the C locale.
@@ -498,12 +496,7 @@ pub fn parse_trec_qrels<P: AsRef<Path>>(path: P) -> Result<QrelsData, IOError> {
             }));
         }
 
-        raw_records.push(RawQrels {
-            qid,
-            docno,
-            rel,
-            line_num,
-        });
+        raw_records.push(RawQrels { qid, docno, rel });
     }
 
     if raw_records.is_empty() {
@@ -518,16 +511,7 @@ pub fn parse_trec_qrels<P: AsRef<Path>>(path: P) -> Result<QrelsData, IOError> {
         }
     });
 
-    // Validate duplicate documents under same query
-    for i in 1..raw_records.len() {
-        if raw_records[i].qid == raw_records[i - 1].qid && raw_records[i].docno == raw_records[i - 1].docno {
-            return Err(IOError::FormatError(ParseError::DuplicateDocument {
-                line_num: raw_records[i].line_num,
-                qid: raw_records[i].qid.clone(),
-                docno: raw_records[i].docno.clone(),
-            }));
-        }
-    }
+    // A repeated document stays: `evaluate_run` refuses it where trec_eval would.
 
     // Group into QrelsQuery records in a linear pass
     let mut queries = Vec::new();
@@ -738,7 +722,6 @@ pub fn parse_trec_run<P: AsRef<Path>>(path: P) -> Result<RunData, IOError> {
             docno,
             sim,
             run_id,
-            line_num,
         });
     }
 
@@ -754,16 +737,7 @@ pub fn parse_trec_run<P: AsRef<Path>>(path: P) -> Result<RunData, IOError> {
         }
     });
 
-    // Validate duplicate documents under same query
-    for i in 1..raw_records.len() {
-        if raw_records[i].qid == raw_records[i - 1].qid && raw_records[i].docno == raw_records[i - 1].docno {
-            return Err(IOError::FormatError(ParseError::DuplicateDocument {
-                line_num: raw_records[i].line_num,
-                qid: raw_records[i].qid.clone(),
-                docno: raw_records[i].docno.clone(),
-            }));
-        }
-    }
+    // A repeated document stays: `evaluate_run` and `evaluate_run_jg` refuse it where trec_eval would.
 
     // Group into RunQuery records in a linear pass
     let mut queries = Vec::new();

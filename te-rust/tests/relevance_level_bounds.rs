@@ -110,7 +110,7 @@ fn negative_level_finishes() {
             relevance_level: -1,
             ..Default::default()
         };
-        let out = te_rust::eval::evaluate_run(&qrels, &run, &measures, &config, None);
+        let out = te_rust::eval::evaluate_run(&qrels, &run, &measures, &config, None).unwrap();
         done.send(out.num_queries_evaluated).unwrap();
     });
     let evaluated = finished
