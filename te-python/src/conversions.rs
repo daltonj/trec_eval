@@ -3,6 +3,7 @@ use std::path::Path;
 use pyo3::exceptions::{PyFileNotFoundError, PyTypeError, PyUserWarning, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyIterator, PySequence, PyString};
+use te_rust::io::parsers::REL_LEVELS;
 use te_rust::io::{parse_trec_qrels, parse_trec_run, QrelsData, QrelsQuery, QrelsRecord, RunData, RunQuery, RunRecord};
 
 /// Extract a file path string from a Python object if it is a `str` or `os.PathLike`.
@@ -56,6 +57,18 @@ fn find_column_name(
     Err(PyTypeError::new_err("Object is not a DataFrame (missing .columns)"))
 }
 
+fn check_rel_grade(rel: i64) -> PyResult<()> {
+    if !REL_LEVELS.contains(&rel) {
+        return Err(PyValueError::new_err(format!(
+            "relevance level {} is outside {} to {}",
+            rel,
+            REL_LEVELS.start(),
+            REL_LEVELS.end()
+        )));
+    }
+    Ok(())
+}
+
 /// Ingest relevance judgments (qrels) from a Python object (file path, dict, DataFrame, or iterable).
 pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> PyResult<QrelsData> {
     // 1. File path / PathLike
@@ -100,6 +113,7 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
                 let rel = rel_obj.extract::<i64>().map_err(|_| {
                     PyTypeError::new_err("Expected relevance judgment to be an integer in qrels dict")
                 })?;
+                check_rel_grade(rel)?;
                 query_map.insert(docno, rel);
             }
         }
@@ -159,6 +173,7 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
             let qid = q_res?.extract::<String>()?;
             let docno = d_res?.extract::<String>()?;
             let rel = r_res?.extract::<i64>()?;
+            check_rel_grade(rel)?;
             grouped.entry(qid).or_default().insert(docno, rel);
         }
 
@@ -197,6 +212,7 @@ fn ingest_qrels_from_iter(iter: Bound<'_, PyIterator>) -> PyResult<QrelsData> {
     for item_res in iter {
         let item = item_res?;
         let (qid, docno, rel) = extract_qrel_item(&item)?;
+        check_rel_grade(rel)?;
         grouped.entry(qid).or_default().insert(docno, rel);
     }
 
