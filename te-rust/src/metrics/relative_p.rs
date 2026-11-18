@@ -7,7 +7,9 @@ pub struct RelativePMeasure {
 }
 
 impl RelativePMeasure {
+    /// Sorts `cutoffs`, and panics on a cutoff of 0 or a repeated cutoff.
     pub fn new(cutoffs: Vec<usize>) -> Self {
+        let cutoffs = crate::metrics::common::sorted_rank_cutoffs(cutoffs);
         let sub_metrics = cutoffs.iter().map(|c| format!("relative_P_{}", c)).collect();
         Self { cutoffs, sub_metrics }
     }
@@ -68,16 +70,6 @@ impl Measure for RelativePMeasure {
                     0.0
                 };
                 cutoff_index += 1;
-                while cutoff_index < num_params && i == self.cutoffs[cutoff_index] {
-                    let cutoff = self.cutoffs[cutoff_index];
-                    let max_possible = min(cutoff, q_state.num_rel);
-                    results[cutoff_index] = if max_possible > 0 {
-                        (rel_so_far as f64) / (max_possible as f64)
-                    } else {
-                        0.0
-                    };
-                    cutoff_index += 1;
-                }
                 if cutoff_index >= num_params {
                     break;
                 }

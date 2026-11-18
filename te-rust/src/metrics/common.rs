@@ -50,14 +50,7 @@ pub fn parse_int_cutoffs(params: &str, default: &[usize]) -> Result<Vec<usize>, 
             Err(_) => return Err(invalid()),
         }
     }
-    list.sort_unstable();
-    if list.first() == Some(&0) {
-        return Err(MeasureParseError::new("rank cutoff must be at least 1"));
-    }
-    if list.windows(2).any(|pair| pair[0] == pair[1]) {
-        return Err(MeasureParseError::new("duplicate cutoffs"));
-    }
-    Ok(list)
+    checked_rank_cutoffs(list)
 }
 
 /// Parse a comma-separated list of float cutoffs/coefficients (e.g. "0.0,0.5,1.0").
@@ -109,23 +102,7 @@ pub(crate) fn utility_coefficients(coeffs: &[f64]) -> Result<(), MeasureParseErr
 /// measures that walk the list in step with the ranking. Lists whose order
 /// carries meaning (`11pt_avg`, `utility`) use [`parse_float_cutoffs`].
 pub fn parse_sorted_float_cutoffs(params: &str, default: &[f64]) -> Result<Vec<f64>, MeasureParseError> {
-    let mut list = parse_float_cutoffs(params, default)?;
-    list.sort_by(f64::total_cmp);
-    if list.windows(2).any(|pair| pair[0] == pair[1]) {
-        return Err(MeasureParseError::new("duplicate cutoffs"));
-    }
-    // Each row is named with the cutoff to two decimals (`Rprec_mult_1.00`). Rounding is
-    // monotone, so in the sorted list two cutoffs that print the same name are neighbours.
-    let label = |cutoff: f64| format!("{:.2}", cutoff);
-    if let Some(pair) = list.windows(2).find(|pair| label(pair[0]) == label(pair[1])) {
-        return Err(MeasureParseError::new(format!(
-            "cutoffs {} and {} both print as {}",
-            pair[0],
-            pair[1],
-            label(pair[0])
-        )));
-    }
-    Ok(list)
+    checked_float_cutoffs(parse_float_cutoffs(params, default)?)
 }
 
 /// Parse a comma-separated list of `key=value` pairs (e.g. "p=0.9").
@@ -253,6 +230,91 @@ impl Gains {
         }
         0.0
     }
+}
+
+fn checked_rank_cutoffs(mut cutoffs: Vec<usize>) -> Result<Vec<usize>, MeasureParseError> {
+    cutoffs.sort_unstable();
+    if cutoffs.first() == Some(&0) {
+        return Err(MeasureParseError::new("rank cutoff must be at least 1"));
+    }
+    if cutoffs.iter().any(|&cutoff| i64::try_from(cutoff).is_err()) {
+        return Err(MeasureParseError::new("integer cutoff is out of range"));
+    }
+    if cutoffs.windows(2).any(|pair| pair[0] == pair[1]) {
+        return Err(MeasureParseError::new("duplicate cutoffs"));
+    }
+    Ok(cutoffs)
+}
+
+fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, MeasureParseError> {
+    for &value in &list {
+        finite_float(value)?;
+    }
+    list.sort_by(f64::total_cmp);
+    if list.windows(2).any(|pair| pair[0] == pair[1]) {
+        return Err(MeasureParseError::new("duplicate cutoffs"));
+    }
+    // Each row is named with the cutoff to two decimals (`Rprec_mult_1.00`). Rounding is
+    // monotone, so in the sorted list two cutoffs that print the same name are neighbours.
+    let label = |cutoff: f64| format!("{:.2}", cutoff);
+    if let Some(pair) = list
+        .windows(2)
+        .find(|pair| label(pair[0]) == label(pair[1]))
+    {
+        return Err(MeasureParseError::new(format!(
+            "cutoffs {} and {} both print as {}",
+            pair[0],
+            pair[1],
+            label(pair[0])
+        )));
+    }
+    Ok(list)
+}
+
+/// Sorts rank cutoffs and applies the same checks as the registry parser.
+///
+/// # Panics
+///
+/// Panics on zero, repeated cutoffs or a cutoff larger than i64::MAX.
+pub(crate) fn sorted_rank_cutoffs(cutoffs: Vec<usize>) -> Vec<usize> {
+    checked_rank_cutoffs(cutoffs).expect("invalid rank cutoffs")
+}
+
+/// Sorts float cutoffs and applies the same checks as the registry parser.
+///
+/// # Panics
+///
+/// Panics on non-finite cutoffs or cutoffs that print the same row name.
+pub(crate) fn sorted_float_cutoffs(cutoffs: Vec<f64>) -> Vec<f64> {
+    checked_float_cutoffs(cutoffs).expect("invalid float cutoffs")
+}
+
+/// Refuse recall levels outside [0, 1], for `iprec_at_recall` and `11pt_avg`.
+pub(crate) fn recall_levels(levels: &[f64]) -> Result<(), MeasureParseError> {
+    for &level in levels {
+        finite_float(level)?;
+        if !(0.0..=1.0).contains(&level) {
+            return Err(MeasureParseError::new(format!(
+                "recall level {} is outside [0, 1]",
+                level
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Refuse multiples of R that are not positive and finite.
+pub(crate) fn r_multiples(multiples: &[f64]) -> Result<(), MeasureParseError> {
+    for &multiple in multiples {
+        finite_float(multiple)?;
+        if multiple <= 0.0 {
+            return Err(MeasureParseError::new(format!(
+                "multiple of R {} is not a positive number",
+                multiple
+            )));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

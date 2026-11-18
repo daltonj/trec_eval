@@ -6,7 +6,10 @@ pub struct IprecAtRecallMeasure {
 }
 
 impl IprecAtRecallMeasure {
+    /// Sorts `cutoff_percents`, and panics on a repeated cutoff.
     pub fn new(cutoff_percents: Vec<f64>) -> Self {
+        let cutoff_percents = crate::metrics::common::sorted_float_cutoffs(cutoff_percents);
+        crate::metrics::common::recall_levels(&cutoff_percents).expect("invalid recall_levels");
         let sub_metrics = cutoff_percents.iter().map(|p| format!("iprec_at_recall_{:.2}", p)).collect();
         Self { cutoff_percents, sub_metrics }
     }

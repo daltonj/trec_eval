@@ -6,7 +6,10 @@ pub struct RprecMultAvgjgMeasure {
 }
 
 impl RprecMultAvgjgMeasure {
+    /// Sorts `cutoff_percents`, and panics on a repeated cutoff.
     pub fn new(cutoff_percents: Vec<f64>) -> Self {
+        let cutoff_percents = crate::metrics::common::sorted_float_cutoffs(cutoff_percents);
+        crate::metrics::common::r_multiples(&cutoff_percents).expect("invalid r_multiples");
         let sub_metrics = cutoff_percents
             .iter()
             .map(|p| format!("Rprec_mult_avgjg_{:.2}", p))

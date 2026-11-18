@@ -12,6 +12,7 @@ impl Avg11PtMeasure {
         } else {
             format!("11pt_avg_{}", params_str)
         };
+        crate::metrics::common::recall_levels(&cutoffs).expect("invalid recall levels");
         Self { cutoffs, sub_metrics: vec![name] }
     }
 }

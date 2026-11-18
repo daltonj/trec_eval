@@ -6,7 +6,9 @@ pub struct MapCutMeasure {
 }
 
 impl MapCutMeasure {
+    /// Sorts `cutoffs`, and panics on a cutoff of 0 or a repeated cutoff.
     pub fn new(cutoffs: Vec<usize>) -> Self {
+        let cutoffs = crate::metrics::common::sorted_rank_cutoffs(cutoffs);
         let sub_metrics = cutoffs.iter().map(|c| format!("map_cut_{}", c)).collect();
         Self { cutoffs, sub_metrics }
     }
@@ -62,10 +64,6 @@ impl Measure for MapCutMeasure {
             if cutoff_index < num_params && i == self.cutoffs[cutoff_index] {
                 results[cutoff_index] = sum_prec / (q_state.num_rel as f64);
                 cutoff_index += 1;
-                while cutoff_index < num_params && i == self.cutoffs[cutoff_index] {
-                    results[cutoff_index] = sum_prec / (q_state.num_rel as f64);
-                    cutoff_index += 1;
-                }
                 if cutoff_index >= num_params {
                     break;
                 }
