@@ -7,6 +7,8 @@ pub struct UtilityMeasure {
 
 impl UtilityMeasure {
     pub fn new(params: Vec<f64>, params_str: &str) -> Self {
+        crate::metrics::common::utility_coefficients(&params)
+            .expect("invalid utility coefficients");
         let name = if params_str.is_empty() {
             "utility".to_string()
         } else {
