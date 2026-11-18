@@ -1,7 +1,6 @@
 use crate::metrics::EvalConfig;
 use std::collections::HashMap;
 use std::fmt;
-use std::num::IntErrorKind;
 
 /// Error returned when a measure's parameter string cannot be parsed.
 #[derive(Debug, Clone, PartialEq)]
@@ -40,15 +39,21 @@ pub fn parse_int_cutoffs(params: &str, default: &[usize]) -> Result<Vec<usize>, 
     let mut list = Vec::new();
     for s in params.split(',') {
         let tok = s.trim();
+        // As trec_eval reads a cutoff: the leading integer, so `5x` and `1.5` read as 5 and 1,
+        // with a warning for take_parse_warnings.
         let invalid = || MeasureParseError::new(format!("invalid integer cutoff '{}'", tok));
-        match tok.parse::<i64>() {
-            Ok(v) => list.push(usize::try_from(v).map_err(|_| invalid())?),
-            Err(e) if matches!(e.kind(), IntErrorKind::PosOverflow | IntErrorKind::NegOverflow) => {
+        let (v, partial) = match crate::io::parsers::read_leading_integer(tok) {
+            Ok(read) => read,
+            Err(std::num::IntErrorKind::PosOverflow | std::num::IntErrorKind::NegOverflow) => {
                 let message = format!("integer cutoff '{}' is out of range", tok);
                 return Err(MeasureParseError::new(message));
             }
             Err(_) => return Err(invalid()),
+        };
+        if partial {
+            parse_warning(format!("value '{}' partially read as '{}'", tok, v));
         }
+        list.push(usize::try_from(v).map_err(|_| invalid())?);
     }
     checked_rank_cutoffs(list)
 }
@@ -120,6 +125,24 @@ pub fn parse_key_values(params: &str) -> Result<Vec<(String, String)>, MeasurePa
         pairs.push((k.trim().to_string(), v.trim().to_string()));
     }
     Ok(pairs)
+}
+
+thread_local! {
+    static PARSE_WARNINGS: std::cell::RefCell<Vec<String>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+fn parse_warning(message: String) {
+    PARSE_WARNINGS.with(|warnings| warnings.borrow_mut().push(message));
+}
+
+/// Takes the warnings that measure parameters raised on this thread since the last call, such as
+/// "value '5x' partially read as '5'" for `P.5x`. [`resolve_measures`] clears them before it
+/// starts, so after it returns they belong to that call.
+///
+/// [`resolve_measures`]: crate::metrics::registry::resolve_measures
+pub fn take_parse_warnings() -> Vec<String> {
+    PARSE_WARNINGS.with(|warnings| std::mem::take(&mut *warnings.borrow_mut()))
 }
 
 /// Helper function to count the number of relevant documents retrieved up to a certain rank limit.
@@ -389,6 +412,21 @@ mod parser_tests {
         for bad in ["9223372036854775808", "18446744073709551615", "-9223372036854775809"] {
             let err = parse_int_cutoffs(bad, &[]).unwrap_err();
             assert!(err.message.contains("out of range"), "{bad}: {}", err.message);
+        }
+    }
+
+    #[test]
+    fn int_cutoffs_read_the_leading_integer_with_a_warning() {
+        take_parse_warnings();
+        assert_eq!(parse_int_cutoffs("1.5,5x,20", &[]).unwrap(), vec![1, 5, 20]);
+        assert_eq!(
+            take_parse_warnings(),
+            ["value '1.5' partially read as '1'", "value '5x' partially read as '5'"]
+        );
+        assert_eq!(parse_int_cutoffs("5,20", &[]).unwrap(), vec![5, 20]);
+        assert!(take_parse_warnings().is_empty());
+        for bad in [".5", "x5", "+", "-1", "9223372036854775808"] {
+            assert!(parse_int_cutoffs(bad, &[]).is_err(), "{bad}");
         }
     }
 

@@ -26,7 +26,7 @@ struct Args {
     no_summary_flag: bool,
 
     /// Minimum relevance level at which a document is considered relevant
-    #[arg(short = 'l', default_value = "1")]
+    #[arg(short = 'l', default_value = "1", value_parser = leading_integer)]
     relevance_level: i64,
 
     /// Average over the complete set of queries in qrels instead of the intersection
@@ -38,11 +38,11 @@ struct Args {
     judged_docs_only: bool,
 
     /// Max number of documents per topic to evaluate
-    #[arg(short = 'M')]
+    #[arg(short = 'M', value_parser = leading_count)]
     max_docs_per_topic: Option<usize>,
 
     /// Number of documents in the collection
-    #[arg(short = 'N', default_value = "0")]
+    #[arg(short = 'N', default_value = "0", value_parser = leading_count)]
     num_docs_in_coll: usize,
 
     /// Calculate only the indicated measure(s)
@@ -104,6 +104,28 @@ fn input_exit_status(e: &IOError) -> i32 {
         IOError::FormatError(ParseError::DuplicateDocument { .. }) => EXIT_TOPIC,
         _ => EXIT_INPUT,
     }
+}
+
+/// Reads an integer option as trec_eval's `str_to_long` does: the leading integer, so `1.5` reads
+/// as 1, with a warning when characters follow it.
+fn leading_integer(value: &str) -> Result<i64, String> {
+    match te_rust::io::parsers::read_leading_integer(value) {
+        Ok((integer, partial)) => {
+            if partial {
+                eprintln!("te-rust: Warning, value '{}' partially read as '{}'", value, integer);
+            }
+            Ok(integer)
+        }
+        Err(std::num::IntErrorKind::PosOverflow | std::num::IntErrorKind::NegOverflow) => {
+            Err(format!("value '{}' out of range", value))
+        }
+        Err(_) => Err(format!("value '{}' could not be parsed", value)),
+    }
+}
+
+/// As [`leading_integer`], for a count that cannot be negative.
+fn leading_count(value: &str) -> Result<usize, String> {
+    usize::try_from(leading_integer(value)?).map_err(|_| format!("value '{}' is negative", value))
 }
 
 fn handle_help_flags(help_measures: bool, help_measure: Option<&str>) {
@@ -220,6 +242,9 @@ fn main() {
             process::exit(if e.illegal_name { EXIT_USAGE } else { EXIT_INPUT });
         }
     };
+    for warning in metrics::common::take_parse_warnings() {
+        eprintln!("te-rust: Warning, {}", warning);
+    }
 
     // 5. Setup runtime config
     let global_gains = args.global_gains;
