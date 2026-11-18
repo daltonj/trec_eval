@@ -104,7 +104,7 @@ int te_get_qrels(EPI *epi, char *text_qrels_file, ALL_REL_INFO *all_rel_info)
     LINES *lines;
     LINES *line_ptr;
     long num_lines;
-    long current_column;
+    long line_num = 0;
     long num_qid;
     int error = 0;
     /* current pointers into static pools above */
@@ -156,24 +156,11 @@ int te_get_qrels(EPI *epi, char *text_qrels_file, ALL_REL_INFO *all_rel_info)
         }
     }
 
-    /* Count number of non-comment lines in file */
+    /* Count number of lines in file */
     num_lines = 0;
-    current_column = 0;
-	ptr = trec_qrels_buf;
-	do {
-		if (*ptr == '\n') {
-			num_lines++;
-            current_column = 0;
-        }
-        else if (current_column == 0 && *ptr == '#') {
-			/* skip to end of line */
-			ptr = index(ptr, '\n');
-		}
-		if (*ptr != '\0') {
-			ptr++;
-            current_column++;
-        }
-	} while (*ptr != '\0');
+    for (ptr = trec_qrels_buf; *ptr; ptr++)
+        if (*ptr == '\n')
+            num_lines++;
 
     /* Get all lines */
     if (NULL == (lines = Malloc(num_lines, LINES)))
@@ -186,15 +173,17 @@ int te_get_qrels(EPI *epi, char *text_qrels_file, ALL_REL_INFO *all_rel_info)
             ptr++;
 		if (*ptr == '\n' || *ptr == '#') {
 			ptr = index(ptr, '\n') + 1;
+			line_num++;
 			continue;
 		}
 		if (UNDEF == parse_qrels_line (&ptr, &line_ptr->qid,
 									   &line_ptr->docno, &line_ptr->rel)) {
 			fprintf (stderr, "trec_eval.get_qrels: Malformed line %ld\n",
-					 (long) (line_ptr - lines + 1));
+					 line_num + 1);
 			return (UNDEF);
 		}
 		line_ptr++;
+		line_num++;
     }
     num_lines = line_ptr - lines;
     if (num_lines == 0) {
