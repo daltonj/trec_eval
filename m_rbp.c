@@ -37,13 +37,28 @@ TREC_MEAS te_meas_rbp = { "rbp",
     &default_rbp_params, -1
 };
 
-/* Every parameter other than the persistence p names a relevance level */
+/* Every parameter other than the persistence p names a relevance level,
+   and p is at least 0 and less than 1 */
 static int
 te_init_rbp(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
 {
-    if (UNDEF == te_init_meas_s_double_p_pair(epi, tm, eval))
+    DOUBLE_PARAM_PAIR *pairs;
+    long i;
+
+    if (UNDEF == te_init_meas_s_double_p_pair(epi, tm, eval) ||
+        UNDEF == check_gain_params(tm, "p"))
         return (UNDEF);
-    return (check_gain_params(tm, "p"));
+    pairs = (DOUBLE_PARAM_PAIR *) tm->meas_params->param_values;
+    for (i = 0; i < tm->meas_params->num_params; i++) {
+        if (0 == strcmp(pairs[i].name, "p") &&
+            !(pairs[i].value >= 0.0 && pairs[i].value < 1.0)) {
+            fprintf(stderr,
+                    "trec_eval: persistence p=%g of measure '%s' is not in [0, 1)\n",
+                    pairs[i].value, tm->name);
+            return (UNDEF);
+        }
+    }
+    return (1);
 }
 
 static int
