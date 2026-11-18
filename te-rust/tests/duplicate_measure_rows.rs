@@ -104,10 +104,16 @@ fn per_topic_rows_print_once() {
 }
 
 #[test]
-fn one_list_can_still_print_a_name_twice() {
-    // 0.999 and 1.001 are distinct multiples that both print as 1.00, as in trec_eval.
-    let printed = names(&["-m", "Rprec_mult.0.999,1.001"]);
-    assert_eq!(printed, ["Rprec_mult_1.00 all", "Rprec_mult_1.00 all"]);
+fn one_list_with_colliding_row_names_is_refused() {
+    // Distinct multiples that both print as 1.00 cannot be distinguished by row name.
+    assert!(!te_rust(&[
+        "-m",
+        "Rprec_mult.0.999,1.001",
+        &fixture("topic.qrels"),
+        &fixture("topic.run")
+    ])
+    .status
+    .success());
 }
 
 #[test]
