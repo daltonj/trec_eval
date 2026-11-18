@@ -100,7 +100,7 @@ pub(crate) fn utility_coefficients(coeffs: &[f64]) -> Result<(), MeasureParseErr
 
 /// Parse a comma-separated list of float cutoffs into ascending order, for
 /// measures that walk the list in step with the ranking. Lists whose order
-/// carries meaning (`11pt_avg`, `utility`) use [`parse_float_cutoffs`].
+/// carries meaning (`utility`) or that may repeat a value (`11pt_avg`) use [`parse_float_cutoffs`].
 pub fn parse_sorted_float_cutoffs(params: &str, default: &[f64]) -> Result<Vec<f64>, MeasureParseError> {
     checked_float_cutoffs(parse_float_cutoffs(params, default)?)
 }
