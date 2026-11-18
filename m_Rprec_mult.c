@@ -70,7 +70,7 @@ te_calc_Rprec_mult(const EPI * epi, const REL_INFO * rel_info,
                    TREC_EVAL * eval)
 {
     double *cutoff_percents = (double *) tm->meas_params->param_values;
-    long *cutoffs;              /* cutoffs expressed in num ret docs instead of percents */
+    double *cutoffs;            /* cutoffs expressed in num ret docs instead of percents */
     long current_cut;           /* current index into cutoffs */
     RES_RELS rr;
     long rel_so_far;
@@ -82,17 +82,19 @@ te_calc_Rprec_mult(const EPI * epi, const REL_INFO * rel_info,
 
     /* translate percentage of rels as given in the measure params, to
        an actual cutoff number of docs. */
-    if (NULL == (cutoffs = Malloc(tm->meas_params->num_params, long)))
+    if (NULL == (cutoffs = Malloc(tm->meas_params->num_params, double)))
          return (UNDEF);
-    for (i = 0; i < tm->meas_params->num_params; i++)
-        cutoffs[i] = (long) (cutoff_percents[i] * rr.num_rel + 0.9);
+    for (i = 0; i < tm->meas_params->num_params; i++) {
+        cutoffs[i] = floor(cutoff_percents[i] * rr.num_rel + 0.9);
+    }
     precis = (double) rr.num_rel_ret / (double) rr.num_ret;
     int_precis = precis;
 
     current_cut = tm->meas_params->num_params - 1;
-    while (current_cut >= 0 && cutoffs[current_cut] > rr.num_ret) {
+    while (current_cut >= 0 && (cutoffs[current_cut] >= (double) LONG_MAX ||
+                               cutoffs[current_cut] > rr.num_ret)) {
         eval->values[tm->eval_index + current_cut].value =
-            (double) rr.num_rel_ret / (double) cutoffs[current_cut];
+            (double) rr.num_rel_ret / cutoffs[current_cut];
         current_cut--;
     }
 
@@ -102,7 +104,7 @@ te_calc_Rprec_mult(const EPI * epi, const REL_INFO * rel_info,
         precis = (double) rel_so_far / (double) i;
         if (int_precis < precis)
             int_precis = precis;
-        while (current_cut >= 0 && i == cutoffs[current_cut]) {
+        while (current_cut >= 0 && i == (long) cutoffs[current_cut]) {
             eval->values[tm->eval_index + current_cut].value = precis;
             current_cut--;
         }
