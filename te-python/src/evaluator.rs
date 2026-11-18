@@ -132,6 +132,7 @@ impl Evaluator {
                 evaluate_run(qrels_ref, &run_data, &active_measures, config_ref, None)
             })
             .map_err(evaluation_error)?;
+        require_shared_topic(&output, config_ref)?;
 
 
         // 2. Run custom measures with exception sandboxing
@@ -175,6 +176,7 @@ impl Evaluator {
                 evaluate_run(qrels_ref, &run_data, &active_measures, config_ref, None)
             })
             .map_err(evaluation_error)?;
+        require_shared_topic(&output, config_ref)?;
 
 
         if !self.custom_measures.is_empty() {
@@ -198,6 +200,17 @@ fn evaluation_error(duplicate: ScoredDuplicate) -> PyErr {
         ScoredDuplicate::Run { .. } => "run",
     };
     PyValueError::new_err(format!("{}: {}", kind, duplicate))
+}
+
+/// As the CLI does, refuse a run that shares no topic with the qrels, unless
+/// `complete_set_average` scores the qrels topics.
+fn require_shared_topic(output: &EvaluationOutput, config: &EvalConfig) -> PyResult<()> {
+    if !config.average_complete_flag && output.num_queries_evaluated == 0 {
+        return Err(PyValueError::new_err(
+            "no topic has both results and judgments; complete_set_average=True evaluates each qrels topic missing from the run as an empty ranking",
+        ));
+    }
+    Ok(())
 }
 
 fn parse_measures_arg(

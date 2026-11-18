@@ -110,7 +110,13 @@ class RelevanceEvaluator:
 
     def evaluate(self, run: Any) -> Dict[str, Dict[str, float]]:
         """Evaluate run and return nested dict matching pytrec_eval output format."""
-        eval_result = self._evaluator.evaluate(run)
+        try:
+            eval_result = self._evaluator.evaluate(run)
+        except ValueError as error:
+            # Ingest and validate every representation before applying this exemption.
+            if str(error).startswith("no topic has both results and judgments;"):
+                return {}
+            raise
         return eval_result.to_dict()
 
 
