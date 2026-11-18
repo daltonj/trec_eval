@@ -221,7 +221,10 @@ fn split_fields(line: &str) -> Vec<&str> {
     line.split(is_field_sep).filter(|field| !field.is_empty()).collect()
 }
 
-/// Reads lines as `BufRead::lines` does, and checks each line's bytes with `decode_line`.
+const UTF8_BOM: &[u8] = b"\xEF\xBB\xBF";
+
+/// Reads lines as `BufRead::lines` does, and checks each line's bytes with `decode_line`. A UTF-8
+/// byte-order mark at the start of the file is removed; elsewhere it is part of the line.
 fn read_lines(mut reader: impl BufRead) -> impl Iterator<Item = Result<String, IOError>> {
     let mut line_num = 0;
     std::iter::from_fn(move || {
@@ -230,7 +233,13 @@ fn read_lines(mut reader: impl BufRead) -> impl Iterator<Item = Result<String, I
             Ok(0) => None,
             Ok(_) => {
                 line_num += 1;
-                Some(decode_line(bytes, line_num))
+                let byte_offset = if line_num == 1 && bytes.starts_with(UTF8_BOM) {
+                    bytes.drain(..UTF8_BOM.len());
+                    UTF8_BOM.len()
+                } else {
+                    0
+                };
+                Some(decode_line(bytes, line_num, byte_offset))
             }
             Err(e) => Some(Err(IOError::FileReadError(e))),
         }
@@ -241,7 +250,7 @@ fn read_lines(mut reader: impl BufRead) -> impl Iterator<Item = Result<String, I
 /// the line's fields wrong: a NUL, which trec_eval refuses too (#126), and any other CR, which
 /// would join the lines of a file with CR line endings. A data line must be UTF-8. A comment
 /// is never compared, so its invalid bytes are replaced rather than refused.
-fn decode_line(mut bytes: Vec<u8>, line_num: usize) -> Result<String, IOError> {
+fn decode_line(mut bytes: Vec<u8>, line_num: usize, byte_offset: usize) -> Result<String, IOError> {
     if bytes.ends_with(b"\n") {
         bytes.pop();
     }
@@ -259,7 +268,7 @@ fn decode_line(mut bytes: Vec<u8>, line_num: usize) -> Result<String, IOError> {
         return Ok(String::from_utf8_lossy(&bytes).into_owned());
     }
     String::from_utf8(bytes).map_err(|e| {
-        let column = e.utf8_error().valid_up_to() + 1;
+        let column = byte_offset + e.utf8_error().valid_up_to() + 1;
         IOError::FormatError(ParseError::InvalidUtf8 { line_num, column })
     })
 }
