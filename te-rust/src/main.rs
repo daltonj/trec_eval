@@ -222,6 +222,9 @@ fn main() {
             process::exit(input_exit_status(&e));
         }
     };
+    for warning in &run_data.warnings {
+        eprintln!("Warning in run file '{}': {}", run_filename, warning);
+    }
 
     // 4. Resolve measures (groups + parameters) via the central registry.
     let default_group = match args.rel_format.to_ascii_lowercase().as_str() {
