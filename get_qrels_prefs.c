@@ -134,7 +134,7 @@ te_get_qrels_prefs(EPI * epi, char *text_prefs_file,
         (size_t) size != fread (trec_prefs_buf, 1, (size_t) size, fd) ||
         -1 == fclose (fd)) {
         fprintf (stderr,
-		 "trec_eval.get_prefs: Cannot read prefs file '%s'\n",
+		 "trec_eval.get_qrels_prefs: Cannot read prefs file '%s'\n",
 		 text_prefs_file);
         return (UNDEF);
     }
