@@ -159,6 +159,7 @@ int main(int argc, char * argv[])
     TEXT_RESULTS_INFO bogus_info = { 0, 1, &bogus_result };
     RESULTS bogus_ranking = { NULL, NULL, "trec_results", &bogus_info };
     RESULTS *this_result;
+    RESULTS **topic_results;
 
     EPI epi;                    /* Eval parameter info */
     TREC_EVAL accum_eval;
@@ -393,6 +394,34 @@ int main(int argc, char * argv[])
     q_eval.num_values = accum_eval.num_values;
     q_eval.num_queries = 0;
 
+    /* Match the qid-sorted arrays before evaluating any topic, so that
+       a missing topic without -c prints nothing on standard output. */
+    if (NULL == (topic_results = Malloc(all_rel_info.num_q_rels, RESULTS *)))
+        exit(3);
+    j = 0;
+    for (i = 0; i < all_rel_info.num_q_rels; i++) {
+        topic_results[i] = NULL;
+        if (epi.debug_query &&
+            strcmp(epi.debug_query, all_rel_info.rel_info[i].qid))
+            continue;
+        for (; j < all_results.num_q_results; j++) {
+            int cmp = strcmp(all_results.results[j].qid,
+                             all_rel_info.rel_info[i].qid);
+            if (cmp > 0)
+                break;
+            if (cmp == 0) {
+                topic_results[i] = &all_results.results[j++];
+                break;
+            }
+        }
+        if (!epi.average_complete_flag && topic_results[i] == NULL) {
+            fprintf(stderr,
+                    "trec_eval: qrels qid '%s' not found in results\n",
+                    all_rel_info.rel_info[i].qid);
+            exit(4);
+        }
+    }
+
     /* For each topic which has both qrels and top results information,
        calculate, possibly print (if query_flag), and accumulate
        evaluation measures. */
@@ -402,24 +431,11 @@ int main(int argc, char * argv[])
             strcmp(epi.debug_query, all_rel_info.rel_info[i].qid))
             continue;
         /* Find results for this query */
-        this_result = NULL;
-        for (j = 0; j < all_results.num_q_results; j++) {
-            if (0 == strcmp(all_results.results[j].qid,
-                            all_rel_info.rel_info[i].qid)) {
-                this_result = &all_results.results[j];
-                break;
-            }
-        }
-        if (epi.average_complete_flag && j >= all_results.num_q_results) {
+        this_result = topic_results[i];
+        if (this_result == NULL) {
             bogus_ranking.qid = all_rel_info.rel_info[i].qid;
             bogus_ranking.run_id = all_results.results[0].run_id;
             this_result = &bogus_ranking;
-        }
-
-        if (this_result == NULL) {
-            fprintf(stderr, "trec_eval: qrels qid '%s' not found in results\n",
-                    all_rel_info.rel_info[i].qid);
-            exit(4);
         }
 
         /* zero out all measures for new query */
@@ -475,6 +491,7 @@ int main(int argc, char * argv[])
         }
         accum_eval.num_queries++;
     }
+    Free(topic_results);
 
     if (accum_eval.num_queries == 0) {
         fprintf(stderr,
