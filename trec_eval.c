@@ -42,12 +42,11 @@ normally ever used.   \n\
        'set': subset of all_trec that calculates unranked values.\n\
        'prefs': Measures not in all_trec that calculate preference measures.\n\
  --complete_rel_info_wanted:\n\
- -c: Average over the complete set of queries in the relevance judgements  \n\
-     instead of the queries in the intersection of relevance judgements \n\
-     and results.  Missing queries will contribute a value of 0 to all \n\
-     evaluation measures (which may or may not be reasonable for a  \n\
-     particular evaluation measure, but is reasonable for standard TREC \n\
-     measures.) Default is off.\n\
+ -c: Average over the complete set of queries in the relevance judgements.\n\
+     Evaluates each qrels topic missing from the run as an empty ranking.\n\
+     The value for a missing topic depends on the evaluation measure.\n\
+     Without -c, a qrels topic missing from the run is an error.\n\
+     Default is off.\n\
  --level_for_rel num:\n\
  -l<num>: Num indicates the minimum relevance judgement value needed for \n\
       a document to be called relevant. Used if rel_info_file contains \n\
@@ -152,7 +151,7 @@ int main(int argc, char * argv[])
 
     /* Bogus results for a missing topic */
     TEXT_RESULTS bogus_result = { "ceci_nest_pas_un_docno", 1.0 };
-    TEXT_RESULTS_INFO bogus_info = { 1, 1, &bogus_result };
+    TEXT_RESULTS_INFO bogus_info = { 0, 1, &bogus_result };
     RESULTS bogus_ranking = { NULL, NULL, "trec_results", &bogus_info };
     RESULTS *this_result;
 
@@ -426,23 +425,6 @@ int main(int argc, char * argv[])
                     fprintf(stderr, "trec_eval: Can't calculate measure '%s'\n",
                             te_trec_measures[m]->name);
                     exit(4);
-                }
-            }
-        }
-
-        if (this_result == &bogus_ranking) {
-            /* clean up leftovers */
-            for (m = 0; m < q_eval.num_values; m++) {
-                if (0 == strcmp(q_eval.values[m].name, "num_ret")) {
-                    q_eval.values[m].value = 0;
-                } else if (0 == strcmp(q_eval.values[m].name, "utility")) {
-                    q_eval.values[m].value = 0.0;
-                } else  if (0 == strcmp(q_eval.values[m].name, "relstring")) {
-                    clear_relstr();
-                } else if (0 == strncmp(q_eval.values[m].name, "unj", 3)) {
-                    q_eval.values[m].value = 0.0;
-                } else if (0 == strcmp(q_eval.values[m].name, "rbp_resid")) {
-                    q_eval.values[m].value = 0.0;
                 }
             }
         }
