@@ -33,8 +33,9 @@ For cutoff measures, `@` syntax is supported as an alias:
 - `mrr` $\rightarrow$ `recip_rank`
 
 ### 4. Parameter Checks
-`te-rust` refuses a parameter that its measure cannot use, with a message that names the measure. `trec_eval` 10.x accepts each of these:
+`te-rust` refuses a parameter that its measure cannot use, with a message that names the measure. `trec_eval` 10.x accepts the examples below except the overflowing integer cutoff, which the bundled reference also rejects:
 - a float parameter that is not a finite number, such as `set_F.nan`, `rbp.p=inf` or `iprec_at_recall.1e400`
+- an integer cutoff above 9223372036854775807, the largest `i64`, such as `P.9223372036854775808`
 
 
 ---
