@@ -247,7 +247,7 @@ fn main() {
     };
 
     let active_measures = match metrics::registry::resolve_measures(&requested_names) {
-        Ok(m) => m,
+        Ok(m) => metrics::registry::in_trec_eval_order(m),
         Err(e) => {
             eprintln!("te-rust: {}", e);
             process::exit(if e.illegal_name { EXIT_USAGE } else { EXIT_INPUT });
