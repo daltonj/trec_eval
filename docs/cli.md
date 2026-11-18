@@ -14,6 +14,7 @@ It is a drop-in replacement for `trec_eval`, supporting the same command-line op
 | `1` | Usage error or illegal measure name. |
 | `2` | Unreadable or malformed input, or an unusable measure parameter. |
 | `4` | A topic cannot be scored: a document repeats within a topic that is scored, or, without `-c`, no run topic is in the qrels. |
+| `8` | The output cannot be written, as on a full disk. |
 
 As in `trec_eval`, a repeated document is refused only in a topic that is scored, and only when a requested measure reads the ranking, which every measure but `num_q` and `runid` does. A scored topic is a qrels topic that the run has, or any qrels topic with `-c`. In the run, only the first `-M` documents of the ranking are checked. A duplicate in a `qrels_jg` file is refused when the file is read, as in `trec_eval`, and exits `2`. Without `-c`, `trec_eval` 10.x also exits `4` when any qrels topic has no results, and `te-rust` scores the shared topics. `trec_eval` checks some measure parameters only while scoring and exits `4` for them, as for `utility.1,2`, where `te-rust` exits `2`. When several things are wrong at once, `te-rust` reports the first it finds, which can differ from `trec_eval`.
 
@@ -129,6 +130,8 @@ Lines in either file end with LF or CRLF. A NUL byte, or a CR that is not follow
 ---
 
 ## Output Formats
+
+If `te-rust` cannot write its output, as on a full disk, it prints a message and exits `8`. `trec_eval` 10.x ignores such an error and exits `0`.
 
 ### Standard Relational Output
 
