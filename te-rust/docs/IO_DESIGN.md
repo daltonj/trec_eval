@@ -240,6 +240,9 @@ In information retrieval, different ranking scores can result in identical simil
 pub enum ParseError {
     EmptyFile,   // no lines at all
     NoDataLines, // only blank or comment lines
+    NulCharacter { line_num: usize },
+    CarriageReturn { line_num: usize },
+    InvalidUtf8 { line_num: usize, column: usize },
     InvalidFieldCount { line_num: usize, expected: FieldCount, found: usize },
     InvalidInteger { line_num: usize, field: String, value: String },
     InvalidFloat { line_num: usize, field: String, value: String },
@@ -260,7 +263,7 @@ pub enum IOError {
 ```
 
 ### 4.2 Parsing Steps (Example for Qrels)
-1. Read the file line-by-line (using `BufReader` and `.lines()`).
+1. Read the file line-by-line as bytes (`read_lines`), and remove the LF or CRLF that ends each line. Refuse a line that holds a NUL byte or a CR not followed by LF (a CR that ends the file is accepted), and a data line that is not UTF-8, naming the line. Decode a comment line lossily.
 2. Track the 1-based line number.
 3. Trim leading and trailing ASCII whitespace (the characters of C `isspace`).
 4. If a line begins with `#` (after optional ASCII whitespace trimming), strip the leading `#` character and store the remainder of the line in the `comments` vector of our top-level data structure. Then skip to the next line.
