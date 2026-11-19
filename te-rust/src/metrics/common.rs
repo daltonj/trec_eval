@@ -108,25 +108,38 @@ pub(crate) fn count_relevant_retrieved_up_to(results_rel_list: &[i64], limit: us
         .count()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GainsConfig {
     pub custom_gains: HashMap<i64, f64>,
 }
 
 impl GainsConfig {
-    pub fn parse(params_str: &str) -> Self {
+    /// Parse a gain map such as `1=3,2=9`. Every name must be an integer relevance level,
+    /// given once, and every gain a finite number. An empty string yields an empty map.
+    pub fn parse(params_str: &str) -> Result<Self, MeasureParseError> {
         let mut custom_gains = HashMap::new();
-        if !params_str.is_empty() {
-            for pair_str in params_str.split(',') {
-                let parts: Vec<&str> = pair_str.split('=').collect();
-                if parts.len() == 2 {
-                    if let (Ok(rel_level), Ok(gain)) = (parts[0].trim().parse::<i64>(), parts[1].trim().parse::<f64>()) {
-                        custom_gains.insert(rel_level, gain);
-                    }
-                }
+        for (name, value) in parse_key_values(params_str)? {
+            let rel_level = name.parse::<i64>().map_err(|_| {
+                MeasureParseError::new(format!("invalid relevance level '{}'", name))
+            })?;
+            let gain = value
+                .parse::<f64>()
+                .ok()
+                .filter(|gain| gain.is_finite())
+                .ok_or_else(|| {
+                    MeasureParseError::new(format!(
+                        "invalid gain '{}' for relevance level {}",
+                        value, rel_level
+                    ))
+                })?;
+            if custom_gains.insert(rel_level, gain).is_some() {
+                return Err(MeasureParseError::new(format!(
+                    "relevance level {} is given more than once",
+                    rel_level
+                )));
             }
         }
-        Self { custom_gains }
+        Ok(Self { custom_gains })
     }
 }
 
@@ -269,5 +282,19 @@ mod parser_tests {
     #[test]
     fn key_values_rejects_missing_equals() {
         assert!(parse_key_values("p0.9").is_err());
+    }
+
+    #[test]
+    fn gains_parse_levels_and_gains() {
+        let gains = GainsConfig::parse("1=3, 2 = 9.5,-1=0").unwrap().custom_gains;
+        assert_eq!(gains, HashMap::from([(1, 3.0), (2, 9.5), (-1, 0.0)]));
+        assert!(GainsConfig::parse("").unwrap().custom_gains.is_empty());
+    }
+
+    #[test]
+    fn gains_refuse_what_they_cannot_use() {
+        for bad in ["1=x", "x=1", "1=nan", "1=-inf", "5,5", "1=2,1=5"] {
+            assert!(GainsConfig::parse(bad).is_err(), "{bad}");
+        }
     }
 }

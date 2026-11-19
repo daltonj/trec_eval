@@ -1,5 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{Gains, GainsConfig};
+use crate::metrics::common::{Gains, GainsConfig, MeasureParseError};
 
 pub struct RbpMeasure {
     p: f64,
@@ -9,18 +9,24 @@ pub struct RbpMeasure {
 }
 
 impl RbpMeasure {
-    pub fn new(p: f64, params_str: &str) -> Self {
+    pub fn new(p: f64, params_str: &str) -> Result<Self, MeasureParseError> {
         let name = if params_str.is_empty() {
             "rbp".to_string()
         } else {
             format!("rbp_{}", params_str)
         };
-        Self {
+        // `p` shares the parameter list with the gain map, as in trec_eval; the registry
+        // reads it, and the rest is the gain map.
+        let gain_map: Vec<&str> = params_str
+            .split(',')
+            .filter(|pair| pair.split('=').next().map(str::trim) != Some("p"))
+            .collect();
+        Ok(Self {
             p,
-            gains_config: GainsConfig::parse(params_str),
+            gains_config: GainsConfig::parse(&gain_map.join(","))?,
             _params_str: params_str.to_string(),
             sub_metrics: vec![name],
-        }
+        })
     }
 }
 
@@ -107,7 +113,7 @@ impl Measure for RbpMeasure {
 
 impl Default for RbpMeasure {
     fn default() -> Self {
-        Self::new(0.9, "")
+        Self::new(0.9, "").expect("an empty gain map is valid")
     }
 }
 
@@ -118,7 +124,7 @@ mod tests {
 
     #[test]
     fn test_rbp_standard() {
-        let measure = RbpMeasure::new(0.9, "");
+        let measure = RbpMeasure::new(0.9, "").unwrap();
         let config = EvalConfig::default();
         // retrieved: [1, 0, 1]. relevance level = 1.
         // gains at rel levels: rel=0 -> gain=0, rel=1 -> gain=1.
@@ -139,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_rbp_custom_p() {
-        let measure = RbpMeasure::new(0.5, "p=0.5");
+        let measure = RbpMeasure::new(0.5, "p=0.5").unwrap();
         let config = EvalConfig::default();
         // retrieved: [1, 0, 1]. R=2.
         // sum = 1 * 0.5^0 + 0 + 1 * 0.5^2 = 1.0 + 0.25 = 1.25.

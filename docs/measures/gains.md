@@ -67,3 +67,8 @@ Custom gain mappings can be passed globally via `--global-gains` (CLI) / `global
 - CLI flag: `--global-gains 1=1.0,2=3.0,3=7.0,4=15.0`
 - Metric parameter: `-m ndcg.1=1.0,2=3.0,3=7.0`
 - Python API: `evaluator = Evaluator(qrels, measures=["ndcg@10"], global_gains="1=1.0,2=3.0")`
+
+### Rules
+- Each entry is `<level>=<gain>`. The level is an integer, and the gain a finite number.
+- A level may appear once.
+- `te-rust` refuses a map that breaks these rules, with a message. `trec_eval` 10.x skips a name that is not an integer. For a level given twice, it can score the run with one gain and the ideal ranking with the other. It reads each gain with `atof`, which reads `x` as 0 and `2x` as 2.
