@@ -10,6 +10,7 @@ pub mod recip_rank;
 pub mod bpref;
 pub mod precision;
 pub mod ndcg_cut;
+pub mod dcg;
 pub mod ndcg;
 pub mod recall;
 pub mod success;

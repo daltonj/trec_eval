@@ -19,7 +19,7 @@ supported_measures: Set[str] = {
     "runid", "num_ret", "num_rel", "num_rel_ret", "num_nonrel_judged_ret",
     "map", "map_cut", "gm_map", "Rprec", "Rprec_mult", "recip_rank",
     "P", "relative_P", "bpref", "gm_bpref", "binG", "G",
-    "ndcg", "ndcg_cut", "ndcg_rel", "ndcg_p", "Rndcg",
+    "ndcg", "dcg", "ideal_dcg", "ndcg_cut", "ndcg_rel", "ndcg_p", "Rndcg",
     "recall", "success", "11pt_avg", "iprec_at_recall", "utility", "relstring",
     "set_relative_P", "set_map", "set_F", "infap", "unj", "rbp", "rbp_resid", "yaap",
 }

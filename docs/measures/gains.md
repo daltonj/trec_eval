@@ -22,6 +22,11 @@ where:
 - Default rank cutoffs: $5, 10, 15, 20, 30, 100, 200, 500, 1000$.
 - Usage: `-m ndcg_cut.10,20` or `ndcg@10`.
 
+### DCG and Ideal DCG (`dcg`, `ideal_dcg`)
+`dcg` is the DCG of the whole ranking and `ideal_dcg` the DCG of the ideal ranking, the numerator and the denominator of `ndcg`. The ideal ranking holds the judged documents with a positive gain, in descending order of gain. `dcg` also counts negative gains. Each summary is the mean of the topic values, so the mean of `ndcg` is not the ratio of the other two means.
+
+- Usage: `-m dcg`, `-m ideal_dcg`, or `-m dcg.1=3,2=9` for custom gains, which work as for `ndcg`.
+
 ---
 
 ## NDCG Variants

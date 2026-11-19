@@ -1,3 +1,4 @@
+use crate::eval::QueryEvalState;
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
 use crate::metrics::common::{Gains, GainsConfig, MeasureParseError};
 
@@ -18,6 +19,54 @@ impl NdcgMeasure {
             sub_metrics: vec![name],
         })
     }
+}
+
+/// Returns the DCG of the ranking and the DCG of the ideal ranking, the numerator and
+/// the denominator of `ndcg`. A measure's own gain map comes first, then
+/// `--global-gains`, then the default gains.
+pub(crate) fn dcg_sums(
+    own_gains: &GainsConfig,
+    config: &EvalConfig,
+    q_state: &QueryEvalState,
+) -> (f64, f64) {
+    let gains_config = if !own_gains.custom_gains.is_empty() {
+        own_gains
+    } else if let Some(ref gg) = config.global_gains {
+        gg
+    } else {
+        own_gains
+    };
+    let gains = Gains::setup(gains_config, &q_state.rel_levels);
+    // Document i, counting from 0, has rank i + 1 and discount log2(i + 2).
+    let discount = |i: usize| ((i + 2) as f64).log2();
+
+    // Every retrieved document, whatever its gain.
+    let mut results_dcg = 0.0;
+    let ranking = q_state.results_rel_list.iter().take(q_state.num_ret);
+    for (i, &rel) in ranking.enumerate() {
+        let gain = gains.get_gain(rel);
+        if gain != 0.0 {
+            results_dcg += gain / discount(i);
+        }
+    }
+
+    // The judged documents with a positive gain, in descending order of gain.
+    // `Gains::setup` sorts the levels by increasing gain.
+    let mut ideal_dcg = 0.0;
+    let mut i = 0;
+    let positive = gains
+        .rel_gains
+        .iter()
+        .rev()
+        .take_while(|level| level.gain > 0.0);
+    for level in positive {
+        for _ in 0..level.num_at_level {
+            ideal_dcg += level.gain / discount(i);
+            i += 1;
+        }
+    }
+
+    (results_dcg, ideal_dcg)
 }
 
 impl Measure for NdcgMeasure {
@@ -55,63 +104,7 @@ impl Measure for NdcgMeasure {
             None => return self.initial_values(),
         };
 
-        let gains_config = if !self.gains_config.custom_gains.is_empty() {
-            &self.gains_config
-        } else if let Some(ref gg) = config.global_gains {
-            gg
-        } else {
-            &self.gains_config
-        };
-        let gains = Gains::setup(gains_config, &q_state.rel_levels);
-
-        let mut results_dcg = 0.0;
-        let mut ideal_dcg = 0.0;
-        let mut cur_level = gains.rel_gains.len() as i64 - 1;
-        let mut ideal_gain = if cur_level >= 0 { gains.rel_gains[cur_level as usize].gain } else { 0.0 };
-        let mut num_at_level = 0;
-
-        let mut i = 0;
-        while i < q_state.num_ret && ideal_gain > 0.0 {
-            let results_gain = gains.get_gain(q_state.results_rel_list[i]);
-            if results_gain != 0.0 {
-                results_dcg += results_gain / ((i + 2) as f64).log2();
-            }
-
-            num_at_level += 1;
-            while cur_level >= 0 && num_at_level > gains.rel_gains[cur_level as usize].num_at_level {
-                num_at_level = 1;
-                cur_level -= 1;
-                ideal_gain = if cur_level >= 0 { gains.rel_gains[cur_level as usize].gain } else { 0.0 };
-            }
-
-            if ideal_gain > 0.0 {
-                ideal_dcg += ideal_gain / ((i + 2) as f64).log2();
-            }
-
-            i += 1;
-        }
-
-        while i < q_state.num_ret {
-            let results_gain = gains.get_gain(q_state.results_rel_list[i]);
-            if results_gain != 0.0 {
-                results_dcg += results_gain / ((i + 2) as f64).log2();
-            }
-            i += 1;
-        }
-
-        while ideal_gain > 0.0 {
-            num_at_level += 1;
-            while cur_level >= 0 && num_at_level > gains.rel_gains[cur_level as usize].num_at_level {
-                num_at_level = 1;
-                cur_level -= 1;
-                ideal_gain = if cur_level >= 0 { gains.rel_gains[cur_level as usize].gain } else { 0.0 };
-            }
-            if ideal_gain > 0.0 {
-                ideal_dcg += ideal_gain / ((i + 2) as f64).log2();
-            }
-            i += 1;
-        }
-
+        let (results_dcg, ideal_dcg) = dcg_sums(&self.gains_config, config, q_state);
         let score = if ideal_dcg > 0.0 { results_dcg / ideal_dcg } else { 0.0 };
         vec![MetricValue::Float(score)]
     }
