@@ -136,7 +136,7 @@ Lines in either file end with LF or CRLF. A NUL byte, or a CR that is not follow
 
 ## Output Formats
 
-If `te-rust` cannot write its output, as on a full disk, it prints a message and exits `8`. `trec_eval` 10.x ignores such an error and exits `0`.
+On Unix, a closed output pipe terminates `te-rust` through SIGPIPE without a diagnostic, as in `trec_eval`. Other output write failures produce a diagnostic and exit status `8`; `trec_eval` 10.x ignores these failures and exits `0`.
 
 ### Standard Relational Output
 
@@ -202,5 +202,5 @@ The confidence-interval options, `--help-measures`, `--help-measure` and `--glob
 
 ### Gain calculations that differ from bundled `trec_eval` 10
 
-- `te-rust` sorts gains by their full floating-point values. The bundled C comparator converts the gain difference to an integer, treating absolute differences below 1 as equal. With judgments `a=1, b=0` and gains `1=1,0=0.9`, `-m ndcg.1=1,0=0.9` gives `1.0000` in `te-rust` and `1.0241` in the bundled C.
+- `te-rust` sorts gains by their full floating-point values. The bundled C comparator converts the gain difference to an integer, treating absolute differences below 1 as equal. With judgments `a=1, b=0`, run order `a,b`, and gains `1=1,0=0.9`, `-m ndcg.1=1,0=0.9` gives `1.0000` in `te-rust` and `1.0241` in the bundled C.
 - `Rndcg` returns 0 when no judged document has a positive gain. With the same judgments and run order `a,b`, `-m Rndcg.0=0,1=-1` gives `0.0000` in `te-rust` and `nan` in the bundled C.

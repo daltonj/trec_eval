@@ -31,7 +31,7 @@ Models a user browsing a ranked list who examines the document at rank $k$ with 
 
 $$\text{RBP} = (1 - p) \sum_{k=1}^N \text{rel}(k) \cdot p^{k-1}$$
 
-where $\text{rel}(k)$ is the gain for the document's relevance level. The gains come from the measure's own gain map when it has one, and otherwise from `--global-gains`. Without either, or for a level that the map in use omits, the gain is the relevance level. The normalisation range includes 0: $g_{\min} = \min(0, \min_g g)$ and $g_{\max} = \max(0, \max_g g)$ over the gain table. If $g_{\min} < 0$ or $g_{\max} > 1$, each table entry $g$ becomes $(g - g_{\min}) / (g_{\max} - g_{\min})$. Gains already in $[0, 1]$ are unchanged. A level absent from the table retains gain 0, including the unjudged sentinel by default.
+where $\text{rel}(k)$ is the gain for the document's relevance level. The gains come from the measure's own gain map when it has one, and otherwise from `--global-gains`. The gain table holds the levels that map names and every level from 0 to the highest judged grade; a level in that range that the map omits has its relevance level as its gain. The normalisation range includes 0: $g_{\min} = \min(0, \min_g g)$ and $g_{\max} = \max(0, \max_g g)$ over the gain table. If $g_{\min} < 0$ or $g_{\max} > 1$, each table entry $g$ becomes $(g - g_{\min}) / (g_{\max} - g_{\min})$. Otherwise the gains are unchanged. A level outside the table, including the unjudged sentinel by default, has gain 0.
 
 - Usage: `-m rbp`, `-m rbp.p=0.8`, or with a gain map, `-m rbp.p=0.8,1=1,2=3`.
 

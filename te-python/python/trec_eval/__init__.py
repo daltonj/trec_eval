@@ -170,7 +170,7 @@ def evaluate(
     max_docs_per_topic : int, optional
         Maximum number of documents per topic to evaluate (-M).
     num_docs_in_coll : int, default 0
-        Number of documents in the collection (-N). utility uses 2**63 - 1 for a larger value.
+        Number of documents in the collection (-N). For utility, values above 2**63 - 1 are clamped to that limit.
     global_gains : str, optional
         Global relevance-to-gain mapping (e.g. '1=3.5,2=9.0').
     qid : str, optional

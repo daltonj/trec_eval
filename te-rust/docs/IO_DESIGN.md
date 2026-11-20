@@ -251,6 +251,7 @@ pub enum ParseError {
     RelevanceOutOfBounds { line_num: usize, value: i64 },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FieldCount {
     Exactly(usize), // qrels and qrels_jg: "expected 4 fields"
     AtLeast(usize), // runs: "expected at least 6 fields"
@@ -275,7 +276,7 @@ pub enum IOError {
     * For Run/Results: Must be at least 6 tokens.
 8. Parse `rel` with `parse_grade`, which reads the leading integer as `trec_eval`'s `str_to_long` does and warns when characters follow it. Parse `sim` with `parse_score`, which reads the leading number as `trec_eval`'s `strtod` does and warns when characters follow it. For relevance values (`rel`), validate that they fall within `REL_LEVELS`, -127 to 127, the range that `trec_eval`'s `get_qrels` documents. The bound also prevents excessive vector allocations.
 9. Store records sequentially.
-10. Populate the `QrelsData` or `RunData` structures, sorting internal lists if necessary or leaving sorting as an explicit post-processing step before metric calculations. Keep all comments preserved in the `comments` field. Keep a document that repeats within a topic of a qrels or run file: `evaluate_run` refuses it if the topic is scored, as `trec_eval` does. The qrels_jg parser refuses a repeat when it reads the file, as `trec_eval`'s `get_qrels_jg` does.
+10. Populate the `QrelsData` or `RunData` structures, sorting internal lists if necessary or leaving sorting as an explicit post-processing step before metric calculations. Keep all comments preserved in the `comments` field. Retain repeated documents in standard qrels and run files. Evaluation rejects duplicates in scored topics only when a requested measure reads the ranking; run duplicates are checked after `-M` truncation. The qrels_jg parser rejects duplicates within a topic and judgment group while reading the file.
 
 ---
 
