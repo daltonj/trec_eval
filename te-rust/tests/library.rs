@@ -232,3 +232,42 @@ fn utility_uses_i64_max_for_a_larger_collection() {
         );
     }
 }
+
+#[test]
+fn all_query_values_adds_the_measures_printed_only_in_the_summary() {
+    let qrels = qrels(vec![judgments("1", &[("a", 1), ("b", 0)])]);
+    let run = run(vec![results("1", &[("b", 2.0), ("a", 1.0)])]);
+    let requested = measures(&["gm_map", "num_q", "runid", "map"]);
+    let per_topic = |config: EvalConfig| {
+        let out = evaluate_run(&qrels, &run, &requested, &config, None).unwrap();
+        let mut scores: Vec<(String, MetricValue)> = out.query_results[0]
+            .scores
+            .iter()
+            .map(|(name, value, _)| (name.clone(), value.clone()))
+            .collect();
+        scores.sort_by(|a, b| a.0.cmp(&b.0));
+        scores
+    };
+    let printed = EvalConfig {
+        query_flag: true,
+        ..Default::default()
+    };
+    assert_eq!(
+        per_topic(printed),
+        [("map".into(), MetricValue::Float(0.5))]
+    );
+    let all = EvalConfig {
+        query_flag: true,
+        all_query_values: true,
+        ..Default::default()
+    };
+    assert_eq!(
+        per_topic(all),
+        [
+            ("gm_map".into(), MetricValue::Float(0.5_f64.ln())),
+            ("map".into(), MetricValue::Float(0.5)),
+            ("num_q".into(), MetricValue::Integer(1)),
+            ("runid".into(), MetricValue::Str("r".into())),
+        ]
+    );
+}

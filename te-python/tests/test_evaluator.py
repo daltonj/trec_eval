@@ -1,3 +1,4 @@
+import math
 import os
 import pytest
 from pathlib import Path
@@ -161,6 +162,16 @@ def test_config_switches(sample_qrels_dict, sample_run_dict):
     map_c = res_c.aggregate()["map"]
 
     assert map_c == pytest.approx(map_no_c * 2.0 / 3.0)
+
+
+def test_all_query_values_adds_the_measures_printed_only_in_the_summary():
+    qrels = {"1": {"a": 1, "b": 0}}
+    run = {"1": {"b": 2.0, "a": 1.0}}
+    measures = ["gm_map", "num_q", "runid", "map"]
+    assert Evaluator(qrels, measures).evaluate(run).to_dict() == {"1": {"map": 0.5}}
+    assert Evaluator(qrels, measures, all_query_values=True).evaluate(run).to_dict() == {
+        "1": {"gm_map": pytest.approx(math.log(0.5)), "num_q": 1, "runid": "trec_eval", "map": 0.5}
+    }
 
 
 def test_numerical_parity_against_known_run():

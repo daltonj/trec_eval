@@ -1,3 +1,4 @@
+import math
 import os
 from pathlib import Path
 import pytest
@@ -45,6 +46,34 @@ def test_pytrec_eval_keeps_unjudged_documents_by_default(flags, expected):
         {"1": {"d1": 1, "d2": 0}}, {"P_1", "num_ret"}, **flags
     )
     assert evaluator.evaluate({"1": {"u": 3.0, "d1": 2.0, "d2": 1.0}}) == {"1": expected}
+
+
+
+def test_pytrec_eval_gives_every_measure_per_topic_as_a_float():
+    evaluator = pytrec_eval.RelevanceEvaluator(
+        {"1": {"d1": 1, "d2": 0}},
+        {"gm_map", "gm_bpref", "num_q", "runid", "relstring", "num_ret", "map"},
+    )
+    res = evaluator.evaluate({"1": {"u": 3.0, "d1": 2.0, "d2": 1.0}})
+    assert res == {
+        "1": {
+            "gm_map": pytest.approx(math.log(0.5)),
+            "gm_bpref": 0.0,
+            "num_q": 1.0,
+            "runid": 0.0,
+            "relstring": 0.0,
+            "num_ret": 3.0,
+            "map": 0.5,
+        }
+    }
+    assert all(type(value) is float for value in res["1"].values())
+
+
+def test_pytrec_eval_gives_the_per_topic_values_of_a_group():
+    evaluator = pytrec_eval.RelevanceEvaluator({"1": {"a": 1}}, {"all_trec"})
+    scores = evaluator.evaluate({"1": {"a": 1.0}})["1"]
+    assert scores["gm_map"] == 0.0
+    assert scores["num_q"] == 1.0
 
 
 @pytest.mark.parametrize(

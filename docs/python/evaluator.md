@@ -15,6 +15,7 @@ class Evaluator(
     qid: Optional[str] = None,
     docno: Optional[str] = None,
     rel: Optional[str] = None,
+    all_query_values: bool = False,
 )
 ```
 
@@ -29,6 +30,7 @@ class Evaluator(
 - `num_docs_in_coll` (`int`, default `0`): Total collection size (`-N`). `utility` uses $2^{63} - 1$ for a larger value.
 - `global_gains` (`str`, optional): Global gain mapping string (e.g. `'1=3.5,2=9.0'`).
 - `qid`, `docno`, `rel` (`str`, optional): Explicit column names when `qrels` is a DataFrame.
+- `all_query_values` (`bool`, default `False`): When `True`, the per-query results also hold the measures that the CLI prints only in the summary: `gm_map` and `gm_bpref` as log(max(v, 0.00001)) of the topic's `map` or `bpref` value v, `num_q` as 1, and `runid`. The pytrec_eval wrapper sets it, as pytrec_eval returns these values.
 
 Problems that do not stop the evaluation are raised as `UserWarning`, with the messages that the CLI prints on stderr. The constructor warns when a cutoff is read only in part, as `'P.5x'` is read as `P_5`, and when a later request gives other parameters for a measure, as in `['P_5', 'P_10']`: the first list is used and the other is ignored. Reading a qrels or run file warns about a grade or score read only in part, such as `1.5x`, a score outside the range of a double, and a blank line in a qrels file.
 

@@ -120,6 +120,7 @@ class RelevanceEvaluator:
             measures=native_measures,
             relevance_level=relevance_level,
             judged_docs_only=judged_docs_only_flag,
+            all_query_values=True,
         )
         self.measures = set(measure_names)
 
@@ -130,7 +131,14 @@ class RelevanceEvaluator:
         except NoSharedTopicError:
             # pytrec_eval returns {} for a run that shares no topic with the qrels.
             return {}
-        return eval_result.to_dict()
+        # pytrec_eval gives every value as a float, and 0.0 for runid and relstring.
+        return {
+            qid: {
+                name: 0.0 if isinstance(value, str) else float(value)
+                for name, value in scores.items()
+            }
+            for qid, scores in eval_result.to_dict().items()
+        }
 
 
 __all__ = [

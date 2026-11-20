@@ -292,6 +292,7 @@ fn main() {
     let global_gains = args.global_gains;
     let config = EvalConfig {
         query_flag: args.query_flag,
+        all_query_values: false,
         summary_flag: !args.no_summary_flag,
         relevance_level: args.relevance_level,
         average_complete_flag: args.complete_set_average,

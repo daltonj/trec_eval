@@ -109,7 +109,7 @@ pub fn evaluate_run(
         for (m_idx, m) in measures.iter().enumerate() {
             let q_scores = m.calc(config, &eval_state);
 
-            if config.query_flag && m.is_query_enabled() {
+            if config.query_flag && (m.is_query_enabled() || config.all_query_values) {
                 let sub_names = m.sub_metrics();
                 for (sub_idx, val) in q_scores.iter().enumerate() {
                     let name = sub_names[sub_idx].clone();
@@ -258,7 +258,7 @@ pub fn evaluate_run_jg(
         for (m_idx, m) in measures.iter().enumerate() {
             let q_scores = m.calc(config, &eval_state);
 
-            if config.query_flag && m.is_query_enabled() {
+            if config.query_flag && (m.is_query_enabled() || config.all_query_values) {
                 let sub_names = m.sub_metrics();
                 for (sub_idx, val) in q_scores.iter().enumerate() {
                     let name = sub_names[sub_idx].clone();

@@ -79,6 +79,9 @@ pub enum EvaluationType {
 #[derive(Debug, Clone)]
 pub struct EvalConfig {
     pub query_flag: bool,
+    /// With `query_flag`, also give the per-topic values of the measures that `trec_eval -q`
+    /// leaves out (`gm_map`, `gm_bpref`, `num_q` and `runid`), as pytrec_eval does.
+    pub all_query_values: bool,
     pub summary_flag: bool,
     pub relevance_level: i64,
     pub average_complete_flag: bool,
@@ -93,6 +96,7 @@ impl Default for EvalConfig {
     fn default() -> Self {
         Self {
             query_flag: false,
+            all_query_values: false,
             summary_flag: true,
             relevance_level: 1,
             average_complete_flag: false,

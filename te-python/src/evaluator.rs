@@ -37,7 +37,8 @@ impl Evaluator {
         global_gains = None,
         qid = None,
         docno = None,
-        rel = None
+        rel = None,
+        all_query_values = false
     ))]
     pub fn new(
         qrels: &Bound<'_, PyAny>,
@@ -51,6 +52,7 @@ impl Evaluator {
         qid: Option<String>,
         docno: Option<String>,
         rel: Option<String>,
+        all_query_values: bool,
     ) -> PyResult<Self> {
         let mapping = ColumnMapping {
             qid,
@@ -77,6 +79,7 @@ impl Evaluator {
 
         let config = EvalConfig {
             query_flag: true,
+            all_query_values,
             summary_flag: true,
             relevance_level,
             average_complete_flag: complete_set_average,
