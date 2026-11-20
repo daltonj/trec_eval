@@ -9,27 +9,39 @@ R=test/regress/results
 printf '1 map 0.5 0.25\n2 map 0.5 0.25\n' > "$T/zscores"
 for f in $Q $P $R "$T/zscores"; do
     awk '{ printf "%s\r\n", $0 }' $f > "$T/${f##*/}.crlf"
+    printf '%s\r' "$(cat $f)" > "$T/${f##*/}.lastcr"
     tr '\n' '\r' < $f > "$T/${f##*/}.cr"
 done
 printf '1 0 d1 1\n1 0 d2 0\r1 0 d3 1\n' > "$T/qrels.mixed"
 
-# CRLF files give the same values as the LF files.
+# CRLF files, and files whose last line ends in CR, give the same values
+# as the LF files.
 m="-q -m num_ret -m map"
 save_output "$T/lf" $m $Q $R
-expect_output "$T/lf" $m "$T/qrels.crlf" "$T/results.crlf"
-expect_output "$T/lf" $m "$T/qrels.crlf" - < "$T/results.crlf"
+for e in crlf lastcr; do
+    expect_output "$T/lf" $m "$T/qrels.$e" "$T/results.$e"
+    expect_output "$T/lf" $m "$T/qrels.$e" - < "$T/results.$e"
+done
 m="-q -R qrels_jg -m map_avgjg"
 save_output "$T/lf" $m $Q $R
-expect_output "$T/lf" $m "$T/qrels.crlf" "$T/results.crlf"
+for e in crlf lastcr; do
+    expect_output "$T/lf" $m "$T/qrels.$e" "$T/results.$e"
+done
 m="-q -R qrels_prefs -m prefs_num_prefs_poss"
 save_output "$T/lf" $m $Q $R
-expect_output "$T/lf" $m "$T/qrels.crlf" "$T/results.crlf"
+for e in crlf lastcr; do
+    expect_output "$T/lf" $m "$T/qrels.$e" "$T/results.$e"
+done
 m="-q -R prefs -m prefs_num_prefs_poss"
 save_output "$T/lf" $m $P $R
-expect_output "$T/lf" $m "$T/prefs.crlf" $R
+for e in crlf lastcr; do
+    expect_output "$T/lf" $m "$T/prefs.$e" $R
+done
 m="-q -m map"
 save_output "$T/lf" $m -Z "$T/zscores" $Q $R
-expect_output "$T/lf" $m -Z "$T/zscores.crlf" $Q $R
+for e in crlf lastcr; do
+    expect_output "$T/lf" $m -Z "$T/zscores.$e" $Q $R
+done
 
 cr="CR character without LF in line"
 expect_message 2 "$cr 1 of results file '$T/results.cr'" \
