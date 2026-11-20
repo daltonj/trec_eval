@@ -120,5 +120,6 @@ te_calc_rbp(const EPI * epi, const REL_INFO * rel_info, const RESULTS * results,
     }
 
     eval->values[tm->eval_index].value = (1.0 - p) * sum;
+    Free(gains.rel_gains);
     return (1);
 }
