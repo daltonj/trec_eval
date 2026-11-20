@@ -305,21 +305,15 @@ static int get_long_cutoffs(PARAMS * params, char *param_string,
             cutoffs[num_cutoffs++] =
                 str_to_long_ctx(start_ptr, &error, "cutoff of measure '%s'",
                                 measure);
-            if (error) {
-                fprintf(stderr, "trec_eval: Illegal cutoff '%s'\n",
-                        start_ptr);
+            if (error)
                 return (UNDEF);
-            }
             start_ptr = ptr + 1;
         }
     }
     cutoffs[num_cutoffs++] =
         str_to_long_ctx(start_ptr, &error, "cutoff of measure '%s'", measure);
-    if (error) {
-        fprintf(stderr, "trec_eval: Illegal cutoff '%s'\n",
-                start_ptr);
+    if (error)
         return (UNDEF);
-    }
 
     /* Sort cutoffs in increasing order */
     qsort((char *) cutoffs, num_cutoffs, sizeof(long), comp_long);
@@ -373,22 +367,16 @@ static int get_double_cutoffs(PARAMS * params, char *param_string,
             cutoffs[num_cutoffs++] =
                 str_to_double_ctx(start_ptr, &error, "cutoff of measure '%s'",
                                   measure);
-            if (error) {
-                fprintf(stderr, "trec_eval: Illegal cutoff '%s'\n",
-                        start_ptr);
+            if (error)
                 return (UNDEF);
-            }
             start_ptr = ptr + 1;
         }
     }
     cutoffs[num_cutoffs++] =
         str_to_double_ctx(start_ptr, &error, "cutoff of measure '%s'",
                           measure);
-    if (error) {
-        fprintf(stderr, "trec_eval: Illegal cutoff '%s'\n",
-                start_ptr);
+    if (error)
         return (UNDEF);
-    }
     for (i = 0; i < num_cutoffs; i++) {
         if (!isfinite(cutoffs[i])) {
             fprintf(stderr,
@@ -445,22 +433,16 @@ static int get_double_params(PARAMS * params, char *param_string,
             values[num_params++] =
                 str_to_double_ctx(start_ptr, &error,
                                   "parameter of measure '%s'", measure);
-            if (error) {
-                fprintf(stderr, "trec_eval: Illegal parameter '%s'\n",
-                        start_ptr);
+            if (error)
                 return (UNDEF);
-            }
             start_ptr = ptr + 1;
         }
     }
     values[num_params++] =
         str_to_double_ctx(start_ptr, &error, "parameter of measure '%s'",
                           measure);
-    if (error) {
-        fprintf(stderr, "trec_eval: Illegal parameter '%s'\n",
-                start_ptr);
+    if (error)
         return (UNDEF);
-    }
     for (i = 0; i < num_params; i++) {
         if (!isfinite(values[i])) {
             fprintf(stderr,
@@ -532,11 +514,8 @@ static int get_param_pairs(PARAMS * params, char *param_string,
                                   "parameter '%s' of measure '%s'",
                                   values[num_params].name, measure);
             num_params++;
-            if (error) {
-                fprintf(stderr, "trec_eval: Illegal parameter value '%s'\n",
-                        start_ptr);
+            if (error)
                 return (UNDEF);
-            }
             start_ptr = ptr + 1;
         }
     }
@@ -544,11 +523,8 @@ static int get_param_pairs(PARAMS * params, char *param_string,
         str_to_double_ctx(start_ptr, &error, "parameter '%s' of measure '%s'",
                           values[num_params].name, measure);
     num_params++;
-    if (error) {
-        fprintf(stderr, "trec_eval: Illegal parameter value '%s'\n",
-                start_ptr);
+    if (error)
         return (UNDEF);
-    }
     for (i = 0; i < num_params; i++) {
         if (!isfinite(values[i].value)) {
             fprintf(stderr,

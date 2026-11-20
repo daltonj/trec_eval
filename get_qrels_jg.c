@@ -235,11 +235,8 @@ te_get_qrels_jg(EPI * epi, char *text_qrels_file, ALL_REL_INFO * all_rel_info)
                             "qrels file '%s', topic %s, jg %s, document %s",
                             text_qrels_file, lines[i].qid, lines[i].jg,
                             lines[i].docno);
-        if (error) {
-            fprintf(stderr, "trec_eval: Unusable relevance level '%s'\n",
-                    lines[i].rel);
+        if (error)
             return (UNDEF);
-        }
         if (text_qrels_ptr->rel < MIN_REL_LEVEL ||
             text_qrels_ptr->rel > MAX_REL_LEVEL) {
             fprintf(stderr, "trec_eval: Relevance level '%s' of document %s "

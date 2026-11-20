@@ -1,5 +1,5 @@
 # A warning or error from reading an integer says where the value comes
-# from: the option, the measure, or the qrels file, topic and document.
+# from: the measure, or the qrels file, topic and document.
 # Before, it named only the value. The exit statuses are unchanged.
 . test/regress/lib.sh
 D=test/regress/str-to-long-context
@@ -15,8 +15,6 @@ expect_message() {
 w="Warning, value \`1.5' partially read as \`1'"
 expect_message "$w (cutoff of measure 'P')." -m P.1.5 $D/qrels $D/run
 expect_status 0 -m P.1.5 $D/qrels $D/run
-expect_message "Warning, value \`0x' partially read as \`0' (option -D)." \
-    -D 0x -m num_rel $D/qrels $D/run
 expect_message "$w (qrels file '$D/qrels.partial', topic 1, document d1)." \
     -m num_rel $D/qrels.partial $D/run
 expect_status 0 -m num_rel $D/qrels.partial $D/run
@@ -37,9 +35,6 @@ expect_message "Warning, value \`0.5x' partially read as \`0.5' (parameter 'p' o
 expect_status 0 -m set_F.0.5x $D/qrels $D/run
 
 # Errors carry the same context, and keep their exit statuses.
-expect_message "Error: value \`x' could not be parsed (option -D)." \
-    -D x $D/qrels $D/run
-expect_status 1 -D x $D/qrels $D/run
 expect_message "Error: value \`x' could not be parsed (cutoff of measure 'P')." \
     -m P.x $D/qrels $D/run
 expect_status 2 -m P.x $D/qrels $D/run

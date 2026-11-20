@@ -282,11 +282,8 @@ int te_get_qrels(EPI *epi, char *text_qrels_file, ALL_REL_INFO *all_rel_info)
             str_to_long_ctx(lines[i].rel, &error,
                             "qrels file '%s', topic %s, document %s",
                             text_qrels_file, lines[i].qid, lines[i].docno);
-        if (error) {
-            fprintf(stderr, "trec_eval: Unusable relevance level '%s'\n",
-                    lines[i].rel);
+        if (error)
             return (UNDEF);
-        }
         if (text_qrels_ptr->rel < MIN_REL_LEVEL ||
             text_qrels_ptr->rel > MAX_REL_LEVEL) {
             fprintf(stderr, "trec_eval: Relevance level '%s' of document %s "
