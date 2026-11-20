@@ -24,7 +24,7 @@ graph TD
 *   **Standard Run Parser**: Whitespace-separated fields (`qid  iter  docno  rank  sim  run_id`).
 *   **Standard Qrels Parser**: Whitespace-separated fields (`qid  iter  docno  rel`).
 *   **Safety Guards**: 
-    *   Strict non-finite float rejection (`NaN`, `Infinity`) for similarity scores.
+    *   `NaN` rejection for similarity scores.
     *   Relevance level validation (-127 to 127, the range that `trec_eval` documents) to prevent allocation exploits.
     *   Indentation-agnostic `#` comment stripping (trimming leading spaces).
 
