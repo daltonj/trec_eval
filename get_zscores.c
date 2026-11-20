@@ -11,6 +11,7 @@
 #include "trec_eval.h"
 #include "trec_format.h"
 #include <ctype.h>
+#include <math.h>
 
 
 /* Read a Zscore file containing means and stddev from a reference set of runs
@@ -48,8 +49,8 @@ Each list of query judgments is sorted lexicographically by docno.
 typedef struct {
     char *qid;
     char *meas;
-    char *mean;
-    char *stddev;
+    double mean;
+    double stddev;
 } LINES;
 
 static int parse_zscore_line(char **start_ptr, char **qid_ptr, char **meas_ptr,
@@ -70,6 +71,7 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
     FILE* fd;
     long size = 0;
     char *ptr;
+    char *mean_ptr, *stddev_ptr, *end_ptr;
     char *current_qid;
     long i;
     LINES *lines;
@@ -138,9 +140,27 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
     ptr = trec_zscores_buf;
     while (*ptr) {
         if (UNDEF == parse_zscore_line(&ptr, &line_ptr->qid, &line_ptr->meas,
-                                       &line_ptr->mean, &line_ptr->stddev)) {
+                                       &mean_ptr, &stddev_ptr)) {
             fprintf(stderr, "trec_eval.get_zscores: Malformed line %ld\n",
                     (long) (line_ptr - lines + 1));
+            Free(lines);
+            return (UNDEF);
+        }
+        line_ptr->mean = strtod(mean_ptr, &end_ptr);
+        if (end_ptr == mean_ptr || *end_ptr || !isfinite(line_ptr->mean)) {
+            fprintf(stderr,
+                    "trec_eval.get_zscores: Unusable mean '%s' in line %ld\n",
+                    mean_ptr, (long) (line_ptr - lines + 1));
+            Free(lines);
+            return (UNDEF);
+        }
+        line_ptr->stddev = strtod(stddev_ptr, &end_ptr);
+        if (end_ptr == stddev_ptr || *end_ptr || !isfinite(line_ptr->stddev) ||
+            line_ptr->stddev < 0.0) {
+            fprintf(stderr,
+                    "trec_eval.get_zscores: Unusable stddev '%s' in line %ld\n",
+                    stddev_ptr, (long) (line_ptr - lines + 1));
+            Free(lines);
             return (UNDEF);
         }
         line_ptr++;
@@ -181,8 +201,8 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
             zscores_ptr->zscores = text_zscores_ptr;
         }
         text_zscores_ptr->meas = lines[i].meas;
-        text_zscores_ptr->mean = atof(lines[i].mean);
-        text_zscores_ptr->stddev = atof(lines[i].stddev);
+        text_zscores_ptr->mean = lines[i].mean;
+        text_zscores_ptr->stddev = lines[i].stddev;
         text_zscores_ptr++;
     }
     /* End last qid */
