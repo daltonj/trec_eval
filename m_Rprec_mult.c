@@ -11,7 +11,6 @@
 #include "functions.h"
 #include "trec_format.h"
 
-static int te_init_Rprec_mult(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval);
 static int
 te_calc_Rprec_mult(const EPI * epi, const REL_INFO * rel_info,
                    const RESULTS * results, const TREC_MEAS * tm,
@@ -44,7 +43,7 @@ TREC_MEAS te_meas_Rprec_mult = { "Rprec_mult",
 };
 
 /* Multiples of R must be positive */
-static int
+int
 te_init_Rprec_mult(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
 {
     double *mults;
