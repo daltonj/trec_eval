@@ -60,12 +60,7 @@ impl Measure for PrecisionAvgjgMeasure {
         for q_state in jg_states {
             for (idx, &c) in self.cutoffs.iter().enumerate() {
                 let rel_ret = super::common::count_relevant_retrieved_up_to(&q_state.results_rel_list, c, config);
-                let p = if c > 0 {
-                    (rel_ret as f64) / (c as f64)
-                } else {
-                    0.0
-                };
-                results[idx] += p;
+                results[idx] += (rel_ret as f64) / (c as f64);
             }
         }
 

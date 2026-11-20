@@ -62,11 +62,7 @@ impl Measure for SetFMeasure {
                 let p = (q_state.num_rel_ret as f64) / (q_state.num_ret as f64);
                 let r = (q_state.num_rel_ret as f64) / (q_state.num_rel as f64);
                 let denominator = self.beta * p + r;
-                if denominator > 0.0 {
-                    (self.beta + 1.0) * p * r / denominator
-                } else {
-                    0.0
-                }
+                (self.beta + 1.0) * p * r / denominator
             } else {
                 0.0
             };

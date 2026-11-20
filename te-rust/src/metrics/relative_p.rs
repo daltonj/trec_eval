@@ -66,11 +66,7 @@ impl Measure for RelativePMeasure {
             if cutoff_index < num_params && i == self.cutoffs[cutoff_index] {
                 let cutoff = self.cutoffs[cutoff_index];
                 let max_possible = min(cutoff, q_state.num_rel);
-                results[cutoff_index] = if max_possible > 0 {
-                    (rel_so_far as f64) / (max_possible as f64)
-                } else {
-                    0.0
-                };
+                results[cutoff_index] = (rel_so_far as f64) / (max_possible as f64);
                 cutoff_index += 1;
                 if cutoff_index >= num_params {
                     break;
@@ -85,11 +81,7 @@ impl Measure for RelativePMeasure {
         while cutoff_index < num_params {
             let cutoff = self.cutoffs[cutoff_index];
             let max_possible = min(cutoff, q_state.num_rel);
-            results[cutoff_index] = if max_possible > 0 {
-                (rel_so_far as f64) / (max_possible as f64)
-            } else {
-                0.0
-            };
+            results[cutoff_index] = (rel_so_far as f64) / (max_possible as f64);
             cutoff_index += 1;
         }
 
