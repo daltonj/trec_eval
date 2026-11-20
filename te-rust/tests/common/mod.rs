@@ -3,6 +3,8 @@
 //! `tests/fixtures` holds the inputs that tests in more than one place read:
 //!
 //! - `ab.qrels` judges a relevant and b nonrelevant in topic 1, and `ab.run` ranks a, then b.
+//! - `graded.qrels` grades a 2, b 0, c 1 and d 3 in topic t, and `graded.run` ranks d, x
+//!   (unjudged), a, b, c.
 //! - `six-relevant.qrels` judges d1 to d6 relevant in topic q1, and `six-relevant.run` ranks
 //!   them in that order.
 //! - `topics.qrels` judges d1 (1), d2 (0) and d3 (2) in topic 1, and d1 (0) and d2 (1) in
