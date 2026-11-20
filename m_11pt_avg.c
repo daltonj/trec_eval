@@ -61,7 +61,7 @@ static int te_init_11ptavg(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
         return (UNDEF);
     levels = (double *) tm->meas_params->param_values;
     for (i = 0; i < tm->meas_params->num_params; i++) {
-        if (!(levels[i] >= 0.0 && levels[i] <= 1.0)) {
+        if (levels[i] < 0.0 || levels[i] > 1.0) {
             fprintf(stderr,
                     "trec_eval: recall level %g of measure '%s' is not in [0, 1]\n",
                     levels[i], tm->name);

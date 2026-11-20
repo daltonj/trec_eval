@@ -51,7 +51,7 @@ te_init_rbp(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
     pairs = (DOUBLE_PARAM_PAIR *) tm->meas_params->param_values;
     for (i = 0; i < tm->meas_params->num_params; i++) {
         if (0 == strcmp(pairs[i].name, "p") &&
-            !(pairs[i].value >= 0.0 && pairs[i].value < 1.0)) {
+            (pairs[i].value < 0.0 || pairs[i].value >= 1.0)) {
             fprintf(stderr,
                     "trec_eval: persistence p=%g of measure '%s' is not in [0, 1)\n",
                     pairs[i].value, tm->name);

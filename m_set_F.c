@@ -50,7 +50,7 @@ te_init_set_F(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
         return (UNDEF);
     weights = (double *) tm->meas_params->param_values;
     for (i = 0; i < tm->meas_params->num_params; i++) {
-        if (!(weights[i] >= 0.0)) {
+        if (weights[i] < 0.0) {
             fprintf(stderr,
                     "trec_eval: weight %g of measure '%s' is not 0 or more\n",
                     weights[i], tm->name);
