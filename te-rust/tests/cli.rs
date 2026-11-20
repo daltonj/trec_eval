@@ -2,10 +2,8 @@
 
 mod common;
 
-/// trec_eval's exit statuses and the order in which it finds problems: an illegal measure name
-/// while it reads its options (1), then the qrels and the run (2), the measure parameters (2),
-/// and a repeated document while it scores (4). Each status is the one that the C tree in
-/// trec_eval/ and v10.0 (f425365) return on the same files.
+/// Exit statuses and validation precedence. te-rust validates measure parameters
+/// before reading files; trec_eval validates them afterward.
 mod exit_status {
     use super::common::{eval, fixture, stderr, te_rust, write};
     use std::path::{Path, PathBuf};
