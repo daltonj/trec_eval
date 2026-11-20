@@ -99,9 +99,15 @@ fn rank_documents<'a>(
     max_docs_per_topic: usize,
     reads_ranking: bool,
 ) -> Result<Vec<&'a RunRecord>, EvaluationError> {
-    // Sort run records by sim descending, and docno descending lexicographically
     let mut doc_infos: Vec<_> = run_query.into_iter().flat_map(|q| &q.records).collect();
+    if let Some(doc) = doc_infos.iter().find(|doc| doc.sim.is_nan()) {
+        return Err(EvaluationError::NanScore {
+            qid: qid.to_string(),
+            docno: doc.docno.clone(),
+        });
+    }
 
+    // Sort run records by sim descending, and docno descending lexicographically
     doc_infos.sort_by(|a, b| {
         // Sort sim descending
         match b.sim.partial_cmp(&a.sim) {
@@ -110,7 +116,7 @@ fn rank_documents<'a>(
                 b.docno.cmp(&a.docno)
             }
             Some(other) => other,
-            None => std::cmp::Ordering::Equal, // The parsers refuse NaN, so None won't happen
+            None => unreachable!("NaN scores are refused above"),
         }
     });
 

@@ -21,6 +21,8 @@ pub enum EvaluationError {
         docno: String,
         value: i64,
     },
+    /// A run's score is NaN, which has no place in the ranking.
+    NanScore { qid: String, docno: String },
 }
 
 impl std::fmt::Display for EvaluationError {
@@ -38,6 +40,9 @@ impl std::fmt::Display for EvaluationError {
                 REL_LEVELS.start(),
                 REL_LEVELS.end(),
             ),
+            Self::NanScore { qid, docno } => {
+                write!(f, "score of document '{}' for query '{}' is NaN", docno, qid)
+            }
         }
     }
 }

@@ -273,19 +273,6 @@ fn extract_qrel_item(item: &Bound<'_, PyAny>) -> PyResult<(String, String, i64)>
     Ok((qid, docno, rel))
 }
 
-/// Refuses a NaN score, as the run file parser does, because NaN has no place in the ranking.
-fn refuse_nan_scores(grouped: &BTreeMap<String, Vec<RunRecord>>) -> PyResult<()> {
-    for (qid, records) in grouped {
-        if let Some(record) = records.iter().find(|r| r.sim.is_nan()) {
-            return Err(PyValueError::new_err(format!(
-                "Score of document '{}' for query '{}' is NaN",
-                record.docno, qid
-            )));
-        }
-    }
-    Ok(())
-}
-
 /// Ingest run results from a Python object (file path, dict, DataFrame, or iterable).
 pub fn ingest_run(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> PyResult<RunData> {
     // 1. File path / PathLike
@@ -334,7 +321,6 @@ pub fn ingest_run(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> Py
             }
         }
 
-        refuse_nan_scores(&grouped)?;
         let queries = grouped
             .into_iter()
             .map(|(qid, records)| RunQuery { qid, records })
@@ -388,7 +374,6 @@ pub fn ingest_run(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> Py
             grouped.entry(qid).or_default().push(RunRecord { docno, sim });
         }
 
-        refuse_nan_scores(&grouped)?;
         let queries = grouped
             .into_iter()
             .map(|(qid, records)| RunQuery { qid, records })
@@ -431,7 +416,6 @@ pub fn ingest_run_arrays(
         grouped.entry(qid).or_default().push(RunRecord { docno, sim });
     }
 
-    refuse_nan_scores(&grouped)?;
     let queries = grouped
         .into_iter()
         .map(|(qid, records)| RunQuery { qid, records })
@@ -455,7 +439,6 @@ fn ingest_run_from_iter(iter: Bound<'_, PyIterator>) -> PyResult<RunData> {
         grouped.entry(qid).or_default().push(RunRecord { docno, sim });
     }
 
-    refuse_nan_scores(&grouped)?;
     let queries = grouped
         .into_iter()
         .map(|(qid, records)| RunQuery { qid, records })

@@ -1,5 +1,5 @@
-use te_rust::eval::{align_query, align_query_jg};
-use te_rust::io::{QrelsJGGroup, QrelsJGQuery, QrelsQuery, QrelsRecord};
+use te_rust::eval::{align_query, align_query_jg, EvaluationError};
+use te_rust::io::{QrelsJGGroup, QrelsJGQuery, QrelsQuery, QrelsRecord, RunQuery, RunRecord};
 
 fn qrels(rel: i64) -> QrelsQuery {
     QrelsQuery {
@@ -42,4 +42,28 @@ fn alignment_accepts_the_documented_grade_boundaries() {
             assert_eq!(state.rel_levels[grade as usize], 1);
         }
     }
+}
+
+#[test]
+fn alignment_refuses_nan_scores() {
+    let run = RunQuery {
+        qid: "1".into(),
+        records: vec![
+            RunRecord {
+                docno: "a".into(),
+                sim: 1.0,
+            },
+            RunRecord {
+                docno: "b".into(),
+                sim: f64::NAN,
+            },
+        ],
+    };
+    assert_eq!(
+        align_query(Some(&run), &qrels(1), "r", 1, usize::MAX, false).unwrap_err(),
+        EvaluationError::NanScore {
+            qid: "1".into(),
+            docno: "b".into()
+        }
+    );
 }

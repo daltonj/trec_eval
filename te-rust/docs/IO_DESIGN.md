@@ -227,7 +227,7 @@ In information retrieval, different ranking scores can result in identical simil
 
 > [!WARNING]
 > **Rust Floating-Point Sorting (`f64`)**:
-> In Rust, standard floating-point numbers (`f64`) do not implement `Ord` (only `PartialOrd`) because `NaN` values cannot be ordered. Since `NaN` values are invalid as similarity scores in standard evaluations, we must handle this safely. Standard methods like `.sort_by()` with `partial_cmp().unwrap()` are safe *only* if the parser rejects `NaN` similarity scores. Infinite scores are ordered by `partial_cmp`, so the parser accepts them, as `trec_eval` does.
+> In Rust, standard floating-point numbers (`f64`) do not implement `Ord` (only `PartialOrd`) because `NaN` values cannot be ordered. Since `NaN` values are invalid as similarity scores in standard evaluations, we must handle this safely. Standard methods like `.sort_by()` with `partial_cmp().unwrap()` are safe *only* if `NaN` similarity scores are rejected first, as the parsers and the alignment engine reject them. Infinite scores are ordered by `partial_cmp`, so the parser accepts them, as `trec_eval` does.
 
 ---
 

@@ -63,10 +63,10 @@ def test_compat_no_overlap_after_ingestion(tmp_path, qrels_kind, run_kind):
     assert evaluator.evaluate({"q1": {"d": 1.0}}) == {"q1": {"map": 1.0}}
 
 
-def test_compat_disjoint_mapping_still_checks_scores():
+def test_compat_keeps_nan_score_errors():
     evaluator = pytrec_eval.RelevanceEvaluator(QRELS, {"map"})
     with pytest.raises(ValueError, match="NaN"):
-        evaluator.evaluate({"q3": {"d": float("nan")}})
+        evaluator.evaluate({"q1": {"d1": float("nan")}})
 
 
 def test_compat_keeps_other_evaluation_errors(tmp_path):

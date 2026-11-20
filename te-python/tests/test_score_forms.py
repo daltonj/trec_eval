@@ -41,5 +41,5 @@ def test_nan_scores_are_refused_from_a_file_and_a_dict(tmp_path):
     evaluator = Evaluator(QRELS, measures=["map"])
     with pytest.raises(ValueError, match="invalid float for field 'sim': 'nan'"):
         evaluator.evaluate(str(run))
-    with pytest.raises(ValueError, match="Score of document 'b' for query 't' is NaN"):
+    with pytest.raises(ValueError, match="score of document 'b' for query 't' is NaN"):
         evaluator.evaluate({"t": {"a": 5.0, "b": math.nan}})
