@@ -92,6 +92,9 @@ impl Measure for RprecMultAvgjgMeasure {
             // Scan retrieved documents backwards
             let mut rel_so_far = q_state.num_rel_ret;
             for i in (1..=q_state.num_ret).rev() {
+                if rel_so_far == 0 {
+                    break;
+                }
                 let precis = (rel_so_far as f64) / (i as f64);
                 while current_cut >= 0 && (i as i64) == cutoffs[current_cut as usize] {
                     jg_results[current_cut as usize] = precis;
