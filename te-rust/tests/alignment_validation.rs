@@ -45,6 +45,12 @@ fn alignment_accepts_the_documented_grade_boundaries() {
 }
 
 #[test]
+fn alignment_pads_grade_counts_up_to_the_highest_level() {
+    let state = align_query(None, &qrels(1), "r", 1_000_000, usize::MAX, false).unwrap();
+    assert_eq!(state.rel_levels.len(), 128);
+}
+
+#[test]
 fn alignment_refuses_nan_scores() {
     let run = RunQuery {
         qid: "1".into(),

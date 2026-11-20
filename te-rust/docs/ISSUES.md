@@ -145,9 +145,7 @@ This document tracks active design questions, structural decisions, and implemen
 ### 17. Defensive `rel_levels` Bounds Sizing
 *   **Type**: Design
 *   **Status**: Resolved (Defensive Vector Sizing & Safe Getters)
-*   **Description**: Resolved to implement a three-layer boundary protection design for relevance counts. First, to support modern research on pairwise tournament and dense-scale preference evaluations while preventing OOM denial-of-service vulnerabilities, the lexical parser strictly validates that parsed relevance levels fall within a safe, generous range of `-1,000,000` to `1,000,000` (max 8MB memory allocation). Second, the alignment engine defensively sizes the `rel_levels` flat vector to `max(max_rel + 1, min(config.relevance_level, 1,000,000) + 1)`. Third, all metrics are mandated to retrieve counts from `rel_levels` using infallible, bounds-checked getters (e.g. `.get(j).copied().unwrap_or(0)`), guaranteeing 100% crash-free execution.
-
-*   **Revised**: The parser now refuses relevance levels outside `REL_LEVELS`, -127 to 127, the range that `trec_eval` documents (`get_qrels.c:43`) and that #123 makes it enforce, so that a qrels file means the same to both tools (#105).
+*   **Description**: Resolved to implement a three-layer boundary protection design for relevance counts. First, the parsers and the alignment engine refuse relevance levels outside `REL_LEVELS`, -127 to 127, the range that `trec_eval`'s `get_qrels` documents, so that a qrels file means the same to both tools and a topic's grade counts stay small. Second, the alignment engine defensively sizes the `rel_levels` flat vector to `max(max_rel + 1, min(config.relevance_level, 127) + 1)`. Third, all metrics are mandated to retrieve counts from `rel_levels` using infallible, bounds-checked getters (e.g. `.get(j).copied().unwrap_or(0)`), guaranteeing 100% crash-free execution.
 
 ### 16. The `bogus_ranking` Ingestion Hack
 *   **Type**: Design

@@ -25,12 +25,12 @@ graph TD
 *   **Standard Qrels Parser**: Whitespace-separated fields (`qid  iter  docno  rel`).
 *   **Safety Guards**: 
     *   Strict non-finite float rejection (`NaN`, `Infinity`) for similarity scores.
-    *   Generous relevance score boundary validation (`-1,000,000` to `1,000,000`) to prevent allocation exploits.
+    *   Relevance level validation (-127 to 127, the range that `trec_eval` documents) to prevent allocation exploits.
     *   Indentation-agnostic `#` comment stripping (trimming leading spaces).
 
 ### 1.3 Aligned Evaluation Engine (`src/eval/alignment.rs`)
 *   **Tie-Breaking sorting**: Sort results descending by `sim` (primary), and **lexicographically descending** by `docno` (secondary) to match C tie-breaking exactly.
-*   **Defensive Allocation**: Populate `QueryEvalState::rel_levels` pre-allocated and initialized with zeros to `max(max_rel + 1, min(config.relevance_level, 1,000,000) + 1)` size.
+*   **Defensive Allocation**: Populate `QueryEvalState::rel_levels` pre-allocated and initialized with zeros to `max(max_rel + 1, min(config.relevance_level, 127) + 1)` size.
 *   **Complete Set Average (`-c`)**: Implement native empty execution states (`Vec::new()`) for topics missing from the run results file under `-c`, ensuring proper default score evaluation without overrides.
 
 ### 1.4 The `all_trec` Metric Registry (`src/metrics/`)
