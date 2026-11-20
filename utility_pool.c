@@ -68,6 +68,16 @@ void *te_chk_and_realloc(void *ptr, long *current_bound,
     return ((void *) realloc(ptr, *current_bound * size));
 }
 
+/* Remove a UTF-8 byte-order mark before line termination is appended. */
+size_t te_skip_bom(char *buf, size_t size)
+{
+    if (size > 3 && 0 == memcmp(buf, "\357\273\277", 3)) {
+        size -= 3;
+        memmove(buf, buf + 3, size);
+    }
+    return (size);
+}
+
 /* Count the lines of an input file read into buf: size bytes that end in
    a newline, followed by a NUL. A NUL byte, or a CR that does not end a
    CRLF line ending, is an error: print a message naming the reader, the

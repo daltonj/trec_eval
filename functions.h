@@ -15,6 +15,7 @@ void *te_chk_and_malloc(void *ptr, long *current_bound,
                         const long needed, const size_t size);
 void *te_chk_and_realloc(void *ptr, long *current_bound,
                          const long needed, const int size);
+size_t te_skip_bom(char *buf, size_t size);
 long te_count_lines(const char *buf, const size_t size, const char *reader,
                     const char *kind, const char *file);
 /* Functions for dealing with zscores */
