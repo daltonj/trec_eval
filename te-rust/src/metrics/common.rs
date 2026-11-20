@@ -87,7 +87,7 @@ pub(crate) fn parse_finite_float(tok: &str) -> Result<f64, MeasureParseError> {
     Ok(value)
 }
 
-pub(crate) fn finite_float(value: f64) -> Result<f64, MeasureParseError> {
+fn finite_float(value: f64) -> Result<f64, MeasureParseError> {
     if value.is_finite() {
         Ok(value)
     } else {
