@@ -134,8 +134,8 @@ This document tracks active design questions, structural decisions, and implemen
 
 ### 20. Infallible Float Sorting and Determinism
 *   **Type**: Design
-*   **Status**: Resolved (total_cmp & Measure-Dependent guards)
-*   **Description**: Resolved to incorporate `f64::total_cmp` for high-performance, branchless, and crash-safe document sorting within the alignment engine, coupled with strict fail-fast validation that rejects `NaN` scores before sorting. Furthermore, recognized that "correct fallback score" under undefined states is measure-dependent (e.g., 0.0 vs utility offsets); resolved that each individual metric `Measure` implementation must defensively evaluate its own specific mathematical boundaries and return its designated standard fallback rather than propagating raw floating-point `NaN` or `Infinity` values.
+*   **Status**: Resolved (NaN refusal & Measure-Dependent guards)
+*   **Description**: Resolved to reject `NaN` scores before the alignment engine sorts documents, so that `partial_cmp` orders every score. The engine does not use `f64::total_cmp`, which orders -0.0 below 0.0: as in `trec_eval`, the two are equal, and the docno orders such documents. Furthermore, recognized that "correct fallback score" under undefined states is measure-dependent (e.g., 0.0 vs utility offsets); resolved that each individual metric `Measure` implementation must defensively evaluate its own specific mathematical boundaries and return its designated standard fallback rather than propagating raw floating-point `NaN` or `Infinity` values.
 
 ### 18. Asymmetric Comment Handling
 *   **Type**: Design

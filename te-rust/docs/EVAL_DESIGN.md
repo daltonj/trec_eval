@@ -420,7 +420,7 @@ Standard floating-point operations can introduce differences due to precision an
     *   Each individual `Measure` implementation is responsible for explicitly checking for its own mathematical boundary cases and returning its specific defined safe fallback value to prevent corrupt non-finite floats from propagating into the accumulation/averaging phase.
 2.  **Infallible Float Sorting and Parsing Constraints**:
     *   The parsers and the alignment engine reject `NaN` similarity scores, which have no place in the ranking. Infinite scores are accepted, as `trec_eval` accepts them; they only order documents and never enter a measure's arithmetic.
-    *   The alignment engine sorts document similarity scores descending using `f64::total_cmp` (stabilized in Rust 1.62). This compiles to branchless, high-performance bit-level instructions, eliminates the need for `.partial_cmp().unwrap()`, and guarantees deterministic tie-breaking even if un-validated float representations are encountered in memory.
+    *   The alignment engine sorts document similarity scores descending with `partial_cmp`, which orders every score once `NaN` is refused, and breaks ties by docno descending. It does not use `f64::total_cmp`, which orders -0.0 below 0.0: as in `trec_eval`, the two are equal, and the docno orders such documents.
 3.  **Geometric Mean Underflow**:
     *   Always use `1e-5` (`MIN_GEO_MEAN`) as the floor for log calculation to prevent $\ln(0)$ running into negative infinity.
 
