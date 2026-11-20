@@ -122,7 +122,8 @@ static char *usage =
    -h: Give full help information, including other options\n\
    -q: In addition to summary evaluation, give evaluation for each query\n\
    -m: calculate and print measures indicated by 'measure'\n\
-       ('-m all_trec' prints all measures, '-m official' is default)\n";
+       ('-m all_trec' prints the standard TREC measures; the default\n\
+        depends on -R)\n";
 
 extern int te_num_trec_measures;
 extern TREC_MEAS *te_trec_measures[];
