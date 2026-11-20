@@ -3,16 +3,6 @@ import trec_eval
 from trec_eval import Evaluator, evaluate
 
 
-class MockDataFrame:
-    """Mock DataFrame implementing column access and .columns attribute."""
-    def __init__(self, data: dict):
-        self.data = data
-        self.columns = list(data.keys())
-
-    def __getitem__(self, col):
-        return self.data[col]
-
-
 def test_evaluate_arrays():
     qrels = {
         "q1": {"d1": 0, "d2": 1},
@@ -30,14 +20,14 @@ def test_evaluate_arrays():
     assert res["q1"]["map"] == 1.0
 
 
-def test_dataframe_ingestion_default_columns():
-    qrels_df = MockDataFrame({
+def test_dataframe_ingestion_default_columns(dataframe):
+    qrels_df = dataframe({
         "query_id": ["q1", "q1", "q2", "q2"],
         "doc_id": ["d1", "d2", "d2", "d3"],
         "relevance": [0, 1, 1, 1],
     })
 
-    run_df = MockDataFrame({
+    run_df = dataframe({
         "query_id": ["q1", "q1", "q2", "q2"],
         "doc_id": ["d1", "d2", "d2", "d3"],
         "score": [0.2, 1.5, 0.9, 0.3],
@@ -48,14 +38,14 @@ def test_dataframe_ingestion_default_columns():
     assert res["q1"]["recip_rank"] == 1.0
 
 
-def test_dataframe_ingestion_custom_columns():
-    qrels_df = MockDataFrame({
+def test_dataframe_ingestion_custom_columns(dataframe):
+    qrels_df = dataframe({
         "topic": ["q1", "q1", "q2"],
         "docno": ["d1", "d2", "d2"],
         "rel_grade": [0, 1, 1],
     })
 
-    run_df = MockDataFrame({
+    run_df = dataframe({
         "topic": ["q1", "q1", "q2"],
         "docno": ["d1", "d2", "d2"],
         "similarity": [0.1, 0.8, 0.5],

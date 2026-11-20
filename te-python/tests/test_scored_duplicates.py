@@ -57,10 +57,8 @@ def test_custom_measures_refuse_scored_duplicates(measures):
 @pytest.mark.parametrize("representation", ["file", "iterable", "frame"])
 @pytest.mark.parametrize("first_grade", [0, 1])
 def test_python_qrels_keep_repeats_for_the_scored_topic_check(
-    tmp_path, representation, first_grade
+    tmp_path, representation, first_grade, dataframe
 ):
-    from test_stage3 import MockDataFrame
-
     rows = [("1", "a", 1), ("3", "x", first_grade), ("3", "x", 1)]
     qrels_file = tmp_path / "repeat.qrels"
     qrels_file.write_text(
@@ -72,7 +70,7 @@ def test_python_qrels_keep_repeats_for_the_scored_topic_check(
             return qrels_file
         if representation == "iterable":
             return iter(rows)
-        return MockDataFrame(
+        return dataframe(
             {
                 "qid": [qid for qid, _, _ in rows],
                 "docno": [docno for _, docno, _ in rows],

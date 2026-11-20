@@ -39,9 +39,7 @@ def test_pytrec_eval_compat_returns_no_topics_as_pytrec_eval_does():
 
 @pytest.mark.parametrize("qrels_kind", ["dict", "file", "iterable", "frame"])
 @pytest.mark.parametrize("run_kind", ["dict", "file", "iterable", "frame"])
-def test_compat_no_overlap_after_ingestion(tmp_path, qrels_kind, run_kind):
-    from test_stage3 import MockDataFrame
-
+def test_compat_no_overlap_after_ingestion(tmp_path, qrels_kind, run_kind, dataframe):
     qrels_file = tmp_path / "topic.qrels"
     qrels_file.write_text("q1 0 d 1\n")
     run_file = tmp_path / "topic.run"
@@ -50,13 +48,13 @@ def test_compat_no_overlap_after_ingestion(tmp_path, qrels_kind, run_kind):
         "dict": {"q1": {"d": 1}},
         "file": qrels_file,
         "iterable": iter([("q1", "d", 1)]),
-        "frame": MockDataFrame({"qid": ["q1"], "docno": ["d"], "rel": [1]}),
+        "frame": dataframe({"qid": ["q1"], "docno": ["d"], "rel": [1]}),
     }
     runs = {
         "dict": {"q2": {"d": 1.0}},
         "file": run_file,
         "iterable": iter([("q2", "d", 1.0)]),
-        "frame": MockDataFrame({"qid": ["q2"], "docno": ["d"], "score": [1.0]}),
+        "frame": dataframe({"qid": ["q2"], "docno": ["d"], "score": [1.0]}),
     }
     evaluator = pytrec_eval.RelevanceEvaluator(qrels[qrels_kind], {"map"})
     assert evaluator.evaluate(runs[run_kind]) == {}
