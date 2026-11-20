@@ -97,7 +97,7 @@ te_calc_ndcg_cut(const EPI * epi, const REL_INFO * rel_info,
             cur_lvl--;
             lvl_count = 1;
         }
-        if (cur_lvl == 0)
+        if (cur_lvl <= 0)
             break;
 
         if (i == cutoffs[cutoff_index]) {
