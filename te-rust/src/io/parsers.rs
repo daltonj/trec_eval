@@ -282,7 +282,7 @@ fn round_binary(mantissa: u64, sticky: bool, exponent: i64) -> f64 {
     if top < -1075 {
         return 0.0;
     }
-    let shift = (11 + (-1022 - top).max(0)).min(65) as u32;
+    let shift = (11 + (-1022 - top).max(0)) as u32;
     let (q, r, half) = (m >> shift, m & ((1u128 << shift) - 1), 1u128 << (shift - 1));
     let up = r > half || (r == half && (sticky || q & 1 == 1));
     let q = (q + u128::from(up)) as u64;
@@ -1069,9 +1069,11 @@ mod tests {
     }
     #[test]
     fn hex_exponent_cancels_a_long_significand_offset() {
+        let digits = 262_145;
+        let zeros = "0".repeat(digits);
         for s in [
-            format!("0x0.{}1p1048584", "0".repeat(262145)),
-            format!("0x1{}p-1048580", "0".repeat(262145)),
+            format!("0x0.{zeros}1p{}", 4 * (digits + 1)),
+            format!("0x1{zeros}p-{}", 4 * digits),
         ] {
             let (value, len) = strtod_prefix(&s).unwrap();
             assert_eq!((value.to_bits(), len), (1.0f64.to_bits(), s.len()));
