@@ -1,18 +1,39 @@
-/* Checks that Malloc and Realloc in common.h return NULL when
-   n * sizeof(type) does not fit in a size_t. test_large-file-sizes.sh
-   builds and runs it; the exit status is 0 if every check holds. */
+/* Checks the byte counts that Malloc and Realloc in common.h pass to
+   malloc and realloc, through stubs that record the count without
+   allocating. test_large-file-sizes.sh builds it with "make alloc-test";
+   the exit status is 0 if every check holds. */
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+static char buffer[1];
+static size_t requested;
+
+static void *record_malloc(size_t size)
+{
+    requested = size;
+    return (buffer);
+}
+
+static void *record_realloc(void *ptr, size_t size)
+{
+    (void) ptr;
+    requested = size;
+    return (buffer);
+}
+
+#define malloc record_malloc
+#define realloc record_realloc
 #include "common.h"
 
 static int failed = 0;
 
-static void check_null(void *ptr, const char *call)
+static void check(int ok, const char *call)
 {
-    if (ptr != NULL) {
-        printf("%s did not return NULL\n", call);
+    if (!ok) {
+        printf("%s\n", call);
         failed = 1;
-        Free(ptr);
     }
 }
 
@@ -20,19 +41,26 @@ int main(void)
 {
     /* half * sizeof(short) is one more than the largest size_t */
     size_t half = ((size_t) -1) / 2 + 1;
-    char *ptr;
 
-    check_null(Malloc(half, short), "Malloc(SIZE_MAX / 2 + 1, short)");
-    check_null(Malloc(-1, long), "Malloc(-1, long)");
-    check_null(Realloc(NULL, half, short),
-               "Realloc(NULL, SIZE_MAX / 2 + 1, short)");
+    requested = 0;
+    check(NULL == Malloc(half, short) && requested == 0,
+          "Malloc(SIZE_MAX / 2 + 1, short) allocated");
+    check(NULL == Malloc(-1, long) && requested == 0,
+          "Malloc(-1, long) allocated");
+    check(NULL == Realloc(buffer, half, short) && requested == 0,
+          "Realloc(ptr, SIZE_MAX / 2 + 1, short) allocated");
 
-    /* Sizes that fit are still allocated */
-    if (NULL == (ptr = Malloc(16, char)) ||
-        NULL == (ptr = Realloc(ptr, 32, char))) {
-        printf("Malloc(16, char) or Realloc(ptr, 32, char) returned NULL\n");
-        return 1;
-    }
-    Free(ptr);
-    return failed;
+    check(NULL != Malloc(16, long) && requested == 16 * sizeof(long),
+          "Malloc(16, long) did not request 16 longs");
+    check(NULL != Realloc(buffer, 32, long) && requested == 32 * sizeof(long),
+          "Realloc(ptr, 32, long) did not request 32 longs");
+#if SIZE_MAX > UINT_MAX
+    check(NULL != Malloc((size_t) UINT_MAX + 1, char) &&
+          requested == (size_t) UINT_MAX + 1,
+          "Malloc(UINT_MAX + 1, char) did not request UINT_MAX + 1 bytes");
+    check(NULL != Realloc(buffer, (size_t) UINT_MAX + 1, char) &&
+          requested == (size_t) UINT_MAX + 1,
+          "Realloc(ptr, UINT_MAX + 1, char) did not request UINT_MAX + 1 bytes");
+#endif
+    return (failed);
 }

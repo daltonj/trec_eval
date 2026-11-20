@@ -54,6 +54,10 @@ SRCOTHER = README Makefile test bpref_bug CHANGELOG
 trec_eval: $(SRCS) Makefile $(SRCH)
 	$(CC) $(CFLAGS)  -o trec_eval $(SRCS) -lm
 
+.PHONY: alloc-test
+alloc-test:
+	$(CC) $(CFLAGS) -o "$(TEST_ALLOC)" test/regress/large-file-sizes/alloc.c
+
 install: $(BIN)/trec_eval
 
 quicktest: trec_eval
