@@ -28,6 +28,23 @@ def test_pytrec_eval_drop_in_relevance_evaluator():
     assert "ndcg" in res["q1"]
     assert res["q1"]["map"] == pytest.approx(1.0 / 3.0)
     assert res["q1"]["ndcg"] == pytest.approx(0.5)
+    assert res["q2"]["map"] == pytest.approx(7.0 / 12.0)
+    assert res["q2"]["ndcg"] == pytest.approx(0.6934264036172708)
+
+
+@pytest.mark.parametrize(
+    "flags, expected",
+    [
+        ({}, {"P_1": 0.0, "num_ret": 3}),
+        ({"judged_docs_only_flag": False}, {"P_1": 0.0, "num_ret": 3}),
+        ({"judged_docs_only_flag": True}, {"P_1": 1.0, "num_ret": 2}),
+    ],
+)
+def test_pytrec_eval_keeps_unjudged_documents_by_default(flags, expected):
+    evaluator = pytrec_eval.RelevanceEvaluator(
+        {"1": {"d1": 1, "d2": 0}}, {"P_1", "num_ret"}, **flags
+    )
+    assert evaluator.evaluate({"1": {"u": 3.0, "d1": 2.0, "d2": 1.0}}) == {"1": expected}
 
 
 @pytest.mark.parametrize(

@@ -30,7 +30,7 @@ evaluator = pytrec_eval.RelevanceEvaluator(qrel, {'map', 'ndcg'})
 results = evaluator.evaluate(run)
 # {
 #     'q1': {'map': 0.3333333333333333, 'ndcg': 0.5},
-#     'q2': {'map': 1.0, 'ndcg': 1.0}
+#     'q2': {'map': 0.5833333333333333, 'ndcg': 0.6934264036172708}
 # }
 ```
 

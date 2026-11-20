@@ -94,7 +94,7 @@ class RelevanceEvaluator:
         qrel: Any,
         measures: Union[Set[str], Iterable[str], str],
         relevance_level: int = 1,
-        judged_docs_only_flag : bool = True,
+        judged_docs_only_flag: bool = False,
     ):
         measure_names = [measures] if isinstance(measures, str) else list(measures)
         native_measures: List[str] = []
