@@ -9,11 +9,12 @@
 # grade 2 gives ideal_dcg 5 + 1/log2(3) = 5.6309.
 . test/regress/lib.sh
 d=test/regress/shared-gain-params
+R=test/regress/results
 
-expect_status 0 -m dcg.1=3 -m ideal_dcg $d/qrels $d/results
-expect_status 0 -m ndcg.1=3 -m dcg $d/qrels $d/results
-expect_output $d/out.dcg -m dcg.1=3 -m ideal_dcg -m ndcg $d/qrels $d/results
-expect_output $d/out.ndcg -m ndcg.1=3 -m dcg -m ideal_dcg $d/qrels $d/results
+expect_status 0 -m dcg.1=3 -m ideal_dcg $d/qrels $R
+expect_status 0 -m ndcg.1=3 -m dcg $d/qrels $R
+expect_output $d/out.dcg -m dcg.1=3 -m ideal_dcg -m ndcg $d/qrels $R
+expect_output $d/out.ndcg -m ndcg.1=3 -m dcg -m ideal_dcg $d/qrels $R
 expect_output $d/out.each -m dcg.1=3 -m ideal_dcg.2=5 -m ndcg.1=3 \
-    $d/qrels $d/results
+    $d/qrels $R
 exit 0
