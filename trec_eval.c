@@ -104,10 +104,6 @@ Most measures, but not all, will treat -1 or -2 the same as 0, \n\
 namely nonrelevant.  Note that relevance_level is used to \n\
 determine if the document is relevant during score calculations. \n\
 Queries for which there is no relevance information are ignored. \n\
-Warning: queries for which there are relevant docs but no retrieved docs \n\
-are also ignored by default.  This allows systems to evaluate over subsets  \n\
-of the relevant docs, but means if a system improperly retrieves no docs,  \n\
-it will not be detected.  Use the -c flag to avoid this behavior. \n\
 ";
 
 
