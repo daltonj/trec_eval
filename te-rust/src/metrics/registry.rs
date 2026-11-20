@@ -291,20 +291,15 @@ fn canonicalize_measure_spec(arg: &str) -> (String, String) {
 }
 
 
-/// `P.`, `P@` and `P_` introduce a parameter list and then give none.
-fn has_empty_param_list(arg: &str) -> bool {
-    match arg.split_once('@').or_else(|| arg.split_once('.')) {
-        Some((_, params)) => params.is_empty(),
-        None => arg.ends_with('_'),
-    }
-}
-
 /// The spec that `arg` names and its parameters, or the error for an illegal name.
 fn named_spec(arg: &str) -> Result<(&'static MeasureSpec, String), MeasureParseError> {
-    if has_empty_param_list(arg) {
-        return Err(MeasureParseError::illegal_name(format!("empty parameter list in measure '{}'", arg)));
-    }
     let (root, params) = canonicalize_measure_spec(arg);
+    if params.is_empty() && arg.ends_with(['.', '@', '_']) {
+        return Err(MeasureParseError::illegal_name(format!(
+            "empty parameter list in measure '{}'",
+            arg
+        )));
+    }
     let spec = find_spec(&root)
         .ok_or_else(|| MeasureParseError::illegal_name(format!("unknown measure '{}'", arg)))?;
     Ok((spec, params))

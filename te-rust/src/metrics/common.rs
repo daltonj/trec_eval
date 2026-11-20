@@ -3,7 +3,7 @@ use crate::metrics::EvalConfig;
 use std::collections::HashMap;
 use std::fmt;
 
-/// Error returned when a measure's parameter string cannot be parsed.
+/// Error returned for an invalid measure name or invalid measure parameters.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MeasureParseError {
     pub message: String,
