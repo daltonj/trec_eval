@@ -30,6 +30,8 @@ double get_gain(const long rel_level, const GAINS * gains);
 int comp_rel_gain(const void * ptr1, const void * ptr2);
 /* Init shared by Rprec_mult and Rprec_mult_avgjg, defined in m_Rprec_mult.c */
 int te_init_Rprec_mult(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval);
+/* Check shared by iprec_at_recall and 11pt_avg, defined in m_iprec_at_recall.c */
+int te_check_recall_levels(const TREC_MEAS * tm);
 /* Functions for converting strings to numbers, with warnings for unexpected inputs*/
 long str_to_long(const char * str, int * error);
 long str_to_long_ctx(const char * str, int * error, const char * fmt, ...);

@@ -50,24 +50,13 @@ TREC_MEAS te_meas_11pt_avg = { "11pt_avg",
     &default_11ptavg_cutoffs, -1
 };
 
-/* Recall levels must be between 0 and 1. te_calc_11ptavg needs them in
-   increasing order */
-static int te_init_11ptavg(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
+/* te_calc_11ptavg needs the recall levels in increasing order */
+static int
+te_init_11ptavg(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
 {
-    double *levels;
-    long i;
-
-    if (UNDEF == te_init_meas_s_double_p_double(epi, tm, eval))
+    if (UNDEF == te_init_meas_s_double_p_double(epi, tm, eval) ||
+        UNDEF == te_check_recall_levels(tm))
         return (UNDEF);
-    levels = (double *) tm->meas_params->param_values;
-    for (i = 0; i < tm->meas_params->num_params; i++) {
-        if (levels[i] < 0.0 || levels[i] > 1.0) {
-            fprintf(stderr,
-                    "trec_eval: recall level %g of measure '%s' is not in [0, 1]\n",
-                    levels[i], tm->name);
-            return (UNDEF);
-        }
-    }
     qsort(tm->meas_params->param_values, tm->meas_params->num_params,
           sizeof(double), comp_double);
     return (1);

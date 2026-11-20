@@ -45,15 +45,11 @@ TREC_MEAS te_meas_iprec_at_recall = { "iprec_at_recall",
 };
 
 /* Recall levels must be between 0 and 1 */
-static int
-te_init_iprec_at_recall(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
+int te_check_recall_levels(const TREC_MEAS * tm)
 {
-    double *levels;
+    double *levels = (double *) tm->meas_params->param_values;
     long i;
 
-    if (UNDEF == te_init_meas_a_double_cut_double(epi, tm, eval))
-        return (UNDEF);
-    levels = (double *) tm->meas_params->param_values;
     for (i = 0; i < tm->meas_params->num_params; i++) {
         if (levels[i] < 0.0 || levels[i] > 1.0) {
             fprintf(stderr,
@@ -63,6 +59,14 @@ te_init_iprec_at_recall(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
         }
     }
     return (1);
+}
+
+static int
+te_init_iprec_at_recall(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
+{
+    if (UNDEF == te_init_meas_a_double_cut_double(epi, tm, eval))
+        return (UNDEF);
+    return (te_check_recall_levels(tm));
 }
 
 static int
