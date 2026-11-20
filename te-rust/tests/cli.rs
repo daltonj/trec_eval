@@ -72,7 +72,14 @@ mod exit_status {
 
     #[test]
     fn an_unusable_measure_parameter_exits_2() {
-        for measure in ["P.x", "map_cut.x"] {
+        for measure in [
+            "P.x",
+            "map_cut.x",
+            "rbp.p=0.2,p=0.8",
+            "rbp_resid.p=0.2,p=0.8",
+            "rbp_resid.x=1",
+            "rbp_resid.1=2,01=3",
+        ] {
             let out = eval(&["-m", measure], &input("good.qrels"), &input("good.run"));
             assert_eq!(out.status.code(), Some(2), "{measure}");
             assert!(out.stdout.is_empty(), "{measure}");
@@ -470,7 +477,7 @@ mod documented_differences {
 
 /// Which measures te-rust evaluates for its `-m` options, and the order of their rows.
 mod measure_requests {
-    use super::common::{eval, fixture, rows};
+    use super::common::{assert_refused, eval, fixture, rows};
 
     /// The measure and topic of each row for `options` on `name`.qrels and `name`.run.
     fn printed(name: &str, options: &[&str]) -> Vec<String> {
@@ -602,6 +609,15 @@ mod measure_requests {
                 "{first} {second}"
             );
         }
+    }
+
+    #[test]
+    fn global_gains_follow_the_rules_of_a_gain_map() {
+        let (qrels, run) = (fixture("topics.qrels"), fixture("topics.run"));
+        let out = eval(&["--global-gains", "1=x", "-m", "ndcg"], &qrels, &run);
+        assert_refused(&out, "invalid gain 'x' for relevance level 1");
+        let out = eval(&["--global-gains", "1=2,1=5", "-m", "ndcg"], &qrels, &run);
+        assert_refused(&out, "relevance level 1 is given more than once");
     }
 }
 

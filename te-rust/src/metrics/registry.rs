@@ -527,4 +527,253 @@ mod tests {
     fn utility_requires_four_coeffs() {
         assert!(resolve_measures(&["utility.1.0,2.0".to_string()]).is_err());
     }
+
+    /// The message of the error that `request` raises.
+    fn refusal(request: &str) -> String {
+        match resolve_measures(&[request.to_string()]) {
+            Ok(_) => panic!("{request} was accepted"),
+            Err(e) => e.message,
+        }
+    }
+
+    #[test]
+    fn rank_cutoffs_must_be_at_least_1() {
+        let mut requests = vec!["P_0".to_string(), "P@0".to_string()];
+        for root in [
+            "P",
+            "recall",
+            "success",
+            "map_cut",
+            "ndcg_cut",
+            "relative_P",
+            "unj",
+        ] {
+            requests.extend([format!("{root}.0"), format!("{root}.0,5")]);
+        }
+        for request in requests {
+            assert_eq!(
+                refusal(&request),
+                format!("measure '{request}': rank cutoff must be at least 1")
+            );
+        }
+    }
+
+    #[test]
+    fn integer_cutoffs_must_fit_in_an_i64() {
+        for root in [
+            "P",
+            "recall",
+            "success",
+            "map_cut",
+            "ndcg_cut",
+            "relative_P",
+            "unj",
+            "P_avgjg",
+        ] {
+            for cutoff in ["9223372036854775808", "18446744073709551615"] {
+                let request = format!("{root}.{cutoff}");
+                let message =
+                    format!("measure '{request}': integer cutoff '{cutoff}' is out of range");
+                assert_eq!(refusal(&request), message);
+            }
+        }
+    }
+
+    #[test]
+    fn cutoffs_must_be_distinct_and_print_distinct_row_names() {
+        for (request, message) in [
+            ("P.5,5", "cutoff 5 is given more than once"),
+            ("map_cut.2,5,2", "cutoff 2 is given more than once"),
+            (
+                "iprec_at_recall.0.5,0.5",
+                "cutoff 0.5 is given more than once",
+            ),
+            ("Rprec_mult.1.0,1.0", "cutoff 1 is given more than once"),
+            (
+                "Rprec_mult.0.999,1.001",
+                "cutoffs 0.999 and 1.001 both print as 1.00",
+            ),
+            (
+                "iprec_at_recall.0.101,0.104",
+                "cutoffs 0.101 and 0.104 both print as 0.10",
+            ),
+            (
+                "Rprec_mult_avgjg.1.001,0.999",
+                "cutoffs 0.999 and 1.001 both print as 1.00",
+            ),
+        ] {
+            assert_eq!(refusal(request), format!("measure '{request}': {message}"));
+        }
+        // A repeat is legal where the order of the list carries meaning.
+        for request in ["utility.1,-1,0,0", "11pt_avg.0.5,0.5"] {
+            assert!(
+                resolve_measures(&[request.to_string()]).is_ok(),
+                "{request}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_empty_parameter_list_is_an_illegal_name() {
+        for request in [
+            "P.",
+            "P@",
+            "P_",
+            "recall_",
+            "map_cut_",
+            "ndcg_cut_",
+            "success_",
+            "unj_",
+            "P_avgjg_",
+        ] {
+            let error = resolve_measures(&[request.to_string()]).err().unwrap();
+            assert_eq!(
+                error.message,
+                format!("empty parameter list in measure '{request}'")
+            );
+            assert!(error.illegal_name, "{request}");
+        }
+        // A number may end in a point, and a measure may have no list.
+        for (request, rows) in [
+            ("iprec_at_recall.1.", &["iprec_at_recall_1.00"][..]),
+            ("Rprec_mult.1.,2.", &["Rprec_mult_1.00", "Rprec_mult_2.00"]),
+            ("rbp.p=0.", &["rbp_p=0."]),
+            ("ndcg.1=2.", &["ndcg_1=2."]),
+            ("map", &["map"]),
+        ] {
+            let measures = resolve_measures(&[request.to_string()]).unwrap().measures;
+            assert_eq!(measures[0].sub_metrics(), rows, "{request}");
+        }
+    }
+
+    #[test]
+    fn float_parameters_must_be_finite() {
+        for value in ["nan", "NaN", "inf", "-inf", "infinity", "1e400"] {
+            for request in [
+                format!("set_F.{value}"),
+                format!("rbp.p={value}"),
+                format!("rbp_resid.p={value}"),
+                format!("iprec_at_recall.{value}"),
+                format!("11pt_avg.{value}"),
+                format!("utility.{value},-1,0,0"),
+                format!("Rprec_mult.{value},0.5"),
+                format!("Rprec_mult_avgjg.{value}"),
+            ] {
+                let message =
+                    format!("measure '{request}': float value '{value}' is not a finite number");
+                assert_eq!(refusal(&request), message);
+            }
+        }
+    }
+
+    #[test]
+    fn float_parameters_must_be_in_the_domain_of_their_measure() {
+        let mut cases = vec![
+            (
+                "set_F.-0.5".to_string(),
+                "set_F weight -0.5 is negative".to_string(),
+            ),
+            (
+                "set_F.-1e-9".to_string(),
+                "set_F weight -0.000000001 is negative".to_string(),
+            ),
+            (
+                "rbp.1=2,p=2".to_string(),
+                "persistence p 2 is outside [0, 1)".to_string(),
+            ),
+        ];
+        for root in ["rbp", "rbp_resid"] {
+            for p in ["1", "1.5", "-0.5", "-0.1"] {
+                cases.push((
+                    format!("{root}.p={p}"),
+                    format!("persistence p {p} is outside [0, 1)"),
+                ));
+            }
+        }
+        for root in ["iprec_at_recall", "11pt_avg"] {
+            for (levels, level) in [
+                ("-1,1.5", "-1"),
+                ("1.5", "1.5"),
+                ("-0.1", "-0.1"),
+                ("0.5,1.01", "1.01"),
+            ] {
+                cases.push((
+                    format!("{root}.{levels}"),
+                    format!("recall level {level} is outside [0, 1]"),
+                ));
+            }
+        }
+        for root in ["Rprec_mult", "Rprec_mult_avgjg"] {
+            for (multiples, multiple) in [("-1", "-1"), ("0", "0"), ("-0.0", "-0"), ("0,1", "0")] {
+                let message = format!("multiple of R {multiple} is not a positive number");
+                cases.push((format!("{root}.{multiples}"), message));
+            }
+        }
+        for (request, message) in cases {
+            assert_eq!(refusal(&request), format!("measure '{request}': {message}"));
+        }
+    }
+
+    #[test]
+    fn rbp_takes_p_once_and_integer_gain_levels() {
+        for root in ["rbp", "rbp_resid"] {
+            let mut cases = vec![(
+                format!("{root}.p=0.2,p=0.8"),
+                "parameter 'p' is given more than once".to_string(),
+            )];
+            for name in ["x", "P", "1x", "1.0"] {
+                cases.push((
+                    format!("{root}.{name}=1"),
+                    format!("invalid relevance level '{name}'"),
+                ));
+            }
+            for (gains, level) in [("1=2,01=3", 1), ("1=2,+1=3", 1), ("-1=2,-01=3", -1)] {
+                cases.push((
+                    format!("{root}.{gains}"),
+                    format!("relevance level {level} is given more than once"),
+                ));
+            }
+            for (request, message) in cases {
+                assert_eq!(refusal(&request), format!("measure '{request}': {message}"));
+            }
+        }
+    }
+
+    #[test]
+    fn gain_maps_take_integer_levels_once_and_finite_gains() {
+        let mut cases: Vec<(String, &str)> = [
+            "ndcg",
+            "G",
+            "ndcg_rel",
+            "Rndcg",
+            "ndcg_p",
+            "dcg",
+            "ideal_dcg",
+        ]
+        .iter()
+        .map(|root| (format!("{root}.x=1"), "invalid relevance level 'x'"))
+        .collect();
+        cases.extend(
+            [
+                ("ndcg.1.5=2", "invalid relevance level '1.5'"),
+                ("ndcg.=2", "invalid relevance level ''"),
+                ("ndcg.1=x", "invalid gain 'x' for relevance level 1"),
+                ("ndcg.1=", "invalid gain '' for relevance level 1"),
+                ("ndcg.1=nan", "invalid gain 'nan' for relevance level 1"),
+                ("ndcg.1=inf", "invalid gain 'inf' for relevance level 1"),
+                ("ndcg.1=2=3", "invalid gain '2=3' for relevance level 1"),
+                ("dcg.1=x", "invalid gain 'x' for relevance level 1"),
+                ("ndcg.5,5", "expected key=value, got '5'"),
+                ("ndcg.1=2,", "expected key=value, got ''"),
+                ("ideal_dcg.5,5", "expected key=value, got '5'"),
+                ("ndcg.1=2,1=5", "relevance level 1 is given more than once"),
+                ("ndcg.1=2,01=3", "relevance level 1 is given more than once"),
+                ("dcg.1=2,1=5", "relevance level 1 is given more than once"),
+            ]
+            .map(|(request, message)| (request.to_string(), message)),
+        );
+        for (request, message) in cases {
+            assert_eq!(refusal(&request), format!("measure '{request}': {message}"));
+        }
+    }
 }

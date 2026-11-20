@@ -144,6 +144,104 @@ mod cutoffs {
     }
 }
 
+/// Parameters at the bounds of their domains, and lists that end in a point or repeat a value.
+mod parameters {
+    use super::common::{eval, fixture, rows};
+
+    #[test]
+    fn parameters_at_their_bounds_score_as_trec_eval() {
+        // One relevant document, a, at rank 1 of 2, so P = 1/2 and R = 1.
+        let (qrels, run) = (fixture("ab.qrels"), fixture("ab.run"));
+        for (request, expected) in [
+            // set_F.x gives (x + 1) * P * R / (x * P + R): x = 0 gives P = 0.5000, the default
+            // x = 1 gives 1 / 1.5 = 0.6667, and x = 0.5 gives 0.75 / 1.25 = 0.6000.
+            ("set_F.0", &["set_F_0 all 0.5000"][..]),
+            ("set_F", &["set_F all 0.6667"]),
+            ("set_F.0.5", &["set_F_0.5 all 0.6000"]),
+            // rbp is (1 - p) * 1 for a relevant document at rank 1. rbp_resid counts unjudged
+            // documents, and this run has none.
+            ("rbp.p=0", &["rbp_p=0 all 1.0000"]),
+            ("rbp.p=0.5", &["rbp_p=0.5 all 0.5000"]),
+            ("rbp_resid.p=0", &["rbp_resid_p=0 all 0.0000"]),
+            ("utility.1,-1,0,0", &["utility_1,-1,0,0 all 0.0000"]),
+            ("11pt_avg.0.5", &["11pt_avg_0.5 all 1.0000"]),
+            ("11pt_avg.0,1", &["11pt_avg_0,1 all 1.0000"]),
+            ("iprec_at_recall.0.5", &["iprec_at_recall_0.50 all 1.0000"]),
+            (
+                "iprec_at_recall.0,1",
+                &[
+                    "iprec_at_recall_0.00 all 1.0000",
+                    "iprec_at_recall_1.00 all 1.0000",
+                ],
+            ),
+            // Cutoffs as close as two decimals can tell apart.
+            (
+                "iprec_at_recall.0.1,0.11",
+                &[
+                    "iprec_at_recall_0.10 all 1.0000",
+                    "iprec_at_recall_0.11 all 1.0000",
+                ],
+            ),
+            (
+                "Rprec_mult.0.99,1.01",
+                &["Rprec_mult_0.99 all 1.0000", "Rprec_mult_1.01 all 1.0000"],
+            ),
+            ("Rprec_mult.0.5", &["Rprec_mult_0.50 all 1.0000"]),
+            ("Rprec_mult.2", &["Rprec_mult_2.00 all 0.5000"]),
+        ] {
+            assert_eq!(
+                rows(&eval(&["-m", request], &qrels, &run)),
+                expected,
+                "{request}"
+            );
+        }
+        let out = eval(
+            &["-R", "qrels_jg", "-m", "Rprec_mult_avgjg.2"],
+            &qrels,
+            &run,
+        );
+        assert_eq!(rows(&out), ["Rprec_mult_avgjg_2.00 all 0.5000"]);
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn a_cutoff_of_i64_max_scores_as_trec_eval() {
+        let (qrels, run) = (fixture("ab.qrels"), fixture("ab.run"));
+        let max = i64::MAX;
+        assert_eq!(
+            rows(&eval(&["-m", &format!("P.{max}")], &qrels, &run)),
+            [format!("P_{max} all 0.0000")]
+        );
+        let out = eval(&["-m", &format!("map_cut.{max}")], &qrels, &run);
+        assert_eq!(rows(&out), [format!("map_cut_{max} all 1.0000")]);
+    }
+
+    #[test]
+    fn lists_that_end_in_a_point_or_repeat_a_value_score_as_trec_eval() {
+        // Six relevant documents in the top six.
+        let (qrels, run) = (fixture("six-relevant.qrels"), fixture("six-relevant.run"));
+        for (request, expected) in [
+            ("P.5", &["P_5 all 1.0000"][..]),
+            ("iprec_at_recall.0.0", &["iprec_at_recall_0.00 all 1.0000"]),
+            ("iprec_at_recall.1.", &["iprec_at_recall_1.00 all 1.0000"]),
+            (
+                "Rprec_mult.1.,2.",
+                &["Rprec_mult_1.00 all 1.0000", "Rprec_mult_2.00 all 0.5000"],
+            ),
+            ("rbp.p=0.", &["rbp_p=0. all 1.0000"]),
+            ("ndcg.1=2.", &["ndcg_1=2. all 1.0000"]),
+            ("utility.1,-1,0,0", &["utility_1,-1,0,0 all 6.0000"]),
+            ("11pt_avg.0.5,0.5", &["11pt_avg_0.5,0.5 all 1.0000"]),
+        ] {
+            assert_eq!(
+                rows(&eval(&["-m", request], &qrels, &run)),
+                expected,
+                "{request}"
+            );
+        }
+    }
+}
+
 /// rbp normalises the gains to [0, 1] by their range, which includes the gain 0 of an
 /// unjudged document.
 mod rbp {
@@ -256,13 +354,36 @@ mod rbp {
         let run = write("xa.run", "1 Q0 x 1 3 r\n1 Q0 a 2 2 r\n");
         let out = eval(&["-m", "rbp.0=-4,1=-2"], &one.0, &run);
         assert_eq!(summary(&out, "rbp_0=-4,1=-2"), "0.0450");
+        // rbp_resid accepts a gain map with integer levels and does not use it.
+        let out = eval(&["-m", "rbp_resid.p=0.5,-1=10,01=2"], &one.0, &run);
+        assert_eq!(summary(&out, "rbp_resid_p=0.5,-1=10,01=2"), "0.7500");
     }
 }
 
 /// The ndcg family and its two sums, dcg and ideal_dcg.
 mod ndcg {
-    use super::common::{assert_refused, eval, fixture, rows, summary, write};
+    use super::common::{eval, fixture, rows, summary, write};
     use std::process::Output;
+
+    #[test]
+    fn gain_maps_score_as_trec_eval() {
+        // ndcg.1=3,2=9: d (grade 3, gain 3), a (gain 9) and c (gain 3) are at ranks 1, 3 and 5,
+        // so DCG = 3 + 9/2 + 3/log2(6) = 8.6606; the ideal order 9, 3, 3 gives
+        // 9 + 3/log2(3) + 3/2 = 12.3928, and 8.6606 / 12.3928 = 0.6988.
+        let (qrels, run) = (fixture("graded.qrels"), fixture("graded.run"));
+        for (options, row) in [
+            (&["-m", "ndcg"][..], "ndcg all 0.9212"),
+            (&["-m", "ndcg.1=3,2=9"], "ndcg_1=3,2=9 all 0.6988"),
+            (&["-m", "ndcg.+1=3,02=9"], "ndcg_+1=3,02=9 all 0.6988"),
+            (
+                &["--global-gains", "1=3,2=9", "-m", "ndcg"],
+                "ndcg all 0.6988",
+            ),
+            (&["-m", "G.1=3,2=9"], "G_1=3,2=9 all 0.4251"),
+        ] {
+            assert_eq!(rows(&eval(options, &qrels, &run)), [row], "{options:?}");
+        }
+    }
 
     #[test]
     fn ndcg_rel_sums_its_terms_with_either_sign() {
@@ -484,18 +605,6 @@ mod ndcg {
                 "ideal_dcg all 1.8770",
             ]
         );
-    }
-
-    #[test]
-    fn unusable_gain_maps_are_refused_as_for_ndcg() {
-        for (measure, message) in [
-            ("dcg.1=x", "invalid gain 'x' for relevance level 1"),
-            ("ideal_dcg.x=1", "invalid relevance level 'x'"),
-            ("dcg.1=2,1=5", "relevance level 1 is given more than once"),
-            ("ideal_dcg.5,5", "expected key=value, got '5'"),
-        ] {
-            assert_refused(&dcg_eval(&["-m", measure]), message);
-        }
     }
 }
 

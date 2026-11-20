@@ -200,4 +200,172 @@ pub trait Measure: Send + Sync {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::avg_11pt::Avg11PtMeasure;
+    use super::common::{make_mock_state, MeasureParseError};
+    use super::iprec_at_recall::IprecAtRecallMeasure;
+    use super::map_cut::MapCutMeasure;
+    use super::ndcg_cut::NdcgCutMeasure;
+    use super::precision::PrecisionCutMeasure;
+    use super::precision_avgjg::PrecisionAvgjgMeasure;
+    use super::rbp::RbpMeasure;
+    use super::rbp_resid::RbpResidMeasure;
+    use super::recall::RecallCutMeasure;
+    use super::relative_p::RelativePMeasure;
+    use super::rprec_mult::RprecMultMeasure;
+    use super::rprec_mult_avgjg::RprecMultAvgjgMeasure;
+    use super::set_f::SetFMeasure;
+    use super::success::SuccessCutMeasure;
+    use super::unj::UnjMeasure;
+    use super::utility::UtilityMeasure;
+    use super::*;
 
+    /// The measures that `new` builds from `sorted` reversed and from `sorted`.
+    fn reversed_and_sorted<T: Clone, M: Measure + 'static>(
+        new: fn(Vec<T>) -> Result<M, MeasureParseError>,
+        sorted: Vec<T>,
+    ) -> [Box<dyn Measure>; 2] {
+        let reversed = sorted.iter().rev().cloned().collect();
+        [
+            Box::new(new(reversed).unwrap()),
+            Box::new(new(sorted).unwrap()),
+        ]
+    }
+
+    #[test]
+    fn cutoff_constructors_sort_their_cutoffs() {
+        // Relevant documents at ranks 1, 4, 7 and 8 of 8, and unjudged ones at ranks 2 and 5.
+        let state = make_mock_state(vec![1, -1, 0, 1, -1, 0, 1, 1], 5);
+        let config = EvalConfig::default();
+        for [given, sorted] in [
+            reversed_and_sorted(PrecisionCutMeasure::new, vec![2, 5]),
+            reversed_and_sorted(RecallCutMeasure::new, vec![2, 5]),
+            reversed_and_sorted(SuccessCutMeasure::new, vec![2, 5]),
+            reversed_and_sorted(MapCutMeasure::new, vec![2, 5]),
+            reversed_and_sorted(NdcgCutMeasure::new, vec![2, 5]),
+            reversed_and_sorted(RelativePMeasure::new, vec![2, 5]),
+            reversed_and_sorted(UnjMeasure::new, vec![2, 5]),
+            reversed_and_sorted(PrecisionAvgjgMeasure::new, vec![2, 5]),
+            reversed_and_sorted(IprecAtRecallMeasure::new, vec![0.2, 0.8]),
+            reversed_and_sorted(RprecMultMeasure::new, vec![0.5, 2.0]),
+            reversed_and_sorted(RprecMultAvgjgMeasure::new, vec![0.5, 2.0]),
+        ] {
+            let state = match given.eval_type() {
+                EvaluationType::JudgmentGroups => EvalState::JudgmentGroups(vec![state.clone()]),
+                _ => EvalState::Standard(state.clone()),
+            };
+            assert_eq!(
+                given.sub_metrics(),
+                sorted.sub_metrics(),
+                "{}",
+                given.name()
+            );
+            assert_eq!(
+                given.calc(&config, &state),
+                sorted.calc(&config, &state),
+                "{}",
+                given.name()
+            );
+        }
+    }
+
+    #[test]
+    fn cutoff_constructors_refuse_lists_they_cannot_use() {
+        let error = MapCutMeasure::new(vec![5, 0]).err().unwrap();
+        assert_eq!(error.message, "rank cutoff must be at least 1");
+        let error = PrecisionCutMeasure::new(vec![5, 2, 5]).err().unwrap();
+        assert_eq!(error.message, "cutoff 5 is given more than once");
+        let error = RprecMultMeasure::new(vec![1.0, 0.5, 1.0]).err().unwrap();
+        assert_eq!(error.message, "cutoff 1 is given more than once");
+        assert!(PrecisionCutMeasure::new(vec![]).is_err());
+        assert!(Avg11PtMeasure::new(vec![], "").is_err());
+        for bad in [
+            vec![],
+            vec![f64::NAN],
+            vec![f64::INFINITY],
+            vec![f64::NEG_INFINITY],
+            vec![0.101, 0.104],
+        ] {
+            assert!(
+                IprecAtRecallMeasure::new(bad.clone()).is_err(),
+                "iprec_at_recall {bad:?}"
+            );
+            assert!(
+                RprecMultMeasure::new(bad.clone()).is_err(),
+                "Rprec_mult {bad:?}"
+            );
+            assert!(
+                RprecMultAvgjgMeasure::new(bad.clone()).is_err(),
+                "Rprec_mult_avgjg {bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn rank_cutoff_constructors_refuse_cutoffs_above_i64_max() {
+        assert!(PrecisionCutMeasure::new(vec![i64::MAX as usize + 1]).is_err());
+        PrecisionCutMeasure::new(vec![i64::MAX as usize]).unwrap();
+    }
+
+    #[test]
+    fn recall_levels_and_multiples_of_r_must_be_in_their_domain() {
+        for bad in [-0.1, 1.1, f64::NAN, f64::INFINITY] {
+            assert!(
+                IprecAtRecallMeasure::new(vec![bad]).is_err(),
+                "iprec_at_recall {bad}"
+            );
+            assert!(
+                Avg11PtMeasure::new(vec![bad], "").is_err(),
+                "11pt_avg {bad}"
+            );
+        }
+        Avg11PtMeasure::new(vec![0.0, 0.0, 0.101, 0.104, 1.0], "").unwrap();
+        IprecAtRecallMeasure::new(vec![0.0, 1.0]).unwrap();
+        for bad in [-1.0, 0.0] {
+            assert!(
+                RprecMultMeasure::new(vec![bad]).is_err(),
+                "Rprec_mult {bad}"
+            );
+            assert!(
+                RprecMultAvgjgMeasure::new(vec![bad]).is_err(),
+                "Rprec_mult_avgjg {bad}"
+            );
+        }
+        RprecMultMeasure::new(vec![f64::MIN_POSITIVE, 1e300]).unwrap();
+    }
+
+    #[test]
+    fn parameter_constructors_refuse_values_outside_their_domain() {
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.1, 1.0, 2.0] {
+            let params = format!("p={bad}");
+            assert!(RbpMeasure::new(&params).is_err(), "rbp {params}");
+            assert!(RbpResidMeasure::new(&params).is_err(), "rbp_resid {params}");
+        }
+        for good in [0.0, 0.9, 1.0 - f64::EPSILON] {
+            let params = format!("p={good}");
+            RbpMeasure::new(&params).unwrap();
+            RbpResidMeasure::new(&params).unwrap();
+        }
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.1] {
+            assert!(SetFMeasure::new(bad, "").is_err(), "set_F {bad}");
+        }
+        for good in [0.0, 1.0, 1e300] {
+            SetFMeasure::new(good, "").unwrap();
+        }
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert!(
+                UtilityMeasure::new(vec![bad, 0.0, 0.0, 0.0], "").is_err(),
+                "utility {bad}"
+            );
+        }
+        for coeffs in [vec![], vec![1.0], vec![1.0; 5]] {
+            assert!(
+                UtilityMeasure::new(coeffs.clone(), "").is_err(),
+                "utility {coeffs:?}"
+            );
+        }
+        UtilityMeasure::new(vec![1e300, -1e300, 0.0, 1.0], "").unwrap();
+    }
+}
