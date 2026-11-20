@@ -9,7 +9,9 @@ import trec_eval.compat.pytrec_eval as pytrec_eval
 
 import collections
 import io
-from typing import Any, Dict, Iterable, Set, Union
+import re
+from decimal import Decimal
+from typing import Any, Dict, Iterable, List, Set, Union
 from trec_eval._trec_eval import Evaluator, NoSharedTopicError, __version__
 
 
@@ -23,6 +25,16 @@ supported_measures: Set[str] = {
     "recall", "success", "11pt_avg", "iprec_at_recall", "utility", "relstring",
     "set_relative_P", "set_map", "set_F", "infap", "unj", "rbp", "rbp_resid", "yaap",
 }
+
+# Measures that print one row per parameter value. pytrec_eval merges the
+# parameter lists of repeated requests for one of these, such as P_5 and P.10.
+_ROW_PER_VALUE = (
+    "P", "recall", "success", "unj", "ndcg_cut", "map_cut", "relative_P",
+    "iprec_at_recall", "Rprec_mult",
+)
+_VALUE_REQUEST = re.compile(
+    rf"({'|'.join(_ROW_PER_VALUE)})[_.]([0-9]+(?:\.[0-9]*)?(?:,[0-9]+(?:\.[0-9]*)?)*)"
+)
 
 
 def parse_run(f_or_path: Union[str, io.IOBase, Any]) -> Dict[str, Dict[str, float]]:
@@ -85,17 +97,23 @@ class RelevanceEvaluator:
         judged_docs_only_flag : bool = True,
     ):
         measure_names = [measures] if isinstance(measures, str) else list(measures)
-        native_measures = []
-        measure_cutoffs: Dict[str, Set[int]] = collections.defaultdict(set)
+        native_measures: List[str] = []
+        positions: Dict[str, int] = {}
+        values: Dict[str, Dict[Decimal, str]] = collections.defaultdict(dict)
         for measure in measure_names:
-            root, _, parameters = measure.rpartition("_")
-            cutoffs = parameters.split(",")
-            if root in supported_measures and all(c.isascii() and c.isdigit() for c in cutoffs):
-                measure_cutoffs[root].update(map(int, cutoffs))
-            else:
+            match = _VALUE_REQUEST.fullmatch(measure)
+            if match is None:
                 native_measures.append(measure)
-        for name, cutoffs in measure_cutoffs.items():
-            native_measures.append(f"{name}.{','.join(map(str, sorted(cutoffs)))}")
+                continue
+            name = match[1]
+            if name not in positions:
+                positions[name] = len(native_measures)
+                native_measures.append(name)
+            for value in match[2].split(","):
+                values[name].setdefault(Decimal(value), value)
+        for name, index in positions.items():
+            listed = values[name]
+            native_measures[index] = f"{name}.{','.join(listed[v] for v in sorted(listed))}"
 
         self._evaluator = Evaluator(
             qrels=qrel,
