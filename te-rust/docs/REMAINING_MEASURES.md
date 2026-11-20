@@ -18,11 +18,11 @@ Set-based measures evaluate unranked retrieved sets (often using the `-M` parame
 ## 2. Cumulative Gain & NDCG Variants
 Measures based on cumulated relevance grade gains, including non-standard NDCG versions.
 
-- [x] **`G`** (`m_G.c`): Cumulated Gain at various ranks (no discounting).
-- [x] **`binG`** (`m_binG.c`): Binary Cumulated Gain (gains are binary relevance grades).
-- [x] **`ndcg_rel`** (`m_ndcg_rel.c`): Graded NDCG relative (normalizes by ideal gain achievable by retrieved set size, rather than the entire corpus relevance pool).
-- [x] **`Rndcg`** (`m_Rndcg.c`): NDCG evaluated at rank $R$ (number of relevant documents).
-- [x] **`ndcg_p`** (`m_ndcg_p.c`): NDCG parameter-based / custom gain version.
+- [x] **`G`** (`m_G.c`): See [normalised gain](../../docs/measures/gains.md#normalized-gain-g).
+- [x] **`binG`** (`m_binG.c`): See [binary normalised gain](../../docs/measures/gains.md#binary-normalized-gain-bing).
+- [x] **`ndcg_rel`** (`m_ndcg_rel.c`): See [NDCG averaged over relevant documents](../../docs/measures/gains.md#2-ndcg-averaged-over-relevant-documents-ndcg_rel).
+- [x] **`Rndcg`** (`m_Rndcg.c`): See [R-NDCG](../../docs/measures/gains.md#3-r-ndcg-rndcg).
+- [x] **`ndcg_p`** (`m_ndcg_p.c`): See [NDCG with the original discount](../../docs/measures/gains.md#1-original-discount-ndcg_p).
 - [x] **`dcg`** (`m_ndcg.c`): DCG of the whole ranking, the numerator of `ndcg`.
 - [x] **`ideal_dcg`** (`m_ndcg.c`): DCG of the ideal ranking, the denominator of `ndcg`.
 

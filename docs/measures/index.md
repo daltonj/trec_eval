@@ -49,12 +49,15 @@ Groups expand into lists of standard measures:
 
 ### `official` (Default)
 Standard TREC track summary report:
-`runid`, `num_ret`, `num_rel`, `num_rel_ret`, `map`, `Rprec`, `recip_rank`, `bpref`, `P` (cutoffs 5, 10, 15, 20, 30, 100, 200, 500, 1000).
+`runid`, `num_q`, `num_ret`, `num_rel`, `num_rel_ret`, `map`, `gm_map`, `Rprec`, `bpref`, `recip_rank`, `iprec_at_recall`, `P` (cutoffs 5, 10, 15, 20, 30, 100, 200, 500, 1000).
 
 ### `all_trec`
-Full suite of standard measures:
-`official` set plus `ndcg_cut`, `ndcg`, `recall`, `success`, `11pt_avg`, `utility`, `relstring`, `set_relative_P`, `set_map`, `set_F`.
+`official` plus `relstring`, `recall`, `infAP`, `gm_bpref`, `Rprec_mult`, `utility`, `11pt_avg`, `binG`, `G`, `ndcg`, `ndcg_rel`, `Rndcg`, `ndcg_cut`, `map_cut`, `relative_P`, `success`, `set_P`, `set_relative_P`, `set_recall`, `set_map`, `set_F`, `num_nonrel_judged_ret`, `rbp`, `rbp_resid`, `unj`.
 
 ### `set`
 Set-based evaluation (unranked sets):
-`runid`, `num_ret`, `num_rel`, `num_rel_ret`, `set_relative_P`, `set_map`, `set_F`.
+`runid`, `num_q`, `num_ret`, `num_rel`, `num_rel_ret`, `utility`, `set_P`, `set_relative_P`, `set_recall`, `set_map`, `set_F`.
+
+### `qrels_jg`
+Multiple judgment groups:
+`runid`, `num_q`, `map_avgjg`, `P_avgjg`, `Rprec_mult_avgjg`.

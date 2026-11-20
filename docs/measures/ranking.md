@@ -57,9 +57,9 @@ $$\text{Rprec} = P@R = \frac{\text{relevant documents in top } R}{R}$$
 
 ### Multiples of R (`Rprec_mult`)
 
-Evaluates precision at rank $\lfloor c \cdot R + 0.5 \rfloor$ for multiplier $c$:
+Evaluates precision at rank $k = \lfloor c \cdot R + 0.9 \rfloor$ for multiplier $c$, matching the positive-number integer conversion in `trec_eval`:
 
-$$\text{Rprec\_mult}@c = \frac{\text{relevant documents in top } \lfloor c \cdot R + 0.5 \rfloor}{R}$$
+$$\text{Rprec\_mult}@c = \begin{cases} \frac{\text{relevant documents in top } k}{k} & k > 0 \\ 0 & k = 0 \end{cases}$$
 
 - Default multipliers: $0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0$.
 - Each multiplier must be a positive number, as in `-m Rprec_mult.0.5,2`.

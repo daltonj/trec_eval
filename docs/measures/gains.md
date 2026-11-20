@@ -6,7 +6,7 @@ Gain-based measures like NDCG evaluate rankings using graded relevance judgments
 
 ## Discounted Cumulative Gain at Cutoffs (`ndcg_cut`, `ndcg`)
 
-Normalized Discounted Cumulative Gain (NDCG) measures the ratio of actual Discounted Cumulative Gain to the ideal Discounted Cumulative Gain (IDCG) obtained by sorting all judged documents by relevance.
+Normalized Discounted Cumulative Gain (NDCG) measures the ratio of actual Discounted Cumulative Gain to the ideal Discounted Cumulative Gain (IDCG) obtained by sorting positive-gain judged documents by gain.
 
 ### Mathematical Formulation
 
@@ -16,7 +16,7 @@ $$\text{NDCG}@k = \begin{cases} \frac{\text{DCG}@k}{\text{IDCG}@k} & \text{if } 
 
 where:
 - $\text{gain}(r)$ is the gain assigned to relevance grade $r$. In standard `trec_eval`, the default gain is the integer relevance level: $\text{gain}(r) = r$.
-- $\text{IDCG}@k$ is the DCG computed on the ideal ranking formed by sorting all documents in the qrels by relevance grade in descending order.
+- $\text{IDCG}@k$ is the DCG computed on the ideal ranking formed by sorting positive-gain documents in the qrels by gain in descending order.
 
 ### Cutoffs (`ndcg_cut`)
 - Default rank cutoffs: $5, 10, 15, 20, 30, 100, 200, 500, 1000$.
@@ -44,29 +44,33 @@ Gains may be zero or negative, and level 0 may be given a gain. `ndcg_p` is 0 wh
 
 - Usage: `-m ndcg_p`, or `-m ndcg_p.1=3.5,2=9.0` for custom gains
 
-### 2. Relative Relevance Level Gains (`ndcg_rel`)
-Maps relevance grades to binary indicators relative to the relevance threshold cutoff $l$:
-
-$$\text{gain}(r) = \begin{cases} 1.0 & \text{if } r \ge l \\ 0.0 & \text{otherwise} \end{cases}$$
+### 2. NDCG Averaged over Relevant Documents (`ndcg_rel`)
+Uses graded gains, with relevance defined by positive gain rather than `-l`. At each retrieved document with positive gain, add the NDCG of that ranking prefix. Let $R$ count positive-gain judged documents and $r$ count positive-gain retrieved documents, including documents at sentinel levels assigned positive custom gains. Add $(R - r)$ times the final retrieved DCG divided by the full ideal DCG to the prefix sum. This correction can be negative. Divide by $R$; return 0 if $R$ or the corrected sum is not positive.
 
 - Usage: `-m ndcg_rel`
 
 ### 3. R-NDCG (`Rndcg`)
-Computes NDCG evaluated at rank $R$, where $R$ is the total count of relevant documents in the collection:
+Averages DCG/IDCG at the boundaries where the ideal ranking changes gain level, including the transition from positive gain to zero. Missing retrieved ranks contribute zero gain. If the run extends beyond the first zero-gain ideal rank, include the ratio at the end of the run too. Return 0 when no boundary has positive ideal DCG, or no judgment meets `-l`.
 
-$$\text{Rndcg} = \text{NDCG}@R$$
+- Usage: `-m Rndcg`
 
 ---
 
-## Cumulative Gain (`G`, `binG`)
+## Normalized Gain (`G`, `binG`)
 
-Evaluates undiscounted cumulative gain across the ranking.
+### Normalized Gain (`G`)
+Let $g_i$ be the retrieved gain at rank $i$, and $h_i$ the ideal gain at that rank, using only positive judged gains and padding with zeros. Define cumulative retrieved gain $S_i = \sum_{j=1}^i g_j$ and cumulative cost $C_i = \sum_{j=1}^i \max(1, h_j)$. Then
 
-### Cumulative Gain (`G`)
-$$\text{G}@k = \sum_{i=1}^k \text{gain}(\text{rel}_i)$$
+$$\text{G} = \frac{1}{\sum_j h_j} \sum_{i:g_i \ne 0} \frac{g_i}{\log_2(2 + C_i - S_i)}.$$
 
-### Binary Cumulative Gain (`binG`)
-$$\text{binG}@k = \sum_{i=1}^k \mathbb{I}(\text{rel}_i \ge l)$$
+The denominator sums all positive judged gains. Return 0 when it is zero.
+
+### Binary Normalized Gain (`binG`)
+For each retrieved relevant document, let $n_i$ count the preceding documents whose grade is below $l$. With $R$ relevant judged documents,
+
+$$\text{binG} = \frac{1}{R} \sum_{i:\text{rel}_i \ge l} \frac{1}{\log_2(2 + n_i)}.$$
+
+Return 0 when $R = 0$. Both measures score the whole ranking and have no cutoff family.
 
 ---
 

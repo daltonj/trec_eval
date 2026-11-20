@@ -44,7 +44,7 @@ te-rust [OPTIONS] <QRELS_FILE> <RUN_FILE>
 | `-q` | | Print evaluations for each individual query/topic in addition to the summary averages. | Disabled |
 | `-n` | | Suppress printing of the summary averages/totals at the end. | Disabled |
 | `-l` | `<int>` | Minimum relevance level at which a document is considered relevant. Documents with judgments $< l$ are considered non-relevant. As in `trec_eval`, a value such as `1.5` is read as its leading integer, 1, with a warning. | `1` |
-| `-c` | | **Complete set average**: Average over the complete set of queries present in the qrels file rather than the intersection of queries evaluated in the run. Topics missing from the run evaluate to 0.0. | Disabled |
+| `-c` | | **Complete set average**: Average over the complete set of queries present in the qrels file rather than the intersection of queries evaluated in the run. It evaluates each qrels topic missing from the run as an empty ranking. | Disabled |
 | `-J` | | **Judged docs only**: Remove all unjudged documents from the retrieved ranking before evaluating. | Disabled |
 | `-M` | `<int>` | Maximum number of retrieved documents per topic to evaluate. Read as `-l` is. | No limit |
 | `-N` | `<int>` | Number of documents in the collection. Only `utility` reads it, when its fourth coefficient is not zero. Read as `-l` is. | `0` |

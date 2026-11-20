@@ -72,7 +72,7 @@ Assigns explicit utility weights $a, b, c, d$ to the four cells of the $2 \times
 $$\text{Utility} = a \cdot \text{num\_rel\_ret} + b \cdot \text{num\_nonrel\_ret} + c \cdot \text{num\_rel\_nonret} + d \cdot \text{num\_nonrel\_nonret}$$
 
 - Parameters: `utility.<a,b,c,d>` (default: `1.0, -1.0, 0.0, 0.0`).
-- Requires `-N <num_docs_in_coll>` when $c \ne 0$ or $d \ne 0$.
+- Requires `-N <num_docs_in_coll>` when $d \ne 0$.
 - Usage: `-m utility.1,-1,0,0`
 
 ---

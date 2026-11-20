@@ -27,7 +27,7 @@ $$\text{set\_recall} = \begin{cases} \frac{\text{num\_rel\_ret}}{R} & \text{if }
 
 ## Set MAP (`set_map`)
 
-Average Precision over an unranked set. Assuming documents in the retrieved set are ordered uniformly at random, the expected AP is:
+Product of set precision and set recall:
 
 $$\text{set\_map} = \text{set\_P} \cdot \text{set\_recall} = \frac{(\text{num\_rel\_ret})^2}{\text{num\_ret} \cdot R}$$
 
