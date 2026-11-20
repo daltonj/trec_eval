@@ -105,6 +105,16 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
         size++;
     }
     trec_zscores_buf[size] = '\0';
+    if (strlen(trec_zscores_buf) != (size_t) size) {
+        long line = 1;
+        for (ptr = trec_zscores_buf; *ptr; ptr++)
+            if (*ptr == '\n')
+                line++;
+        fprintf(stderr,
+                "trec_eval.get_zscores: NUL character in zscores file '%s' at line %ld\n",
+                zscores_file, line);
+        return (UNDEF);
+    }
     for (ptr = trec_zscores_buf, i = 1; *ptr; ptr++) {
         if (*ptr == '\n')
             i++;
