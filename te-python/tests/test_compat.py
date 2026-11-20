@@ -36,6 +36,7 @@ def test_pytrec_eval_drop_in_relevance_evaluator():
         (["P_5", "P_10"], {"P_5": 0.2, "P_10": 0.1}),
         (["P_10", "P_5"], {"P_5": 0.2, "P_10": 0.1}),
         ({"P_5", "P_10"}, {"P_5": 0.2, "P_10": 0.1}),
+        (["P_05", "P_5"], {"P_5": 0.2}),
         (["ndcg_cut_5", "ndcg_cut_10"], {"ndcg_cut_5": 1.0, "ndcg_cut_10": 1.0}),
         (["ndcg_cut_10", "ndcg_cut_5"], {"ndcg_cut_5": 1.0, "ndcg_cut_10": 1.0}),
         ({"ndcg_cut_5", "ndcg_cut_10"}, {"ndcg_cut_5": 1.0, "ndcg_cut_10": 1.0}),

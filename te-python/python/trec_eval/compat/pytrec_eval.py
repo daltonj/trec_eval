@@ -86,19 +86,16 @@ class RelevanceEvaluator:
     ):
         measure_names = [measures] if isinstance(measures, str) else list(measures)
         native_measures = []
-        measure_cutoffs: Dict[str, Set[str]] = collections.defaultdict(set)
+        measure_cutoffs: Dict[str, Set[int]] = collections.defaultdict(set)
         for measure in measure_names:
             root, _, parameters = measure.rpartition("_")
-            if (
-                root in supported_measures
-                and parameters
-                and all(char in "0123456789," for char in parameters)
-            ):
-                measure_cutoffs[root].update(parameters.split(","))
+            cutoffs = parameters.split(",")
+            if root in supported_measures and all(c.isascii() and c.isdigit() for c in cutoffs):
+                measure_cutoffs[root].update(map(int, cutoffs))
             else:
                 native_measures.append(measure)
         for name, cutoffs in measure_cutoffs.items():
-            native_measures.append(f"{name}.{','.join(sorted(cutoffs))}")
+            native_measures.append(f"{name}.{','.join(map(str, sorted(cutoffs)))}")
 
         self._evaluator = Evaluator(
             qrels=qrel,
