@@ -61,6 +61,9 @@ te_calc_avg_num_rel(const EPI * epi, const TREC_MEAS * tm,
 
     num_rel = 0;
     for (i = 0; i < all_rel_info->num_q_rels; i++) {
+        if (epi->debug_query &&
+            strcmp(epi->debug_query, all_rel_info->rel_info[i].qid))
+            continue;
         if (0 == strcmp("qrels", all_rel_info->rel_info[i].rel_format)) {
             TEXT_QRELS_INFO *trec_qrels;
             trec_qrels =
