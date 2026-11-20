@@ -37,7 +37,8 @@ int comp_double(const void * ptr1, const void * ptr2);
 /* Functions for converting strings to numbers, with warnings for unexpected inputs*/
 long str_to_long(const char * str, int * error);
 long str_to_long_ctx(const char * str, int * error, const char * fmt, ...);
-double str_to_double_ctx(const char * str, int * error, const char * fmt, ...);
+double str_to_double_ctx(const char * str, char ** endptr, int * error,
+                         const char * fmt, ...);
 
 /* ------------------- Generic Routines for Measures ------------------------ */
 

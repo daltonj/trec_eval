@@ -7,7 +7,7 @@ printf '1 0 d 1\n' > "$Q"
 printf '1 Q0 d 1 1 r\n' > "$R"
 
 for field in mean stddev; do
-    values='abc nan inf -inf 1e999'
+    values='abc 1x nan inf -inf 1e999'
     [ "$field" = mean ] || values="$values -1"
     for value in $values; do
         if [ "$field" = mean ]; then
@@ -19,6 +19,8 @@ for field in mean stddev; do
         unusable="trec_eval.get_zscores: Unusable $field '$value' in $loc"
         case $value in
         abc) want="Error: value \`abc' could not be parsed ($loc)." ;;
+        1x) want="Warning, value \`1x' partially read as \`1' ($loc).
+$unusable" ;;
         nan) want="Error: value \`nan' is not a number ($loc)." ;;
         1e999) want="Warning, value \`1e999' out of range, read as \`inf' ($loc).
 $unusable" ;;
@@ -31,10 +33,8 @@ $unusable" ;;
     done
 done
 
-for row in '1 map 1 1e-310' '1 map 1x 1' '1 map 0 1x'; do
-    printf '%s\n' "$row" > "$T/zscores"
-    expect_status 0 -Z "$T/zscores" -m map "$Q" "$R"
-done
+printf '1 map 1 1e-310\n' > "$T/zscores"
+expect_status 0 -Z "$T/zscores" -m map "$Q" "$R"
 printf '1 map -1 2\n' > "$T/zscores"
 expect_output "$D/out.one" -q -Z "$T/zscores" -m map "$Q" "$R"
 printf '1 map 1 0\n' > "$T/zscores"

@@ -60,16 +60,20 @@ long str_to_long_ctx(const char * str, int * error, const char * fmt, ...) {
 /*
  * Convert a string to a double, with the error checking of
  * str_to_long_ctx. NaN is an error. A value out of range is kept as
- * strtod reads it, an infinity or zero, with a warning.
+ * strtod reads it, an infinity or zero, with a warning. Unless endptr
+ * is NULL, the end of the number is stored in it, as by strtod.
  */
-double str_to_double_ctx(const char * str, int * error, const char * fmt, ...) {
-    char *endptr = NULL;
+double str_to_double_ctx(const char * str, char ** endptr, int * error,
+                         const char * fmt, ...) {
+    char *end = NULL;
     va_list ap;
     errno = 0;
 
     *error = 0;
-    double value = strtod(str, &endptr);
-    if (endptr == str) {
+    double value = strtod(str, &end);
+    if (endptr != NULL)
+        *endptr = end;
+    if (end == str) {
         fprintf(stderr, "Error: value `%s' could not be parsed", str);
         *error = 1;
     } else if (isnan(value)) {
@@ -78,9 +82,9 @@ double str_to_double_ctx(const char * str, int * error, const char * fmt, ...) {
     } else if (errno == ERANGE && (isinf(value) || value == 0.0)) {
         fprintf(stderr, "Warning, value `%s' out of range, read as `%g'",
                 str, value);
-    } else if (*endptr != '\0') {
+    } else if (*end != '\0') {
         fprintf(stderr, "Warning, value `%s' partially read as `%.*s'",
-                str, (int) (endptr - str), str);
+                str, (int) (end - str), str);
     } else {
         return value;
     }

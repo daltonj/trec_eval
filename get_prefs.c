@@ -208,7 +208,7 @@ int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
                     line_num + 1);
             return (UNDEF);
         }
-        line_ptr->rel = str_to_double_ctx(rel_ptr, &error,
+        line_ptr->rel = str_to_double_ctx(rel_ptr, NULL, &error,
                                           "line %ld of prefs file '%s'",
                                           line_num + 1, text_prefs_file);
         if (error)
