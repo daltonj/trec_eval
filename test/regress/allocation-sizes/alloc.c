@@ -26,6 +26,7 @@ static void *record_realloc(void *ptr, size_t size)
 #define malloc record_malloc
 #define realloc record_realloc
 #include "common.h"
+#include "utility_pool.c"
 
 static int failed = 0;
 
@@ -41,6 +42,15 @@ int main(void)
 {
     /* half * sizeof(short) is one more than the largest size_t */
     size_t half = ((size_t) -1) / 2 + 1;
+    size_t n = 1;
+
+    check(NULL != Malloc(n++, char) && n == 2 && requested == sizeof(char),
+          "Malloc(n++, char) did not evaluate n once and request one char");
+    n = 1;
+    requested = 0;
+    check(NULL != Realloc(buffer, n++, char) && n == 2 &&
+          requested == sizeof(char),
+          "Realloc(ptr, n++, char) did not evaluate n once and request one char");
 
     requested = 0;
     check(NULL == Malloc(half, short) && requested == 0,

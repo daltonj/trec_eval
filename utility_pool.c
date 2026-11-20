@@ -11,6 +11,20 @@
 #include "functions.h"
 #include "trec_format.h"
 
+void *te_malloc_array(size_t n, size_t size)
+{
+    if (n > (size_t) -1 / size)
+        return (NULL);
+    return (malloc(n * size));
+}
+
+void *te_realloc_array(void *ptr, size_t n, size_t size)
+{
+    if (n > (size_t) -1 / size)
+        return (NULL);
+    return (realloc(ptr, n * size));
+}
+
 /* Utility malloc procedures for handling a malloc'd reusable object list that
    may need to be resized.
    Procedures take a current pointer, the current bound on the number of
