@@ -33,7 +33,6 @@ static int get_double_params(PARAMS * params, char *param_string,
 static int get_param_pairs(PARAMS * params, char *param_string,
                            const char *measure);
 static int comp_long(const void * ptr1, const void * ptr2);
-static int comp_double(const void * ptr1, const void * ptr2);
 static char *append_long(char *name, long value);
 static char *append_double(char *name, double value);
 static char *append_string(char *name, char *value);
@@ -549,7 +548,7 @@ static int comp_long(const void *ptr1, const void *ptr2)
     return (0);
 }
 
-static int comp_double(const void *ptr1, const void *ptr2)
+int comp_double(const void *ptr1, const void *ptr2)
 {
     if (*((double *) ptr1) < *((double *) ptr2))
         return (-1);

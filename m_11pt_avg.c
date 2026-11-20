@@ -17,7 +17,6 @@ static int
 te_calc_11ptavg(const EPI * epi, const REL_INFO * rel_info,
                 const RESULTS * results, const TREC_MEAS * tm,
                 TREC_EVAL * eval);
-static int comp_double(const void *ptr1, const void *ptr2);
 static double double_cutoff_array[] = {
     0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0
 };
@@ -130,13 +129,4 @@ te_calc_11ptavg(const EPI * epi, const REL_INFO * rel_info,
     (void) Free(cutoffs);
 
     return (1);
-}
-
-static int comp_double(const void *ptr1, const void *ptr2)
-{
-    if (*((double *) ptr1) < *((double *) ptr2))
-        return (-1);
-    if (*((double *) ptr1) > *((double *) ptr2))
-        return (1);
-    return (0);
 }
