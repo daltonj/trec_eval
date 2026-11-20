@@ -10,10 +10,8 @@ D=test/regress/count-parameter-range
 same() {
     m=$1 huge=$2 large=$3
     shift 3
-    "$TREC_EVAL" -q "$@" -m $m.$huge $D/qrels $D/run > "$T/huge" ||
-        fail "trec_eval -m $m.$huge failed"
-    "$TREC_EVAL" -q "$@" -m $m.$large $D/qrels $D/run > "$T/large" ||
-        fail "trec_eval -m $m.$large failed"
+    save_output "$T/huge" -q "$@" -m $m.$huge $D/qrels $D/run
+    save_output "$T/large" -q "$@" -m $m.$large $D/qrels $D/run
     [ "$(cut -f2- "$T/huge")" = "$(cut -f2- "$T/large")" ] ||
         fail "trec_eval -m $m.$huge differs from $m.$large"
 }
@@ -31,11 +29,10 @@ expect_output $D/out.relstring -q -m relstring.1e300 $D/qrels $D/run
 for m in Rprec_mult Rprec_mult_avgjg; do
     format=qrels
     [ "$m" = Rprec_mult_avgjg ] && format=qrels_jg
-    "$TREC_EVAL" -R "$format" -m "$m.1e300" $D/qrels $D/run > "$T/out" ||
-        fail "$m: cannot get row name"
+    save_output "$T/out" -R "$format" -m "$m.1e300" $D/qrels $D/run
     awk '{print "1", $1, "0", "1e-19"}' "$T/out" > "$T/zscores"
-    "$TREC_EVAL" -q -R "$format" -m "$m.1e300" -Z "$T/zscores" \
-        $D/qrels $D/run > "$T/out" || fail "$m: cannot compute zscore"
+    save_output "$T/out" -q -R "$format" -m "$m.1e300" -Z "$T/zscores" \
+        $D/qrels $D/run
     awk '{print $2, $3}' "$T/out" > "$T/values"
     diff "$T/values" $D/out.huge-zscore || fail "$m: clamped denominator"
 done

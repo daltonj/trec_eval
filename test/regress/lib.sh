@@ -35,6 +35,14 @@ expect_status() {
     te_run "$@"
 }
 
+# save_output FILE ARGS...: exit 0, and write standard output to FILE.
+save_output() {
+    te_file=$1
+    shift
+    te_run 0 "$@"
+    cp "$T/te.out" "$te_file"
+}
+
 # expect_output FILE ARGS...: exit 0, and standard output equal to FILE.
 expect_output() {
     expect_output_status 0 "$@"

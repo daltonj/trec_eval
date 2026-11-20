@@ -22,7 +22,6 @@ for n in 4093 4094 4095 8190; do
     pad=$(( n - $(wc -c < "$T/head") - 1 ))
     { cat "$T/head"; printf "#%${pad}s" ''; } > "$T/run.$n"
     [ "$(wc -c < "$T/run.$n")" -eq $n ] || fail "$T/run.$n is not $n bytes"
-    "$TREC_EVAL" -q "$T/qrels.301" "$T/run.$n" > "$T/out.$n" ||
-        fail "trec_eval $T/qrels.301 $T/run.$n failed"
+    save_output "$T/out.$n" -q "$T/qrels.301" "$T/run.$n"
     expect_output "$T/out.$n" -q "$T/qrels.301" - < "$T/run.$n"
 done
