@@ -1,17 +1,12 @@
+mod common;
+
+use common::trec_eval_bin;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::process::Command;
 
 fn get_te_rust_bin() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_te-rust"))
-}
-
-fn get_trec_eval_bin() -> PathBuf {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.pop(); // Go to workspace root
-    path.push(get_trec_eval_dir_name());
-    path.push("trec_eval");
-    path
 }
 
 fn get_test_file_path(filename: &str) -> PathBuf {
@@ -148,7 +143,7 @@ fn compare_outputs(rust_args: &[&str], c_args: &[&str], qrels_name: &str, result
     let rust_rows = parse_output(&rust_str);
 
     // 2. Run C trec_eval
-    let c_bin = get_trec_eval_bin();
+    let c_bin = trec_eval_bin();
     let mut c_cmd = Command::new(&c_bin);
     for arg in c_args {
         c_cmd.arg(arg);

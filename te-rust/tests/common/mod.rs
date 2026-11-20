@@ -21,6 +21,15 @@ pub fn te_rust() -> Command {
     Command::new(env!("CARGO_BIN_EXE_te-rust"))
 }
 
+pub fn trec_eval_bin() -> PathBuf {
+    let dir = std::env::var_os("TREC_EVAL_DIR")
+        .unwrap_or_else(|| "trec_eval".into());
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join(dir)
+        .join("trec_eval")
+}
+
 /// Runs te-rust with `options` on `qrels` and `run`.
 pub fn eval(options: &[&str], qrels: &Path, run: &Path) -> Output {
     te_rust()

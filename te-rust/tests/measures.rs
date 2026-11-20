@@ -690,20 +690,7 @@ mod geometric_means {
 /// Relevance levels of 0 and below, at which nonrelevant and unjudged documents can count as
 /// relevant, as in trec_eval.
 mod negative_levels {
-    use super::common::{eval, fixture, rows, summary, test_data, write};
-    use std::path::{Path, PathBuf};
-
-    /// The trec_eval binary in `$TREC_EVAL_DIR`, which `regression.rs` reads from the
-    /// workspace root, when that variable is set.
-    fn reference_trec_eval() -> Option<PathBuf> {
-        let dir = std::env::var_os("TREC_EVAL_DIR")?;
-        Some(
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("..")
-                .join(dir)
-                .join("trec_eval"),
-        )
-    }
+    use super::common::{eval, fixture, rows, summary, test_data, trec_eval_bin, write};
 
     #[test]
     fn eleven_pt_avg_matches_the_c_reverse_scan_for_unjudged_documents() {
@@ -742,19 +729,17 @@ mod negative_levels {
                     (relevant.to_string(), value.to_string()),
                     "{docs}, {level}"
                 );
-                if let Some(trec_eval) = reference_trec_eval() {
-                    let reference = std::process::Command::new(trec_eval)
-                        .args(options)
-                        .arg(&qrels)
-                        .arg(&run)
-                        .output()
-                        .unwrap();
-                    let expected = (
-                        summary(&reference, "num_rel_ret"),
-                        summary(&reference, "11pt_avg"),
-                    );
-                    assert_eq!(printed, expected, "trec_eval: {docs}, {level}");
-                }
+                let reference = std::process::Command::new(trec_eval_bin())
+                    .args(options)
+                    .arg(&qrels)
+                    .arg(&run)
+                    .output()
+                    .unwrap();
+                let expected = (
+                    summary(&reference, "num_rel_ret"),
+                    summary(&reference, "11pt_avg"),
+                );
+                assert_eq!(printed, expected, "trec_eval: {docs}, {level}");
             }
         }
     }
