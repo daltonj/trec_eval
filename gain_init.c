@@ -133,7 +133,7 @@ int setup_gains(const TREC_MEAS * tm, const RES_RELS * res_rels, GAINS * gains)
 
     /* Sort gains by increasing gain value */
     qsort((char *) gains->rel_gains,
-          (int) num_gains, sizeof(REL_GAIN), comp_rel_gain);
+          num_gains, sizeof(REL_GAIN), comp_rel_gain);
 
     gains->total_num_at_levels = 0;
     for (i = 0; i < num_gains; i++)

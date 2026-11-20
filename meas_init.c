@@ -324,7 +324,7 @@ static int get_long_cutoffs(PARAMS * params, char *param_string,
     }
 
     /* Sort cutoffs in increasing order */
-    qsort((char *) cutoffs, (int) num_cutoffs, sizeof(long), comp_long);
+    qsort((char *) cutoffs, num_cutoffs, sizeof(long), comp_long);
 
     /* Sanity checking: cutoffs > 0 and non-duplicates */
     if (cutoffs[0] <= 0) {
@@ -392,7 +392,7 @@ static int get_double_cutoffs(PARAMS * params, char *param_string,
     }
 
     /* Sort cutoffs in increasing order */
-    qsort((char *) cutoffs, (int) num_cutoffs, sizeof(double), comp_double);
+    qsort((char *) cutoffs, num_cutoffs, sizeof(double), comp_double);
 
     /* Sanity checking: non-duplicates */
     for (i = 1; i < num_cutoffs; i++) {
