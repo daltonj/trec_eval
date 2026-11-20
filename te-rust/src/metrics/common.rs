@@ -41,8 +41,7 @@ pub fn parse_int_cutoffs(
         return Ok(default.to_vec());
     }
     let mut list = Vec::new();
-    for s in params.split(',') {
-        let tok = s.trim();
+    for tok in params.split(',') {
         let invalid = || MeasureParseError::new(format!("invalid integer cutoff '{}'", tok));
         let (v, partial) = match crate::io::parsers::read_leading_integer(tok) {
             Ok(read) => read,
@@ -394,8 +393,15 @@ mod parser_tests {
     }
 
     #[test]
-    fn int_cutoffs_parses_and_trims() {
-        assert_eq!(parse_int_cutoffs("5, 10 ,20", &[], &mut Vec::new()).unwrap(), vec![5, 10, 20]);
+    fn int_cutoffs_skip_only_leading_c_locale_whitespace() {
+        let mut warnings = Vec::new();
+        assert_eq!(parse_int_cutoffs("5, 10 ,\t20", &[], &mut warnings).unwrap(), vec![5, 10, 20]);
+        assert_eq!(warnings, ["value ' 10 ' partially read as '10'"]);
+        let mut warnings = Vec::new();
+        assert_eq!(parse_int_cutoffs("2\u{a0}", &[], &mut warnings).unwrap(), vec![2]);
+        assert_eq!(warnings, ["value '2\u{a0}' partially read as '2'"]);
+        let err = parse_int_cutoffs("\u{a0}2", &[], &mut Vec::new()).unwrap_err();
+        assert_eq!(err.message, "invalid integer cutoff '\u{a0}2'");
     }
 
     #[test]
