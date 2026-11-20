@@ -87,9 +87,9 @@ pub(crate) fn parse_finite_float(tok: &str) -> Result<f64, MeasureParseError> {
     Ok(value)
 }
 
-fn finite_float(value: f64) -> Result<f64, MeasureParseError> {
+fn finite_float(value: f64) -> Result<(), MeasureParseError> {
     if value.is_finite() {
-        Ok(value)
+        Ok(())
     } else {
         Err(MeasureParseError::new(format!(
             "float value '{}' is not a finite number",
@@ -234,13 +234,13 @@ impl Gains {
         // 2. Then add all other relevance levels that were NOT specified in custom_gains,
         // up to the highest level with a judged document. rel_levels can be padded past it.
         let num_rel_levels = rel_levels.iter().rposition(|&n| n > 0).map_or(0, |top| top + 1);
-        for i in 0..num_rel_levels {
+        for (i, &num_at_level) in rel_levels.iter().enumerate().take(num_rel_levels) {
             let rel_level = i as i64;
             if !config.custom_gains.contains_key(&rel_level) {
                 rel_gains.push(RelGain {
                     rel_level,
                     gain: rel_level as f64,
-                    num_at_level: rel_levels[i],
+                    num_at_level,
                 });
             }
         }
@@ -338,10 +338,10 @@ pub(crate) fn recall_levels(levels: &[f64]) -> Result<(), MeasureParseError> {
     Ok(())
 }
 
-/// Refuse multiples of R that are not positive and finite.
+/// Refuse multiples of R that are not positive. `checked_float_cutoffs` has already
+/// refused values that are not finite.
 pub(crate) fn r_multiples(multiples: &[f64]) -> Result<(), MeasureParseError> {
     for &multiple in multiples {
-        finite_float(multiple)?;
         if multiple <= 0.0 {
             return Err(MeasureParseError::new(format!(
                 "multiple of R {} is not a positive number",

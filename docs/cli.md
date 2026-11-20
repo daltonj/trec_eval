@@ -194,7 +194,7 @@ bpref                 	all	0.2589 [0.2215, 0.2974]
 - Cutoffs written after an underscore: `P_5`, and likewise `P_avgjg_5`, `recall_10`, `ndcg_cut_10`, `map_cut_100`, `success_5` and `unj_10`. `P_5` prints the same row as `P.5`.
 - Cutoffs written after `@`: `P@5`, `recall@10`, `success@5`, `unj@10` and `relative_P@5`, and `ndcg@10` and `map@100`, which mean `ndcg_cut.10` and `map_cut.100`.
 - The names `mrr` and `rr` for `recip_rank`, and `precision` for `P`, and measure and group names in any case, such as `MAP`.
-- The measure `ndcg_p`. The `trec_eval` source includes `m_ndcg_p.c`, but `trec_eval` 10.x does not register or build it, so `-m ndcg_p` fails there. If `trec_eval` registers it, `ndcg_p` becomes a shared measure and leaves this list.
+- The measure `ndcg_p`. The `trec_eval` source includes `m_ndcg_p.c`, but `trec_eval` 10.x does not register or build it, so `-m ndcg_p` fails there.
 
 `te-rust` also reads the value of a short option after `=`, as in `-l=2`, `-M=100`, `-N=10`, `-m=map` or `-R=qrels`, as if it were a separate argument. `trec_eval` reads the `=` as part of the value. It refuses `-m=map` and `-R=qrels`. `trec_eval` 10.0 reads `-l=2`, `-M=100` and `-N=10` as 0 without a message.
 

@@ -22,10 +22,10 @@ fn extract_path_string(obj: &Bound<'_, PyAny>) -> Option<String> {
 }
 
 /// Raises each warning as a Python `UserWarning`.
-pub fn warn_all(py: Python<'_>, warnings: impl IntoIterator<Item = impl std::fmt::Display>) -> PyResult<()> {
+pub fn warn_all(py: Python<'_>, warnings: impl IntoIterator<Item = impl AsRef<str>>) -> PyResult<()> {
     let category = py.get_type_bound::<PyUserWarning>();
     for warning in warnings {
-        PyErr::warn_bound(py, category.as_any(), &warning.to_string(), 1)?;
+        PyErr::warn_bound(py, category.as_any(), warning.as_ref(), 1)?;
     }
     Ok(())
 }
