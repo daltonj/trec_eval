@@ -11,7 +11,7 @@ expect_output $d/out.first -q -m map $d/qrels.first $d/results.first
 expect_output $d/out.second -q -m map $d/qrels.second $d/results.second
 
 # The ideal ranking of the all-negative topic has no document, so ndcg_cut
-# finishes at once even with a cutoff of 10^12; the CPU limit fails a run
+# finishes at once even with a cutoff of 2147483647; the CPU limit fails a run
 # that counts up to the cutoff.
 (ulimit -t 2
- expect_output $d/out.ndcg-cut -q -m ndcg_cut.1000000000000 $d/qrels.first $d/results.first) || exit 1
+ expect_output $d/out.ndcg-cut -q -m ndcg_cut.2147483647 $d/qrels.first $d/results.first) || exit 1
