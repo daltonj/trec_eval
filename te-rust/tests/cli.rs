@@ -492,12 +492,6 @@ mod measure_requests {
             .collect()
     }
 
-    fn assert_each_once(options: &[&str]) {
-        let all = printed("six-relevant", options);
-        let distinct: std::collections::HashSet<_> = all.iter().collect();
-        assert_eq!(all.len(), distinct.len(), "{options:?}: {all:?}");
-    }
-
     #[test]
     fn measures_print_in_trec_eval_table_order() {
         // trec_eval prints num_q before map, whatever the order of the -m options.
@@ -564,28 +558,48 @@ mod measure_requests {
             rows(&eval(&["-m", "map", "-m", "map"], &qrels, &run)),
             ["map all 1.0000"]
         );
-        assert_each_once(&["-q", "-m", "map", "-m", "map"]);
+        assert_eq!(
+            printed("six-relevant", &["-q", "-m", "map", "-m", "map"]),
+            printed("six-relevant", &["-q", "-m", "map"])
+        );
     }
 
     #[test]
     fn group_and_member_print_once() {
-        assert_each_once(&["-m", "official", "-m", "map"]);
-        assert_each_once(&["-m", "map", "-m", "official"]);
+        let official = printed("six-relevant", &["-m", "official"]);
+        assert_eq!(
+            printed("six-relevant", &["-m", "official", "-m", "map"]),
+            official
+        );
+        assert_eq!(
+            printed("six-relevant", &["-m", "map", "-m", "official"]),
+            official
+        );
+        let (official_precision, official_rest): (Vec<_>, Vec<_>) =
+            official.iter().partition(|row| row.starts_with("P_"));
+        assert!(!official_precision.is_empty());
         for options in [
             ["-m", "official", "-m", "P.5"],
             ["-m", "P.5", "-m", "official"],
         ] {
             let rows = printed("six-relevant", &options);
-            let precision: Vec<_> = rows.iter().filter(|row| row.starts_with("P_")).collect();
+            let (precision, rest): (Vec<_>, Vec<_>) =
+                rows.iter().partition(|row| row.starts_with("P_"));
             assert_eq!(precision, ["P_5 all"], "{options:?}");
-            assert_each_once(&options);
+            assert_eq!(rest, official_rest, "{options:?}");
         }
     }
 
     #[test]
     fn aliases_and_reordered_lists_print_once() {
-        assert_each_once(&["-m", "P.5", "-m", "P_5", "-m", "P@5"]);
-        assert_each_once(&["-m", "P.5,10", "-m", "P.10,5"]);
+        assert_eq!(
+            printed("six-relevant", &["-m", "P.5", "-m", "P_5", "-m", "P@5"]),
+            ["P_5 all"]
+        );
+        assert_eq!(
+            printed("six-relevant", &["-m", "P.5,10", "-m", "P.10,5"]),
+            ["P_5 all", "P_10 all"]
+        );
     }
 
     #[test]
@@ -852,7 +866,7 @@ mod complete_set {
     }
 
     #[test]
-    fn confidence_intervals_cover_the_complete_set() {
+    fn confidence_interval_rows_print_without_shared_topics() {
         let options = ["-c", "-C", "--seed", "1", "-m", "map"];
         let out = eval(&options, &fixture("topics.qrels"), &topic_3_run());
         assert_eq!(
@@ -866,7 +880,7 @@ mod complete_set {
     }
 
     #[test]
-    fn no_summary_flag_is_still_respected() {
+    fn no_summary_flag_omits_summary_rows() {
         let out = eval(
             &["-c", "-n", "-m", "map"],
             &fixture("topics.qrels"),

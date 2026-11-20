@@ -23,7 +23,7 @@ def test_complete_set_average_scores_the_qrels_topics():
     assert evaluator.evaluate(OTHER_TOPIC).per_query() == {"q1": {"map": 0.0}, "q2": {"map": 0.0}}
 
 
-def test_partial_overlap_is_unchanged():
+def test_partial_overlap_scores_only_shared_topics():
     # q1 ranks d1, its only relevant document, first: map 1.
     result = Evaluator(QRELS, measures=["map", "num_q"]).evaluate({"q1": {"d1": 1.0}, "q3": {"d1": 1.0}})
     assert result.aggregate() == {"map": 1.0, "num_q": 1}

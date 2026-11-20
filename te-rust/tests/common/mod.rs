@@ -47,7 +47,11 @@ pub fn test_data(name: &str) -> PathBuf {
 /// Writes `contents` to a new file whose name ends with `name`.
 pub fn write(name: &str, contents: impl AsRef<[u8]>) -> PathBuf {
     static FILES: AtomicUsize = AtomicUsize::new(0);
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(env!("CARGO_CRATE_NAME"));
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "{}-{}",
+        env!("CARGO_CRATE_NAME"),
+        std::process::id()
+    ));
     std::fs::create_dir_all(&dir).expect("failed to create the directory for test files");
     let path = dir.join(format!("{}-{name}", FILES.fetch_add(1, Ordering::Relaxed)));
     std::fs::write(&path, contents).expect("failed to write a test file");
