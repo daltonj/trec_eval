@@ -63,12 +63,12 @@ impl Evaluator {
 
         // Validate built-in measure names by attempting resolution
         if !measure_names.is_empty() {
-            resolve_measures(&measure_names).map_err(|e| {
+            let resolved = resolve_measures(&measure_names).map_err(|e| {
                 PyValueError::new_err(format!("Invalid measure configuration: {}", e))
             })?;
             let category = qrels.py().get_type_bound::<PyUserWarning>();
-            for warning in te_rust::metrics::common::take_parse_warnings() {
-                PyErr::warn_bound(qrels.py(), category.as_any(), &warning, 1)?;
+            for warning in &resolved.warnings {
+                PyErr::warn_bound(qrels.py(), category.as_any(), warning, 1)?;
             }
         }
 
@@ -119,6 +119,7 @@ impl Evaluator {
             resolve_measures(&self.measure_names).map_err(|e| {
                 PyValueError::new_err(format!("Measure resolution error: {}", e))
             })?
+            .measures
         } else {
             Vec::new()
         };
@@ -164,6 +165,7 @@ impl Evaluator {
             resolve_measures(&self.measure_names).map_err(|e| {
                 PyValueError::new_err(format!("Measure resolution error: {}", e))
             })?
+            .measures
         } else {
             Vec::new()
         };

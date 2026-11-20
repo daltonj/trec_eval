@@ -42,7 +42,9 @@ fn run() -> RunData {
 
 #[test]
 fn library_refuses_scored_run_duplicates() {
-    let measures = resolve_measures(&["map".into(), "recall.2".into()]).unwrap();
+    let measures = resolve_measures(&["map".into(), "recall.2".into()])
+        .unwrap()
+        .measures;
     let result = evaluate_run(&qrels(), &run(), &measures, &EvalConfig::default(), None);
     assert_eq!(
         result.unwrap_err(),
@@ -66,7 +68,7 @@ fn library_refuses_scored_jg_run_duplicates() {
         comments: vec![],
         warnings: vec![],
     };
-    let measures = resolve_measures(&["map_avgjg".into()]).unwrap();
+    let measures = resolve_measures(&["map_avgjg".into()]).unwrap().measures;
     let result = evaluate_run_jg(&qrels, &run(), &measures, &EvalConfig::default(), None);
     assert_eq!(
         result.unwrap_err(),
@@ -80,7 +82,7 @@ fn library_refuses_scored_jg_run_duplicates() {
 #[test]
 fn library_checks_only_retained_ranks_and_requested_rankings() {
     for (request, max_docs) in [("map", 1), ("num_q", usize::MAX), ("runid", usize::MAX)] {
-        let measures = resolve_measures(&[request.into()]).unwrap();
+        let measures = resolve_measures(&[request.into()]).unwrap().measures;
         let config = EvalConfig {
             max_num_docs_per_topic: max_docs,
             ..Default::default()
@@ -104,7 +106,7 @@ fn library_checks_missing_qrels_topics_only_with_complete_averaging() {
     });
     let mut run = run();
     run.queries[0].records.truncate(1);
-    let measures = resolve_measures(&["map".into()]).unwrap();
+    let measures = resolve_measures(&["map".into()]).unwrap().measures;
     assert!(evaluate_run(&qrels, &run, &measures, &EvalConfig::default(), None).is_ok());
     let config = EvalConfig {
         average_complete_flag: true,

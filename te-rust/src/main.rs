@@ -158,7 +158,7 @@ fn handle_help_flags(help_measures: bool, help_measure: Option<&str>) {
         check_write(writeln!(out, "{:<22} {:<13} Description", "Measure", "Status"));
         check_write(writeln!(out, "{}", "-".repeat(70)));
         for spec in metrics::registry::registry() {
-            if let Ok(m) = (spec.factory)("") {
+            if let Ok(m) = (spec.factory)("", &mut Vec::new()) {
                 check_write(writeln!(out, "{:<22} {:<13} {}", m.name(), spec.status.label(), m.short_description()));
             }
         }
@@ -170,7 +170,7 @@ fn handle_help_flags(help_measures: bool, help_measure: Option<&str>) {
     if let Some(target) = help_measure {
         for spec in metrics::registry::registry() {
             if spec.name.eq_ignore_ascii_case(target) {
-                if let Ok(m) = (spec.factory)("") {
+                if let Ok(m) = (spec.factory)("", &mut Vec::new()) {
                     check_write(writeln!(out, "{}", m.name()));
                     if !spec.status.label().is_empty() {
                         check_write(writeln!(out, "Status: {}", spec.status.label()));
@@ -271,16 +271,17 @@ fn main() {
         args.measures.clone()
     };
 
-    let active_measures = match metrics::registry::resolve_measures(&requested_names) {
-        Ok(m) => metrics::registry::in_trec_eval_order(m),
+    let resolved = match metrics::registry::resolve_measures(&requested_names) {
+        Ok(resolved) => resolved,
         Err(e) => {
             eprintln!("te-rust: {}", e);
             process::exit(if e.illegal_name { EXIT_USAGE } else { EXIT_INPUT });
         }
     };
-    for warning in metrics::common::take_parse_warnings() {
+    for warning in &resolved.warnings {
         eprintln!("te-rust: Warning, {}", warning);
     }
+    let active_measures = metrics::registry::in_trec_eval_order(resolved.measures);
 
     // 5. Setup runtime config
     let global_gains = args.global_gains;

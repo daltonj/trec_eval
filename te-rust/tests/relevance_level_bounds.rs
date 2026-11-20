@@ -105,7 +105,9 @@ fn negative_level_finishes() {
         let qrels = te_rust::io::parse_trec_qrels(&qrels).unwrap();
         let run = te_rust::io::parse_trec_run(&run).unwrap();
         let requested = ["bpref".to_string(), "gm_bpref".to_string()];
-        let measures = te_rust::metrics::registry::resolve_measures(&requested).unwrap();
+        let measures = te_rust::metrics::registry::resolve_measures(&requested)
+            .unwrap()
+            .measures;
         let config = te_rust::metrics::EvalConfig {
             relevance_level: -1,
             ..Default::default()

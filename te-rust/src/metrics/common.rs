@@ -29,17 +29,20 @@ impl fmt::Display for MeasureParseError {
 impl std::error::Error for MeasureParseError {}
 
 /// Parse a comma-separated list of integer cutoffs (e.g. "5,10,20"). A cutoff must fit
-/// in an `i64`, as trec_eval's `long` cutoffs must.
+/// in an `i64`, as trec_eval's `long` cutoffs must. As trec_eval does, a cutoff reads as its
+/// leading integer, so `5x` and `1.5` read as 5 and 1, and a warning is added to `warnings`.
 /// An empty string yields the provided defaults.
-pub fn parse_int_cutoffs(params: &str, default: &[usize]) -> Result<Vec<usize>, MeasureParseError> {
+pub fn parse_int_cutoffs(
+    params: &str,
+    default: &[usize],
+    warnings: &mut Vec<String>,
+) -> Result<Vec<usize>, MeasureParseError> {
     if params.is_empty() {
         return Ok(default.to_vec());
     }
     let mut list = Vec::new();
     for s in params.split(',') {
         let tok = s.trim();
-        // As trec_eval reads a cutoff: the leading integer, so `5x` and `1.5` read as 5 and 1,
-        // with a warning for take_parse_warnings.
         let invalid = || MeasureParseError::new(format!("invalid integer cutoff '{}'", tok));
         let (v, partial) = match crate::io::parsers::read_leading_integer(tok) {
             Ok(read) => read,
@@ -50,7 +53,7 @@ pub fn parse_int_cutoffs(params: &str, default: &[usize]) -> Result<Vec<usize>, 
             Err(_) => return Err(invalid()),
         };
         if partial {
-            parse_warning(format!("value '{}' partially read as '{}'", tok, v));
+            warnings.push(format!("value '{}' partially read as '{}'", tok, v));
         }
         list.push(usize::try_from(v).map_err(|_| invalid())?);
     }
@@ -117,24 +120,6 @@ pub fn parse_key_values(params: &str) -> Result<Vec<(String, String)>, MeasurePa
         pairs.push((k.trim().to_string(), v.trim().to_string()));
     }
     Ok(pairs)
-}
-
-thread_local! {
-    static PARSE_WARNINGS: std::cell::RefCell<Vec<String>> =
-        const { std::cell::RefCell::new(Vec::new()) };
-}
-
-fn parse_warning(message: String) {
-    PARSE_WARNINGS.with(|warnings| warnings.borrow_mut().push(message));
-}
-
-/// Takes the warnings that measure parameters raised on this thread since the last call, such as
-/// "value '5x' partially read as '5'" for `P.5x`. [`resolve_measures`] clears them before it
-/// starts, so after it returns they belong to that call.
-///
-/// [`resolve_measures`]: crate::metrics::registry::resolve_measures
-pub fn take_parse_warnings() -> Vec<String> {
-    PARSE_WARNINGS.with(|warnings| std::mem::take(&mut *warnings.borrow_mut()))
 }
 
 /// Helper function to count the number of relevant documents retrieved up to a certain rank limit.
@@ -405,43 +390,44 @@ mod parser_tests {
 
     #[test]
     fn int_cutoffs_empty_uses_default() {
-        assert_eq!(parse_int_cutoffs("", &[5, 10, 20]).unwrap(), vec![5, 10, 20]);
+        assert_eq!(parse_int_cutoffs("", &[5, 10, 20], &mut Vec::new()).unwrap(), vec![5, 10, 20]);
     }
 
     #[test]
     fn int_cutoffs_parses_and_trims() {
-        assert_eq!(parse_int_cutoffs("5, 10 ,20", &[]).unwrap(), vec![5, 10, 20]);
+        assert_eq!(parse_int_cutoffs("5, 10 ,20", &[], &mut Vec::new()).unwrap(), vec![5, 10, 20]);
     }
 
     #[test]
     fn int_cutoffs_rejects_bad_token() {
-        assert!(parse_int_cutoffs("5,x,20", &[]).is_err());
-        assert!(parse_int_cutoffs("5,-1", &[]).is_err());
+        assert!(parse_int_cutoffs("5,x,20", &[], &mut Vec::new()).is_err());
+        assert!(parse_int_cutoffs("5,-1", &[], &mut Vec::new()).is_err());
     }
 
     #[test]
     #[cfg(target_pointer_width = "64")]
     fn int_cutoffs_must_fit_in_i64() {
-        let max = parse_int_cutoffs("9223372036854775807", &[]).unwrap();
+        let max = parse_int_cutoffs("9223372036854775807", &[], &mut Vec::new()).unwrap();
         assert_eq!(max, vec![i64::MAX as usize]);
         for bad in ["9223372036854775808", "18446744073709551615", "-9223372036854775809"] {
-            let err = parse_int_cutoffs(bad, &[]).unwrap_err();
+            let err = parse_int_cutoffs(bad, &[], &mut Vec::new()).unwrap_err();
             assert!(err.message.contains("out of range"), "{bad}: {}", err.message);
         }
     }
 
     #[test]
     fn int_cutoffs_read_the_leading_integer_with_a_warning() {
-        take_parse_warnings();
-        assert_eq!(parse_int_cutoffs("1.5,5x,20", &[]).unwrap(), vec![1, 5, 20]);
+        let mut warnings = Vec::new();
+        assert_eq!(parse_int_cutoffs("1.5,5x,20", &[], &mut warnings).unwrap(), vec![1, 5, 20]);
         assert_eq!(
-            take_parse_warnings(),
+            warnings,
             ["value '1.5' partially read as '1'", "value '5x' partially read as '5'"]
         );
-        assert_eq!(parse_int_cutoffs("5,20", &[]).unwrap(), vec![5, 20]);
-        assert!(take_parse_warnings().is_empty());
+        let mut warnings = Vec::new();
+        assert_eq!(parse_int_cutoffs("5,20", &[], &mut warnings).unwrap(), vec![5, 20]);
+        assert!(warnings.is_empty());
         for bad in [".5", "x5", "+", "-1", "9223372036854775808"] {
-            assert!(parse_int_cutoffs(bad, &[]).is_err(), "{bad}");
+            assert!(parse_int_cutoffs(bad, &[], &mut Vec::new()).is_err(), "{bad}");
         }
     }
 

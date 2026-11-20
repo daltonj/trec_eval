@@ -34,8 +34,9 @@ impl MeasureStatus {
     }
 }
 
-/// Factory building a measure instance from its parameter string.
-type MeasureFactory = fn(&str) -> Result<Box<dyn Measure>, MeasureParseError>;
+/// Factory building a measure instance from its parameter string. Warnings about the
+/// parameters, such as a cutoff read partially, are added to the vector.
+type MeasureFactory = fn(&str, &mut Vec<String>) -> Result<Box<dyn Measure>, MeasureParseError>;
 
 /// Static description of a single measure root.
 pub struct MeasureSpec {
@@ -59,90 +60,90 @@ const DEFAULT_UTILITY_COEFFS: &[f64] = &[1.0, -1.0, 0.0, 0.0];
 pub fn registry() -> &'static [MeasureSpec] {
     use MeasureStatus::*;
     &[
-        MeasureSpec { name: "runid", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::runid::RunIdMeasure::new())) },
-        MeasureSpec { name: "num_q", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::num_q::NumQMeasure::new())) },
-        MeasureSpec { name: "num_ret", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::num_ret::NumRetMeasure::new())) },
-        MeasureSpec { name: "num_rel", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::num_rel::NumRelMeasure::new())) },
-        MeasureSpec { name: "num_rel_ret", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::num_rel_ret::NumRelRetMeasure::new())) },
-        MeasureSpec { name: "num_nonrel_judged_ret", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::num_nonrel_judged_ret::NumNonrelJudgedRetMeasure::new())) },
-        MeasureSpec { name: "map", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::map::MapMeasure::new())) },
-        MeasureSpec { name: "gm_map", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::gm_map::GMMapMeasure::new())) },
-        MeasureSpec { name: "Rprec", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::rprec::RprecMeasure::new())) },
-        MeasureSpec { name: "recip_rank", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::recip_rank::RecipRankMeasure::new())) },
-        MeasureSpec { name: "bpref", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::bpref::BprefMeasure::new())) },
-        MeasureSpec { name: "gm_bpref", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::gm_bpref::GMBprefMeasure::new())) },
-        MeasureSpec { name: "infAP", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::infap::InfAPMeasure::new())) },
+        MeasureSpec { name: "runid", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::runid::RunIdMeasure::new())) },
+        MeasureSpec { name: "num_q", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::num_q::NumQMeasure::new())) },
+        MeasureSpec { name: "num_ret", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::num_ret::NumRetMeasure::new())) },
+        MeasureSpec { name: "num_rel", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::num_rel::NumRelMeasure::new())) },
+        MeasureSpec { name: "num_rel_ret", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::num_rel_ret::NumRelRetMeasure::new())) },
+        MeasureSpec { name: "num_nonrel_judged_ret", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::num_nonrel_judged_ret::NumNonrelJudgedRetMeasure::new())) },
+        MeasureSpec { name: "map", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::map::MapMeasure::new())) },
+        MeasureSpec { name: "gm_map", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::gm_map::GMMapMeasure::new())) },
+        MeasureSpec { name: "Rprec", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::rprec::RprecMeasure::new())) },
+        MeasureSpec { name: "recip_rank", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::recip_rank::RecipRankMeasure::new())) },
+        MeasureSpec { name: "bpref", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::bpref::BprefMeasure::new())) },
+        MeasureSpec { name: "gm_bpref", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::gm_bpref::GMBprefMeasure::new())) },
+        MeasureSpec { name: "infAP", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::infap::InfAPMeasure::new())) },
         MeasureSpec {
             name: "P",
             status: Production,
             usage: "P[.<c1,c2,...>]  precision at integer rank cutoffs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::precision::PrecisionCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
+            factory: |p, w| Ok(Box::new(metrics::precision::PrecisionCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS, w)?)?)),
         },
         MeasureSpec {
             name: "recall",
             status: Production,
             usage: "recall[.<c1,c2,...>]  recall at integer rank cutoffs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::recall::RecallCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
+            factory: |p, w| Ok(Box::new(metrics::recall::RecallCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS, w)?)?)),
         },
         MeasureSpec {
             name: "ndcg_cut",
             status: Production,
             usage: "ndcg_cut[.<c1,c2,...>]  nDCG at integer rank cutoffs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::ndcg_cut::NdcgCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
+            factory: |p, w| Ok(Box::new(metrics::ndcg_cut::NdcgCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS, w)?)?)),
         },
         MeasureSpec {
             name: "map_cut",
             status: Production,
             usage: "map_cut[.<c1,c2,...>]  MAP at integer rank cutoffs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::map_cut::MapCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
+            factory: |p, w| Ok(Box::new(metrics::map_cut::MapCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS, w)?)?)),
         },
         MeasureSpec {
             name: "relative_P",
             status: Production,
             usage: "relative_P[.<c1,c2,...>]  relative precision at integer rank cutoffs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::relative_p::RelativePMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
+            factory: |p, w| Ok(Box::new(metrics::relative_p::RelativePMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS, w)?)?)),
         },
         MeasureSpec {
             name: "success",
             status: Production,
             usage: "success[.<c1,c2,...>]  success at integer rank cutoffs (default: 1,5,10)",
-            factory: |p| Ok(Box::new(metrics::success::SuccessCutMeasure::new(parse_int_cutoffs(p, DEFAULT_SUCCESS_CUTOFFS)?)?)),
+            factory: |p, w| Ok(Box::new(metrics::success::SuccessCutMeasure::new(parse_int_cutoffs(p, DEFAULT_SUCCESS_CUTOFFS, w)?)?)),
         },
         MeasureSpec {
             name: "unj",
             status: Production,
             usage: "unj[.<c1,c2,...>]  unjudged fraction at integer rank cutoffs (default: 5,10,20)",
-            factory: |p| Ok(Box::new(metrics::unj::UnjMeasure::new(parse_int_cutoffs(p, DEFAULT_UNJ_CUTOFFS)?)?)),
+            factory: |p, w| Ok(Box::new(metrics::unj::UnjMeasure::new(parse_int_cutoffs(p, DEFAULT_UNJ_CUTOFFS, w)?)?)),
         },
         MeasureSpec {
             name: "11pt_avg",
             status: Production,
             usage: "11pt_avg[.<r1,r2,...>]  interpolated precision at recall levels (default: 0.0,0.1,...,1.0)",
-            factory: |p| Ok(Box::new(metrics::avg_11pt::Avg11PtMeasure::new(parse_float_cutoffs(p, DEFAULT_RECALL_LEVELS)?, p)?)),
+            factory: |p, _| Ok(Box::new(metrics::avg_11pt::Avg11PtMeasure::new(parse_float_cutoffs(p, DEFAULT_RECALL_LEVELS)?, p)?)),
         },
         MeasureSpec {
             name: "iprec_at_recall",
             status: Production,
             usage: "iprec_at_recall[.<r1,r2,...>]  interpolated precision at recall levels (default: 0.0,0.1,...,1.0)",
-            factory: |p| Ok(Box::new(metrics::iprec_at_recall::IprecAtRecallMeasure::new(parse_float_cutoffs(p, DEFAULT_RECALL_LEVELS)?)?)),
+            factory: |p, _| Ok(Box::new(metrics::iprec_at_recall::IprecAtRecallMeasure::new(parse_float_cutoffs(p, DEFAULT_RECALL_LEVELS)?)?)),
         },
         MeasureSpec {
             name: "Rprec_mult",
             status: Production,
             usage: "Rprec_mult[.<m1,m2,...>]  R-precision at multiples of R (default: 0.2,0.4,...,2.0)",
-            factory: |p| Ok(Box::new(metrics::rprec_mult::RprecMultMeasure::new(parse_float_cutoffs(p, DEFAULT_RPREC_MULT)?)?)),
+            factory: |p, _| Ok(Box::new(metrics::rprec_mult::RprecMultMeasure::new(parse_float_cutoffs(p, DEFAULT_RPREC_MULT)?)?)),
         },
         MeasureSpec {
             name: "utility",
             status: Production,
             usage: "utility.<rr,rn,nr,nn>  four utility coefficients (default: 1.0,-1.0,0.0,0.0)",
-            factory: |p| Ok(Box::new(metrics::utility::UtilityMeasure::new(parse_float_cutoffs(p, DEFAULT_UTILITY_COEFFS)?, p)?)),
+            factory: |p, _| Ok(Box::new(metrics::utility::UtilityMeasure::new(parse_float_cutoffs(p, DEFAULT_UTILITY_COEFFS)?, p)?)),
         },
         MeasureSpec {
             name: "set_F",
             status: Production,
             usage: "set_F[.<x>]  weight x of recall against precision, beta^2 of F_beta (default: 1.0)",
-            factory: |p| {
+            factory: |p, _| {
                 let beta = if p.is_empty() {
                     1.0
                 } else {
@@ -155,7 +156,7 @@ pub fn registry() -> &'static [MeasureSpec] {
             name: "relstring",
             status: Production,
             usage: "relstring[.<len>]  relevance string length (default: 10)",
-            factory: |p| {
+            factory: |p, _| {
                 let len = if p.is_empty() {
                     10
                 } else {
@@ -164,35 +165,35 @@ pub fn registry() -> &'static [MeasureSpec] {
                 Ok(Box::new(metrics::relstring::RelstringMeasure::new(len, p)))
             },
         },
-        MeasureSpec { name: "set_P", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::set_p::SetPMeasure::new())) },
-        MeasureSpec { name: "set_recall", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::set_recall::SetRecallMeasure::new())) },
-        MeasureSpec { name: "set_relative_P", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::set_relative_p::SetRelativePMeasure::new())) },
-        MeasureSpec { name: "set_map", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::set_map::SetMapMeasure::new())) },
-        MeasureSpec { name: "G", status: Production, usage: "G[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::g::GMeasure::new(p)?)) },
-        MeasureSpec { name: "dcg", status: Production, usage: "dcg[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::dcg::DcgMeasure::new(p)?)) },
-        MeasureSpec { name: "ideal_dcg", status: Production, usage: "ideal_dcg[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::dcg::DcgMeasure::ideal(p)?)) },
-        MeasureSpec { name: "ndcg", status: Production, usage: "ndcg[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::ndcg::NdcgMeasure::new(p)?)) },
-        MeasureSpec { name: "ndcg_rel", status: Production, usage: "ndcg_rel[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::ndcg_rel::NdcgRelMeasure::new(p)?)) },
-        MeasureSpec { name: "Rndcg", status: Production, usage: "Rndcg[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::rndcg::RndcgMeasure::new(p)?)) },
-        MeasureSpec { name: "ndcg_p", status: Production, usage: "ndcg_p[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::ndcg_p::NdcgPMeasure::new(p)?)) },
-        MeasureSpec { name: "rbp", status: Production, usage: "rbp[.p=<float>,<rel>=<gain>,...]  persistence parameter p (default: 0.9) and optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::rbp::RbpMeasure::new(p)?)) },
-        MeasureSpec { name: "rbp_resid", status: Production, usage: "rbp_resid[.p=<float>,<rel>=<gain>,...]  persistence parameter p (default: 0.9); a gain mapping is checked as for rbp and not used", factory: |p| Ok(Box::new(metrics::rbp_resid::RbpResidMeasure::new(p)?)) },
-        MeasureSpec { name: "map_avgjg", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::map_avgjg::MapAvgjgMeasure::new())) },
+        MeasureSpec { name: "set_P", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::set_p::SetPMeasure::new())) },
+        MeasureSpec { name: "set_recall", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::set_recall::SetRecallMeasure::new())) },
+        MeasureSpec { name: "set_relative_P", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::set_relative_p::SetRelativePMeasure::new())) },
+        MeasureSpec { name: "set_map", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::set_map::SetMapMeasure::new())) },
+        MeasureSpec { name: "G", status: Production, usage: "G[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p, _| Ok(Box::new(metrics::g::GMeasure::new(p)?)) },
+        MeasureSpec { name: "dcg", status: Production, usage: "dcg[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p, _| Ok(Box::new(metrics::dcg::DcgMeasure::new(p)?)) },
+        MeasureSpec { name: "ideal_dcg", status: Production, usage: "ideal_dcg[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p, _| Ok(Box::new(metrics::dcg::DcgMeasure::ideal(p)?)) },
+        MeasureSpec { name: "ndcg", status: Production, usage: "ndcg[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p, _| Ok(Box::new(metrics::ndcg::NdcgMeasure::new(p)?)) },
+        MeasureSpec { name: "ndcg_rel", status: Production, usage: "ndcg_rel[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p, _| Ok(Box::new(metrics::ndcg_rel::NdcgRelMeasure::new(p)?)) },
+        MeasureSpec { name: "Rndcg", status: Production, usage: "Rndcg[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p, _| Ok(Box::new(metrics::rndcg::RndcgMeasure::new(p)?)) },
+        MeasureSpec { name: "ndcg_p", status: Production, usage: "ndcg_p[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p, _| Ok(Box::new(metrics::ndcg_p::NdcgPMeasure::new(p)?)) },
+        MeasureSpec { name: "rbp", status: Production, usage: "rbp[.p=<float>,<rel>=<gain>,...]  persistence parameter p (default: 0.9) and optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p, _| Ok(Box::new(metrics::rbp::RbpMeasure::new(p)?)) },
+        MeasureSpec { name: "rbp_resid", status: Production, usage: "rbp_resid[.p=<float>,<rel>=<gain>,...]  persistence parameter p (default: 0.9); a gain mapping is checked as for rbp and not used", factory: |p, _| Ok(Box::new(metrics::rbp_resid::RbpResidMeasure::new(p)?)) },
+        MeasureSpec { name: "map_avgjg", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::map_avgjg::MapAvgjgMeasure::new())) },
         MeasureSpec {
             name: "P_avgjg",
             status: Production,
             usage: "P_avgjg[.<c1,c2,...>]  precision at integer rank cutoffs averaged over JGs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::precision_avgjg::PrecisionAvgjgMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
+            factory: |p, w| Ok(Box::new(metrics::precision_avgjg::PrecisionAvgjgMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS, w)?)?)),
         },
         MeasureSpec {
             name: "Rprec_mult_avgjg",
             status: Production,
             usage: "Rprec_mult_avgjg[.<m1,m2,...>]  R-precision at multiples of R averaged over JGs (default: 0.2,0.4,...,2.0)",
-            factory: |p| Ok(Box::new(metrics::rprec_mult_avgjg::RprecMultAvgjgMeasure::new(parse_float_cutoffs(p, DEFAULT_RPREC_MULT)?)?)),
+            factory: |p, _| Ok(Box::new(metrics::rprec_mult_avgjg::RprecMultAvgjgMeasure::new(parse_float_cutoffs(p, DEFAULT_RPREC_MULT)?)?)),
         },
-        MeasureSpec { name: "yaap", status: Experimental, usage: "", factory: |_| Ok(Box::new(metrics::yaap::YaapMeasure::new())) },
+        MeasureSpec { name: "yaap", status: Experimental, usage: "", factory: |_, _| Ok(Box::new(metrics::yaap::YaapMeasure::new())) },
 
-        MeasureSpec { name: "binG", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::bin_g::BinGMeasure::new())) },
+        MeasureSpec { name: "binG", status: Production, usage: "", factory: |_, _| Ok(Box::new(metrics::bin_g::BinGMeasure::new())) },
     ]
 }
 
@@ -305,13 +306,18 @@ fn named_spec(arg: &str) -> Result<&'static MeasureSpec, MeasureParseError> {
     find_spec(&root).ok_or_else(|| MeasureParseError::illegal_name(format!("unknown measure '{}'", arg)))
 }
 
+/// The measures built by [`resolve_measures`], with the warnings that their parameters raised.
+pub struct ResolvedMeasures {
+    pub measures: Vec<Box<dyn Measure>>,
+    pub warnings: Vec<String>,
+}
+
 /// Resolve a list of requested measure arguments into constructed measures.
 ///
 /// Each request is either a group name (expanded via [`expand_group`]) or a
 /// `root[.params]` (or alias like `root@cutoff`) measure specification.
 /// Parameters are passed to the measure's factory. Errors carry the offending argument.
-pub fn resolve_measures(requested: &[String]) -> Result<Vec<Box<dyn Measure>>, MeasureParseError> {
-    metrics::common::take_parse_warnings();
+pub fn resolve_measures(requested: &[String]) -> Result<ResolvedMeasures, MeasureParseError> {
     // 1. Expand any groups into concrete measure argument strings.
     let mut expanded: Vec<String> = Vec::new();
     for req in requested {
@@ -341,6 +347,7 @@ pub fn resolve_measures(requested: &[String]) -> Result<Vec<Box<dyn Measure>>, M
 
     let mut built = HashSet::new();
     let mut measures: Vec<Box<dyn Measure>> = Vec::with_capacity(expanded.len());
+    let mut warnings = Vec::new();
     for arg in &expanded {
         let spec = named_spec(arg)?;
         let (_, params) = canonicalize_measure_spec(arg);
@@ -348,11 +355,11 @@ pub fn resolve_measures(requested: &[String]) -> Result<Vec<Box<dyn Measure>>, M
             continue;
         }
         let selected = parameters.get(spec.name).unwrap_or(&params);
-        let measure = (spec.factory)(selected)
+        let measure = (spec.factory)(selected, &mut warnings)
             .map_err(|e| MeasureParseError::new(format!("measure '{}': {}", arg, e)))?;
         measures.push(measure);
     }
-    Ok(measures)
+    Ok(ResolvedMeasures { measures, warnings })
 }
 
 /// The order of `te_trec_measures` in trec_eval's `measures.c`, in which trec_eval
@@ -392,7 +399,7 @@ mod tests {
     #[test]
     fn every_registry_factory_builds_with_defaults() {
         for spec in registry() {
-            let m = (spec.factory)("").unwrap_or_else(|e| panic!("{} failed: {}", spec.name, e));
+            let m = (spec.factory)("", &mut Vec::new()).unwrap_or_else(|e| panic!("{} failed: {}", spec.name, e));
             assert_eq!(m.name(), spec.name, "spec name must match measure name");
         }
     }
@@ -436,7 +443,7 @@ mod tests {
             "P@5,10".to_string(),
             "mrr".to_string(),
             "recip_rank".to_string(),
-        ]).unwrap();
+        ]).unwrap().measures;
         // mrr and recip_rank print the same row, so recip_rank is evaluated once.
         assert_eq!(measures.len(), 4);
         assert_eq!(measures[0].name(), "ndcg_cut");
@@ -451,7 +458,7 @@ mod tests {
 
     #[test]
     fn official_group_expands() {
-        let ms = resolve_measures(&["official".to_string()]).unwrap();
+        let ms = resolve_measures(&["official".to_string()]).unwrap().measures;
         let names: Vec<_> = ms.iter().map(|m| m.name()).collect();
         assert_eq!(
             names,
@@ -464,9 +471,16 @@ mod tests {
 
     #[test]
     fn parameterized_measure_parses() {
-        let ms = resolve_measures(&["P.10,20".to_string()]).unwrap();
+        let ms = resolve_measures(&["P.10,20".to_string()]).unwrap().measures;
         assert_eq!(ms.len(), 1);
         assert_eq!(ms[0].sub_metrics(), vec!["P_10".to_string(), "P_20".to_string()]);
+    }
+
+    #[test]
+    fn parameter_warnings_are_returned() {
+        let resolved = resolve_measures(&["P.5x".to_string()]).unwrap();
+        assert_eq!(resolved.measures[0].sub_metrics(), vec!["P_5"]);
+        assert_eq!(resolved.warnings, ["value '5x' partially read as '5'"]);
     }
 
     #[test]
