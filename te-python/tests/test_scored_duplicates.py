@@ -7,7 +7,7 @@ QRELS = "1 0 d1 1\n1 0 d2 0\n1 0 d3 2\n2 0 d1 0\n2 0 d2 1\n"
 def test_a_repeated_judgment_is_refused_when_its_topic_is_scored(tmp_path):
     qrels = tmp_path / "repeat.qrels"
     qrels.write_text(QRELS + "3 0 x 1\n3 0 x 0\n")
-    # Reading the file no longer fails: topic 3 has a repeat, but only -c would score it.
+    # Topic 3 repeats x, but only complete_set_average scores topic 3.
     evaluator = Evaluator(str(qrels), measures=["map"])
     run = {"1": {"d1": 3.0, "d2": 2.0, "d3": 1.0}, "2": {"d2": 2.0, "d1": 1.0}}
     assert evaluator.evaluate(run).aggregate()["map"] == pytest.approx(0.9167, abs=1e-4)
