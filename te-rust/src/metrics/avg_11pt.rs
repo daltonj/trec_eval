@@ -62,13 +62,7 @@ impl Measure for Avg11PtMeasure {
             return vec![MetricValue::Float(0.0)];
         }
 
-        // Count total relevant retrieved
-        let mut num_rel_ret = 0;
-        for &rel in &q_state.results_rel_list {
-            if rel >= config.relevance_level {
-                num_rel_ret += 1;
-            }
-        }
+        let num_rel_ret = q_state.num_rel_ret as i64;
 
         // Translate cutoff percentages to target relevant document counts
         let num_params = self.cutoffs.len();
@@ -78,7 +72,7 @@ impl Measure for Avg11PtMeasure {
         }
 
         let mut current_cut = num_params as i64 - 1;
-        while current_cut >= 0 && cutoffs[current_cut as usize] > num_rel_ret as i64 {
+        while current_cut >= 0 && cutoffs[current_cut as usize] > num_rel_ret {
             current_cut -= 1;
         }
 
@@ -91,12 +85,15 @@ impl Measure for Avg11PtMeasure {
         let mut rel_so_far = num_rel_ret;
 
         for i in (1..=num_ret).rev() {
+            if rel_so_far <= 0 {
+                break;
+            }
             let precis = (rel_so_far as f64) / (i as f64);
             if int_precis < precis {
                 int_precis = precis;
             }
             if q_state.results_rel_list[i - 1] >= config.relevance_level {
-                while current_cut >= 0 && rel_so_far as i64 == cutoffs[current_cut as usize] {
+                while current_cut >= 0 && rel_so_far == cutoffs[current_cut as usize] {
                     sum += int_precis;
                     current_cut -= 1;
                 }
