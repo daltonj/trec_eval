@@ -20,4 +20,4 @@ def test_unusable_global_gains_are_refused(gains):
 def test_legal_global_gains_are_applied():
     # As `te-rust --global-gains 1=3,2=9 -m ndcg` and trec_eval's `ndcg.1=3,2=9`: 0.6988.
     evaluator = Evaluator(QRELS, measures=["ndcg"], global_gains="1=3,2=9")
-    assert evaluator.evaluate(RUN).aggregate()["ndcg"] == pytest.approx(0.6988, abs=5e-5)
+    assert evaluator.evaluate(RUN).aggregate()["ndcg"] == pytest.approx(0.6988385132278441, rel=1e-12)

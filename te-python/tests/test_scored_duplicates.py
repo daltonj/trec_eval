@@ -10,7 +10,7 @@ def test_a_repeated_judgment_is_refused_when_its_topic_is_scored(tmp_path):
     # Topic 3 repeats x, but only complete_set_average scores topic 3.
     evaluator = Evaluator(str(qrels), measures=["map"])
     run = {"1": {"d1": 3.0, "d2": 2.0, "d3": 1.0}, "2": {"d2": 2.0, "d1": 1.0}}
-    assert evaluator.evaluate(run).aggregate()["map"] == pytest.approx(0.9167, abs=1e-4)
+    assert evaluator.evaluate(run).aggregate()["map"] == pytest.approx(11 / 12, rel=1e-12)
     complete = Evaluator(str(qrels), measures=["map"], complete_set_average=True)
     with pytest.raises(ValueError, match="qrels: duplicate document 'x' for query '3'"):
         complete.evaluate(run)
