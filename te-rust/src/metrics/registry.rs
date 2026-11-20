@@ -10,7 +10,6 @@
 
 use crate::metrics::common::{parse_float_cutoffs, parse_int_cutoffs, MeasureParseError};
 use crate::metrics::{self, Measure};
-use std::collections::{HashMap, HashSet};
 
 /// Development/support status of a measure (ISSUES #24).
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -297,13 +296,15 @@ fn has_empty_param_list(arg: &str) -> bool {
     arg.ends_with(['@', '_']) || arg.split_once('.').is_some_and(|(_, params)| params.is_empty())
 }
 
-/// The spec that `arg` names, or the error for an illegal name.
-fn named_spec(arg: &str) -> Result<&'static MeasureSpec, MeasureParseError> {
+/// The spec that `arg` names and its parameters, or the error for an illegal name.
+fn named_spec(arg: &str) -> Result<(&'static MeasureSpec, String), MeasureParseError> {
     if has_empty_param_list(arg) {
         return Err(MeasureParseError::illegal_name(format!("empty parameter list in measure '{}'", arg)));
     }
-    let (root, _) = canonicalize_measure_spec(arg);
-    find_spec(&root).ok_or_else(|| MeasureParseError::illegal_name(format!("unknown measure '{}'", arg)))
+    let (root, params) = canonicalize_measure_spec(arg);
+    let spec = find_spec(&root)
+        .ok_or_else(|| MeasureParseError::illegal_name(format!("unknown measure '{}'", arg)))?;
+    Ok((spec, params))
 }
 
 /// The measures built by [`resolve_measures`], with the warnings that their parameters raised.
@@ -316,7 +317,10 @@ pub struct ResolvedMeasures {
 ///
 /// Each request is either a group name (expanded via [`expand_group`]) or a
 /// `root[.params]` (or alias like `root@cutoff`) measure specification.
-/// Parameters are passed to the measure's factory. Errors carry the offending argument.
+/// As in trec_eval, every name is checked before any parameters are read, and each
+/// measure is built once, in the order of its first request, from the first parameter
+/// list given for it, or from its defaults if no request gives one. A later, different
+/// list is ignored with a warning. An error names the request whose parameters failed.
 pub fn resolve_measures(requested: &[String]) -> Result<ResolvedMeasures, MeasureParseError> {
     // 1. Expand any groups into concrete measure argument strings.
     let mut expanded: Vec<String> = Vec::new();
@@ -327,36 +331,36 @@ pub fn resolve_measures(requested: &[String]) -> Result<ResolvedMeasures, Measur
         }
     }
 
-    // trec_eval refuses an illegal name while it reads its options, before it
-    // reads any parameter, so every name is checked before any measure is built.
-    for arg in &expanded {
-        named_spec(arg)?;
-    }
+    let named = expanded
+        .iter()
+        .map(|arg| named_spec(arg).map(|(spec, params)| (arg.as_str(), spec, params)))
+        .collect::<Result<Vec<_>, _>>()?;
 
-    // trec_eval keeps the first explicit parameter list for a measure, even
-    // when a group or a request without parameters names the measure first.
-    let mut parameters = HashMap::new();
-    for arg in &expanded {
-        let (root, params) = canonicalize_measure_spec(arg);
-        if let Some(spec) = find_spec(&root) {
-            if !params.is_empty() {
-                parameters.entry(spec.name).or_insert(params);
-            }
-        }
-    }
-
-    let mut built = HashSet::new();
-    let mut measures: Vec<Box<dyn Measure>> = Vec::with_capacity(expanded.len());
+    // Each measure with the parameters it uses and the request that gave them.
+    let mut selected: Vec<(&MeasureSpec, &str, &str)> = Vec::new();
     let mut warnings = Vec::new();
-    for arg in &expanded {
-        let spec = named_spec(arg)?;
-        let (_, params) = canonicalize_measure_spec(arg);
-        if !built.insert(spec.name) {
+    for (arg, spec, params) in &named {
+        let Some((_, chosen, source)) = selected.iter_mut().find(|(s, ..)| s.name == spec.name) else {
+            selected.push((spec, params, arg));
+            continue;
+        };
+        if params.is_empty() || params == chosen {
             continue;
         }
-        let selected = parameters.get(spec.name).unwrap_or(&params);
-        let measure = (spec.factory)(selected, &mut warnings)
-            .map_err(|e| MeasureParseError::new(format!("measure '{}': {}", arg, e)))?;
+        if chosen.is_empty() {
+            (*chosen, *source) = (params, arg);
+        } else {
+            warnings.push(format!(
+                "measure '{}': parameters ignored; {} uses those of '{}'",
+                arg, spec.name, source
+            ));
+        }
+    }
+
+    let mut measures: Vec<Box<dyn Measure>> = Vec::with_capacity(selected.len());
+    for (spec, params, source) in selected {
+        let measure = (spec.factory)(params, &mut warnings)
+            .map_err(|e| MeasureParseError::new(format!("measure '{}': {}", source, e)))?;
         measures.push(measure);
     }
     Ok(ResolvedMeasures { measures, warnings })
@@ -486,6 +490,21 @@ mod tests {
     #[test]
     fn unknown_measure_errors() {
         assert!(resolve_measures(&["nope".to_string()]).is_err());
+    }
+
+    #[test]
+    fn error_names_the_request_that_gave_the_parameters() {
+        let error = resolve_measures(&["P".to_string(), "P.0".to_string()]).err().unwrap();
+        assert_eq!(error.message, "measure 'P.0': rank cutoff must be at least 1");
+    }
+
+    #[test]
+    fn later_parameter_lists_are_ignored_with_a_warning() {
+        let requests = ["P", "P.2", "P_2", "P.5", "recall@3"].map(String::from);
+        let resolved = resolve_measures(&requests).unwrap();
+        let rows: Vec<_> = resolved.measures.iter().flat_map(|m| m.sub_metrics()).collect();
+        assert_eq!(rows, ["P_2", "recall_3"]);
+        assert_eq!(resolved.warnings, ["measure 'P.5': parameters ignored; P uses those of 'P.2'"]);
     }
 
     #[test]
