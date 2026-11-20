@@ -58,10 +58,10 @@ void *te_chk_and_realloc(void *ptr, long *current_bound,
    a newline, followed by a NUL. A NUL byte, or a CR that does not end a
    CRLF line ending, is an error: print a message naming the reader, the
    kind of file and the file, and return UNDEF. */
-long te_count_lines(const char *buf, const long size, const char *reader,
+long te_count_lines(const char *buf, const size_t size, const char *reader,
                     const char *kind, const char *file)
 {
-    long i;
+    size_t i;
     long num_lines = 0;
 
     for (i = 0; i < size; i++) {

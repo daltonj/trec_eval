@@ -139,7 +139,8 @@ typedef struct {
 int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
 {
     FILE* fd;
-    long size = 0;
+    long file_size;
+    size_t size = 0;
     char *ptr;
     char *current_qid;
     char *rel_ptr;
@@ -157,10 +158,10 @@ int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
 
     /* Read entire file into memory */
     if (! (fd = fopen (text_prefs_file, "rb")) ||
-        fseek (fd, 0L, SEEK_END) != 0 || 0 >= (size = ftell(fd)) ||
-        NULL == (trec_prefs_buf = malloc ((size_t) size + 2)) ||
+        fseek (fd, 0L, SEEK_END) != 0 || 0 >= (file_size = ftell(fd)) ||
+        NULL == (trec_prefs_buf = malloc ((size = file_size) + 2)) ||
         -1 == fseek (fd, 0L, SEEK_SET) ||
-        (size_t) size != fread (trec_prefs_buf, 1, (size_t) size, fd) ||
+        size != fread (trec_prefs_buf, 1, size, fd) ||
         -1 == fclose (fd)) {
         fprintf (stderr,
 		 "trec_eval.get_prefs: Cannot read prefs file '%s'\n",
