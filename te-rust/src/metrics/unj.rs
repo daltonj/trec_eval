@@ -59,10 +59,6 @@ impl Measure for UnjMeasure {
             if cutoff_index < self.cutoffs.len() && i == self.cutoffs[cutoff_index] {
                 results[cutoff_index] = (unj_so_far as f64) / (i as f64);
                 cutoff_index += 1;
-                while cutoff_index < self.cutoffs.len() && i == self.cutoffs[cutoff_index] {
-                    results[cutoff_index] = (unj_so_far as f64) / (i as f64);
-                    cutoff_index += 1;
-                }
             }
             if rel == crate::eval::alignment::RELVALUE_NONPOOL || rel == crate::eval::alignment::RELVALUE_UNJUDGED {
                 unj_so_far += 1;
