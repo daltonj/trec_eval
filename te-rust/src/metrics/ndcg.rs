@@ -21,14 +21,13 @@ impl NdcgMeasure {
     }
 }
 
-/// Returns the DCG of the ranking and the DCG of the ideal ranking, the numerator and
-/// the denominator of `ndcg`. A measure's own gain map comes first, then
+/// The gains of a topic's levels. A measure's own gain map comes first, then
 /// `--global-gains`, then the default gains.
-pub(crate) fn dcg_sums(
+pub(crate) fn topic_gains(
     own_gains: &GainsConfig,
     config: &EvalConfig,
     q_state: &QueryEvalState,
-) -> (f64, f64) {
+) -> Gains {
     let gains_config = if !own_gains.custom_gains.is_empty() {
         own_gains
     } else if let Some(ref gg) = config.global_gains {
@@ -36,23 +35,33 @@ pub(crate) fn dcg_sums(
     } else {
         own_gains
     };
-    let gains = Gains::setup(gains_config, &q_state.rel_levels);
-    // Document i, counting from 0, has rank i + 1 and discount log2(i + 2).
-    let discount = |i: usize| ((i + 2) as f64).log2();
+    Gains::setup(gains_config, &q_state.rel_levels)
+}
 
-    // Every retrieved document, whatever its gain.
-    let mut results_dcg = 0.0;
+/// Document i, counting from 0, has rank i + 1 and discount log2(i + 2).
+fn discount(i: usize) -> f64 {
+    ((i + 2) as f64).log2()
+}
+
+/// The DCG of the ranking, the numerator of `ndcg`: every retrieved document, whatever
+/// its gain.
+pub(crate) fn ranking_dcg(gains: &Gains, q_state: &QueryEvalState) -> f64 {
+    let mut dcg = 0.0;
     let ranking = q_state.results_rel_list.iter().take(q_state.num_ret);
     for (i, &rel) in ranking.enumerate() {
         let gain = gains.get_gain(rel);
         if gain != 0.0 {
-            results_dcg += gain / discount(i);
+            dcg += gain / discount(i);
         }
     }
+    dcg
+}
 
-    // The judged documents with a positive gain, in descending order of gain.
+/// The DCG of the ideal ranking, the denominator of `ndcg`: the judged documents with a
+/// positive gain, in descending order of gain.
+pub(crate) fn ideal_dcg(gains: &Gains) -> f64 {
     // `Gains::setup` sorts the levels by increasing gain.
-    let mut ideal_dcg = 0.0;
+    let mut dcg = 0.0;
     let mut i = 0;
     let positive = gains
         .rel_gains
@@ -61,12 +70,11 @@ pub(crate) fn dcg_sums(
         .take_while(|level| level.gain > 0.0);
     for level in positive {
         for _ in 0..level.num_at_level {
-            ideal_dcg += level.gain / discount(i);
+            dcg += level.gain / discount(i);
             i += 1;
         }
     }
-
-    (results_dcg, ideal_dcg)
+    dcg
 }
 
 impl Measure for NdcgMeasure {
@@ -104,8 +112,9 @@ impl Measure for NdcgMeasure {
             None => return self.initial_values(),
         };
 
-        let (results_dcg, ideal_dcg) = dcg_sums(&self.gains_config, config, q_state);
-        let score = if ideal_dcg > 0.0 { results_dcg / ideal_dcg } else { 0.0 };
+        let gains = topic_gains(&self.gains_config, config, q_state);
+        let ideal = ideal_dcg(&gains);
+        let score = if ideal > 0.0 { ranking_dcg(&gains, q_state) / ideal } else { 0.0 };
         vec![MetricValue::Float(score)]
     }
 

@@ -1,9 +1,9 @@
 //! `dcg` and `ideal_dcg`, the numerator and the denominator of `ndcg`, which
-//! `m_ndcg.c` registers beside it. Both sums come from [`dcg_sums`].
+//! `m_ndcg.c` registers beside it.
 
 use crate::metrics::common::{GainsConfig, MeasureParseError};
 use crate::metrics::invariants::{self, Invariant};
-use crate::metrics::ndcg::dcg_sums;
+use crate::metrics::ndcg::{ideal_dcg, ranking_dcg, topic_gains};
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
 
 /// Which of the two sums of `ndcg` a measure reports.
@@ -113,10 +113,10 @@ impl Measure for DcgMeasure {
             Some(q) => q,
             None => return self.initial_values(),
         };
-        let (results_dcg, ideal_dcg) = dcg_sums(&self.gains_config, config, q_state);
+        let gains = topic_gains(&self.gains_config, config, q_state);
         let value = match self.sum {
-            Sum::Ranking => results_dcg,
-            Sum::Ideal => ideal_dcg,
+            Sum::Ranking => ranking_dcg(&gains, q_state),
+            Sum::Ideal => ideal_dcg(&gains),
         };
         vec![MetricValue::Float(value)]
     }
