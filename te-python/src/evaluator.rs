@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyList, PySequence, PySet, PyString};
 use te_rust::eval::alignment::align_query;
 use te_rust::eval::{
-    evaluate_run, EvaluationOutput, QueryEvaluation, ScoredDuplicate,
+    evaluate_run, EvaluationError, EvaluationOutput, QueryEvaluation, ScoredDuplicate,
     SummaryEvaluation,
 };
 use te_rust::io::{QrelsData, QrelsQuery, RunData, RunQuery};
@@ -194,7 +194,11 @@ impl Evaluator {
     }
 }
 
-fn evaluation_error(duplicate: ScoredDuplicate) -> PyErr {
+fn evaluation_error(error: EvaluationError) -> PyErr {
+    let duplicate = match error {
+        EvaluationError::Duplicate(duplicate) => duplicate,
+        other => return PyValueError::new_err(other.to_string()),
+    };
     let kind = match duplicate {
         ScoredDuplicate::Qrels { .. } => "qrels",
         ScoredDuplicate::Run { .. } => "run",

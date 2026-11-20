@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::eval::alignment::{align_query_jg_with_validation, align_query_with_validation};
 use crate::eval::bootstrap::{bootstrap_ci_with_aggregator, bootstrap_mean_ci, BootstrapConfig, ConfidenceInterval};
-use crate::eval::ScoredDuplicate;
+use crate::eval::EvaluationError;
 use crate::io::{QrelsData, QrelsJGData, QrelsJGQuery, QrelsQuery, RunData, RunQuery};
 use crate::metrics::{EvalConfig, EvalState, Measure, MetricValue, ValueFormat};
 
@@ -39,7 +39,7 @@ pub fn evaluate_run(
     measures: &[Box<dyn Measure>],
     config: &EvalConfig,
     ci_config: Option<&BootstrapConfig>,
-) -> Result<EvaluationOutput, ScoredDuplicate> {
+) -> Result<EvaluationOutput, EvaluationError> {
     let mut qrels_by_qid: HashMap<String, &QrelsQuery> = HashMap::with_capacity(qrels.queries.len());
     for qrels_q in &qrels.queries {
         qrels_by_qid.insert(qrels_q.qid.clone(), qrels_q);
@@ -183,7 +183,7 @@ pub fn evaluate_run_jg(
     measures: &[Box<dyn Measure>],
     config: &EvalConfig,
     ci_config: Option<&BootstrapConfig>,
-) -> Result<EvaluationOutput, ScoredDuplicate> {
+) -> Result<EvaluationOutput, EvaluationError> {
     let mut qrels_by_qid: HashMap<String, &QrelsJGQuery> =
         HashMap::with_capacity(qrels.queries.len());
     for qrels_q in &qrels.queries {

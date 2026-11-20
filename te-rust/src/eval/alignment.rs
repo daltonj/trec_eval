@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::eval::ScoredDuplicate;
+use crate::eval::{EvaluationError, ScoredDuplicate};
+use crate::io::parsers::REL_LEVELS;
 use crate::io::{QrelsJGQuery, QrelsQuery, RunQuery, RunRecord};
 
 pub const RELVALUE_NONPOOL: i64 = -1;
@@ -55,7 +56,7 @@ pub fn align_query(
     relevance_level_cutoff: i64,
     max_docs_per_topic: usize,
     judged_docs_only_flag: bool,
-) -> Result<QueryEvalState, ScoredDuplicate> {
+) -> Result<QueryEvalState, EvaluationError> {
     align_query_with_validation(
         run_query,
         qrels_query,
@@ -75,7 +76,7 @@ pub(crate) fn align_query_with_validation(
     max_docs_per_topic: usize,
     judged_docs_only_flag: bool,
     reads_ranking: bool,
-) -> Result<QueryEvalState, ScoredDuplicate> {
+) -> Result<QueryEvalState, EvaluationError> {
     let doc_infos = rank_documents(
         run_query,
         &qrels_query.qid,
@@ -97,7 +98,7 @@ fn rank_documents<'a>(
     qid: &str,
     max_docs_per_topic: usize,
     reads_ranking: bool,
-) -> Result<Vec<&'a RunRecord>, ScoredDuplicate> {
+) -> Result<Vec<&'a RunRecord>, EvaluationError> {
     // Sort run records by sim descending, and docno descending lexicographically
     let mut doc_infos: Vec<_> = run_query.into_iter().flat_map(|q| &q.records).collect();
 
@@ -125,7 +126,8 @@ fn rank_documents<'a>(
                 return Err(ScoredDuplicate::Run {
                     qid: qid.to_string(),
                     docno: doc.docno.clone(),
-                });
+                }
+                .into());
             }
         }
     }
@@ -140,7 +142,7 @@ fn align_ranked_query(
     relevance_level_cutoff: i64,
     judged_docs_only_flag: bool,
     reads_ranking: bool,
-) -> Result<QueryEvalState, ScoredDuplicate> {
+) -> Result<QueryEvalState, EvaluationError> {
     let qid = qrels_query.qid.clone();
 
     let mut qrels_map = HashMap::with_capacity(qrels_query.records.len());
@@ -149,13 +151,21 @@ fn align_ranked_query(
             return Err(ScoredDuplicate::Qrels {
                 qid,
                 docno: record.docno.clone(),
-            });
+            }
+            .into());
         }
     }
 
     // Calculate max relevance grade and populate rel_levels counts
     let mut max_rel_grade = 0;
     for record in &qrels_query.records {
+        if !REL_LEVELS.contains(&record.rel) {
+            return Err(EvaluationError::RelevanceOutOfBounds {
+                qid,
+                docno: record.docno.clone(),
+                value: record.rel,
+            });
+        }
         if record.rel > max_rel_grade {
             max_rel_grade = record.rel;
         }
@@ -237,7 +247,7 @@ pub fn align_query_jg(
     relevance_level_cutoff: i64,
     max_docs_per_topic: usize,
     judged_docs_only_flag: bool,
-) -> Result<Vec<QueryEvalState>, ScoredDuplicate> {
+) -> Result<Vec<QueryEvalState>, EvaluationError> {
     align_query_jg_with_validation(
         run_query,
         qrels_jg_query,
@@ -257,7 +267,7 @@ pub(crate) fn align_query_jg_with_validation(
     max_docs_per_topic: usize,
     judged_docs_only_flag: bool,
     reads_ranking: bool,
-) -> Result<Vec<QueryEvalState>, ScoredDuplicate> {
+) -> Result<Vec<QueryEvalState>, EvaluationError> {
     let doc_infos = rank_documents(
         run_query,
         &qrels_jg_query.qid,

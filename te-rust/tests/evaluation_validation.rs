@@ -1,4 +1,4 @@
-use te_rust::eval::{evaluate_run, evaluate_run_jg, ScoredDuplicate};
+use te_rust::eval::{evaluate_run, evaluate_run_jg, EvaluationError, ScoredDuplicate};
 use te_rust::io::{
     QrelsData, QrelsJGData, QrelsJGGroup, QrelsJGQuery, QrelsQuery, QrelsRecord, RunData, RunQuery,
     RunRecord,
@@ -46,10 +46,10 @@ fn library_refuses_scored_run_duplicates() {
     let result = evaluate_run(&qrels(), &run(), &measures, &EvalConfig::default(), None);
     assert_eq!(
         result.unwrap_err(),
-        ScoredDuplicate::Run {
+        EvaluationError::Duplicate(ScoredDuplicate::Run {
             qid: "1".into(),
             docno: "a".into()
-        }
+        })
     );
 }
 
@@ -70,10 +70,10 @@ fn library_refuses_scored_jg_run_duplicates() {
     let result = evaluate_run_jg(&qrels, &run(), &measures, &EvalConfig::default(), None);
     assert_eq!(
         result.unwrap_err(),
-        ScoredDuplicate::Run {
+        EvaluationError::Duplicate(ScoredDuplicate::Run {
             qid: "1".into(),
             docno: "a".into()
-        }
+        })
     );
 }
 
@@ -112,9 +112,9 @@ fn library_checks_missing_qrels_topics_only_with_complete_averaging() {
     };
     assert_eq!(
         evaluate_run(&qrels, &run, &measures, &config, None).unwrap_err(),
-        ScoredDuplicate::Qrels {
+        EvaluationError::Duplicate(ScoredDuplicate::Qrels {
             qid: "2".into(),
             docno: "b".into()
-        }
+        })
     );
 }

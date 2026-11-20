@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::process;
 
 use te_rust::eval::bootstrap::BootstrapConfig;
-use te_rust::eval::{evaluate_run, evaluate_run_jg, ScoredDuplicate};
+use te_rust::eval::{evaluate_run, evaluate_run_jg, EvaluationError, ScoredDuplicate};
 use te_rust::io::{parse_trec_qrels, parse_trec_qrels_jg, parse_trec_run};
 use te_rust::metrics::{EvalConfig, MetricValue, ValueFormat};
 use te_rust::metrics;
@@ -110,11 +110,18 @@ const EXIT_TOPIC: i32 = 4;
 
 /// Reports an evaluation error with trec_eval's exit status.
 fn refuse_evaluation_error(
-    duplicate: ScoredDuplicate,
+    error: EvaluationError,
     qrels_kind: &str,
     qrels_file: &str,
     run_file: &str,
 ) -> ! {
+    let duplicate = match error {
+        EvaluationError::Duplicate(duplicate) => duplicate,
+        other => {
+            eprintln!("te-rust: {}", other);
+            process::exit(EXIT_INPUT);
+        }
+    };
     let (kind, file) = match duplicate {
         ScoredDuplicate::Qrels { .. } => (qrels_kind, qrels_file),
         ScoredDuplicate::Run { .. } => ("run", run_file),
