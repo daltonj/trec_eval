@@ -15,11 +15,15 @@
 . test/regress/lib.sh
 d=test/regress/complete-empty-ranking
 
-i=0
-for m in utility utility.1,-1,0,0 utility.1,-1,2,3 rbp_resid rbp_resid.p=0.5 \
-    num_ret relstring ndcg.-1=1 relstring.3; do
-    i=$((i + 1))
-    expect_output $d/out.$i -c -q -m $m $d/qrels $d/results
-done
+m="-c -q $d/qrels $d/results"
+expect_output $d/out.utility -m utility $m
+expect_output $d/out.utility-default -m utility.1,-1,0,0 $m
+expect_output $d/out.utility-custom -m utility.1,-1,2,3 $m
+expect_output $d/out.rbp_resid -m rbp_resid $m
+expect_output $d/out.rbp_resid-p -m rbp_resid.p=0.5 $m
+expect_output $d/out.num_ret -m num_ret $m
+expect_output $d/out.relstring -m relstring $m
+expect_output $d/out.relstring-length -m relstring.3 $m
+expect_output $d/out.ndcg -m ndcg.-1=1 $m
 expect_output $d/out.first -c -q -m map $d/qrels.first $d/results.first
 expect_status 0 -c -q -m all_trec $d/qrels.first $d/results.first
