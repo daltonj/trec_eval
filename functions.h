@@ -28,9 +28,10 @@ int check_gain_params(const TREC_MEAS * tm, const char *named_param);
 int te_init_meas_s_double_p_gain(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval);
 double get_gain(const long rel_level, const GAINS * gains);
 int comp_rel_gain(const void * ptr1, const void * ptr2);
-/* Functions for converting strings to ints, with warnings for unexpected inputs*/
+/* Functions for converting strings to numbers, with warnings for unexpected inputs*/
 long str_to_long(const char * str, int * error);
 long str_to_long_ctx(const char * str, int * error, const char * fmt, ...);
+double str_to_double_ctx(const char * str, int * error, const char * fmt, ...);
 
 /* ------------------- Generic Routines for Measures ------------------------ */
 

@@ -15,9 +15,21 @@
 #include <stdarg.h>
 
 /*
- * Convert a string to a long, with error checking. Unless fmt is NULL, an
- * error or warning ends with fmt and the arguments after it, formatted as
- * by printf, in parentheses: they say where the value comes from.
+ * End an error or warning from a string conversion. Unless fmt is NULL,
+ * fmt and the arguments after it, formatted as by printf, follow in
+ * parentheses: they say where the value comes from.
+ */
+static void end_message(const char * fmt, va_list ap) {
+    if (fmt != NULL) {
+        fputs(" (", stderr);
+        vfprintf(stderr, fmt, ap);
+        fputc(')', stderr);
+    }
+    fputs(".\n", stderr);
+}
+
+/*
+ * Convert a string to a long, with error checking.
  */
 long str_to_long_ctx(const char * str, int * error, const char * fmt, ...) {
     char *endptr = NULL;
@@ -39,14 +51,42 @@ long str_to_long_ctx(const char * str, int * error, const char * fmt, ...) {
     } else {
         return value;
     }
-    if (fmt != NULL) {
-        va_start(ap, fmt);
-        fputs(" (", stderr);
-        vfprintf(stderr, fmt, ap);
-        fputc(')', stderr);
-        va_end(ap);
+    va_start(ap, fmt);
+    end_message(fmt, ap);
+    va_end(ap);
+    return value;
+}
+
+/*
+ * Convert a string to a double, with the error checking of
+ * str_to_long_ctx. NaN is an error. A value out of range is kept as
+ * strtod reads it, an infinity or zero, with a warning.
+ */
+double str_to_double_ctx(const char * str, int * error, const char * fmt, ...) {
+    char *endptr = NULL;
+    va_list ap;
+    errno = 0;
+
+    *error = 0;
+    double value = strtod(str, &endptr);
+    if (endptr == str) {
+        fprintf(stderr, "Error: value `%s' could not be parsed", str);
+        *error = 1;
+    } else if (isnan(value)) {
+        fprintf(stderr, "Error: value `%s' is not a number", str);
+        *error = 1;
+    } else if (errno == ERANGE && (isinf(value) || value == 0.0)) {
+        fprintf(stderr, "Warning, value `%s' out of range, read as `%g'",
+                str, value);
+    } else if (*endptr != '\0') {
+        fprintf(stderr, "Warning, value `%s' partially read as `%.*s'",
+                str, (int) (endptr - str), str);
+    } else {
+        return value;
     }
-    fputs(".\n", stderr);
+    va_start(ap, fmt);
+    end_message(fmt, ap);
+    va_end(ap);
     return value;
 }
 

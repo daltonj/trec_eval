@@ -30,9 +30,9 @@ expect_message "Warning, value \`.25x' partially read as \`.25' (cutoff of measu
     -m iprec_at_recall..25x $D/qrels $D/run
 expect_message "Warning, value \`0.5x' partially read as \`0.5' (parameter of measure 'set_F')." \
     -m set_F.0.5x $D/qrels $D/run
-expect_message "Warning, value \`2x' partially read as \`2' (value of '1' in '1=2x')." \
+expect_message "Warning, value \`2x' partially read as \`2' (parameter '1' of measure 'ndcg')." \
     -m ndcg.1=2x $D/qrels $D/run
-expect_message "Warning, value \`0.5x' partially read as \`0.5' (value of 'p' in 'p=0.5x')." \
+expect_message "Warning, value \`0.5x' partially read as \`0.5' (parameter 'p' of measure 'rbp')." \
     -m rbp.p=0.5x $D/qrels $D/run
 expect_status 0 -m set_F.0.5x $D/qrels $D/run
 
@@ -46,7 +46,7 @@ expect_status 2 -m P.x $D/qrels $D/run
 expect_message "Error: value \`x' could not be parsed (parameter of measure 'set_F')." \
     -m set_F.x $D/qrels $D/run
 expect_status 2 -m set_F.x $D/qrels $D/run
-expect_message "Error: value \`inf' is not a finite number (cutoff of measure 'iprec_at_recall')." \
+expect_message "trec_eval: cutoff inf of measure 'iprec_at_recall' is not finite" \
     -m iprec_at_recall.inf $D/qrels $D/run
 expect_status 2 -m iprec_at_recall.inf $D/qrels $D/run
 exit 0
