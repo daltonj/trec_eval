@@ -36,54 +36,85 @@ static int valid_int(const char *str)
     return 1;
 }
 
-int check_gain_params(const TREC_MEAS * tm, const char *named_param)
+/* Each of the pairs of measure tm names a different relevance level */
+static int check_gain_params(const TREC_MEAS * tm,
+                             const DOUBLE_PARAM_PAIR * pairs, long num_pairs)
 {
-    DOUBLE_PARAM_PAIR *pairs =
-        (DOUBLE_PARAM_PAIR *) tm->meas_params->param_values;
-    long i, j, level_i = 0, level_j;
+    long *levels;
+    long i, j;
     int error = 0;
-    int is_named;
 
-    for (i = 0; i < tm->meas_params->num_params; i++) {
-        is_named = named_param && 0 == strcmp(pairs[i].name, named_param);
-        if (!is_named) {
-            if (valid_int(pairs[i].name))
-                level_i = str_to_long(pairs[i].name, &error);
-            else
-                error = 1;
-            if (error) {
-                fprintf(stderr, "trec_eval: Unusable relevance level '%s'\n",
-                        pairs[i].name);
+    if (num_pairs == 0)
+        return (1);
+    if (NULL == (levels = Malloc(num_pairs, long)))
+        return (UNDEF);
+    for (i = 0; i < num_pairs; i++) {
+        if (valid_int(pairs[i].name))
+            levels[i] = str_to_long(pairs[i].name, &error);
+        else
+            error = 1;
+        if (error) {
+            fprintf(stderr, "trec_eval: Unusable relevance level '%s'\n",
+                    pairs[i].name);
+            return (UNDEF);
+        }
+        for (j = 0; j < i; j++) {
+            if (levels[j] == levels[i]) {
+                fprintf(stderr,
+                        "trec_eval: relevance level %ld of measure '%s' is given more than once\n",
+                        levels[i], tm->name);
                 return (UNDEF);
             }
         }
-        for (j = 0; j < i; j++) {
-            if (is_named) {
-                if (0 == strcmp(pairs[i].name, pairs[j].name)) {
-                    fprintf(stderr,
-                            "trec_eval: parameter '%s' of measure '%s' is given more than once\n",
-                            pairs[i].name, tm->name);
-                    return (UNDEF);
-                }
-            } else if (!named_param || strcmp(pairs[j].name, named_param)) {
-                level_j = str_to_long(pairs[j].name, &error);
-                if (level_i == level_j) {
-                    fprintf(stderr,
-                            "trec_eval: relevance level %ld of measure '%s' is given more than once\n",
-                            level_i, tm->name);
-                    return (UNDEF);
-                }
-            }
-        }
     }
+    Free(levels);
     return (1);
 }
 
+/* Measure is a single double with gains for relevance levels as
+   name=double params */
 int te_init_meas_s_double_p_gain(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
 {
     if (UNDEF == te_init_meas_s_double_p_pair(epi, tm, eval))
         return (UNDEF);
-    return check_gain_params(tm, NULL);
+    return (check_gain_params(tm, tm->meas_params->param_values,
+                              tm->meas_params->num_params));
+}
+
+/* rbp and rbp_resid: the persistence p, at least 0 and less than 1, and
+   gains for relevance levels, which rbp_resid accepts and ignores */
+int te_init_meas_s_double_p_rbp(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
+{
+    DOUBLE_PARAM_PAIR *pairs, pair;
+    long num_pairs, num_p = 0;
+    long i;
+
+    if (UNDEF == te_init_meas_s_double_p_pair(epi, tm, eval))
+        return (UNDEF);
+    pairs = (DOUBLE_PARAM_PAIR *) tm->meas_params->param_values;
+    num_pairs = tm->meas_params->num_params;
+    /* Swap p to the front, so that the pairs after it are the gains */
+    for (i = 0; i < num_pairs; i++) {
+        if (strcmp(pairs[i].name, "p"))
+            continue;
+        if (num_p) {
+            fprintf(stderr,
+                    "trec_eval: parameter 'p' of measure '%s' is given more than once\n",
+                    tm->name);
+            return (UNDEF);
+        }
+        if (pairs[i].value < 0.0 || pairs[i].value >= 1.0) {
+            fprintf(stderr,
+                    "trec_eval: persistence p=%g of measure '%s' is not in [0, 1)\n",
+                    pairs[i].value, tm->name);
+            return (UNDEF);
+        }
+        pair = pairs[0];
+        pairs[0] = pairs[i];
+        pairs[i] = pair;
+        num_p = 1;
+    }
+    return (check_gain_params(tm, pairs + num_p, num_pairs - num_p));
 }
 
 int setup_gains(const TREC_MEAS * tm, const RES_RELS * res_rels, GAINS * gains)
