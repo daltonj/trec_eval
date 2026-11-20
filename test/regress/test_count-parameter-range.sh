@@ -37,4 +37,3 @@ for m in Rprec_mult Rprec_mult_avgjg; do
     awk '{print $2, $3}' "$T/out" > "$T/values"
     diff "$T/values" $D/out.huge-zscore || fail "$m: clamped denominator"
 done
-exit 0

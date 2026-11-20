@@ -8,4 +8,3 @@ for q in 1 3; do
     expect_output $D/out.$q -c -q -l 2 -D1.$q -m num_rel $Q $R
 done
 expect_output $D/out.1 -q -l 2 -D1.1 -m num_rel $Q $R
-exit 0

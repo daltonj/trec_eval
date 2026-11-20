@@ -6,4 +6,3 @@
 
 make -s alloc-test TEST_ALLOC="$T/alloc" || fail "cannot build the allocation test"
 "$T/alloc" || fail "Malloc or Realloc requested a wrong size"
-exit 0

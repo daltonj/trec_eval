@@ -9,4 +9,3 @@ expect_output $D/out.Rprec_mult \
     test/qrels.test test/results.test
 expect_output $D/out.avgjg -R qrels_jg -m Rprec_mult_avgjg.0.2,100000000 \
     test/qrels.rel_level test/results.test
-exit 0

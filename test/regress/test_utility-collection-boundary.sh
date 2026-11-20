@@ -16,4 +16,3 @@ else
     cat "$T/err" >&2
     fail "large collection evaluation failed"
 fi
-exit 0

@@ -15,4 +15,3 @@ for value in 1e-310 1e-400; do
     done
     expect_status 0 -m "utility.$value,-$value,0,0" $Q $R
 done
-exit 0
