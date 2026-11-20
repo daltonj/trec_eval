@@ -64,7 +64,7 @@ typedef struct {
     char *qid;
     char *jg;
     char *docno;
-    char *rel;
+    long rel;
 } LINES;
 
 static int parse_qrels_line(char **start_ptr, char **qid_ptr, char **jg_ptr,
@@ -88,6 +88,7 @@ te_get_qrels_jg(EPI * epi, char *text_qrels_file, ALL_REL_INFO * all_rel_info)
     long size = 0;
     char *ptr;
     char *current_qid, *current_jg;
+    char *rel_ptr;
     long i;
     LINES *lines;
     LINES *line_ptr;
@@ -148,9 +149,21 @@ te_get_qrels_jg(EPI * epi, char *text_qrels_file, ALL_REL_INFO * all_rel_info)
 			continue;
 		}
         if (UNDEF == parse_qrels_line(&ptr, &line_ptr->qid, &line_ptr->jg,
-                                      &line_ptr->docno, &line_ptr->rel)) {
+                                      &line_ptr->docno, &rel_ptr)) {
             fprintf(stderr, "trec_eval.get_qrels_jg: Malformed line %ld\n",
                     line_num + 1);
+            return (UNDEF);
+        }
+        line_ptr->rel = str_to_long_ctx(rel_ptr, &error,
+                                        "line %ld of qrels file '%s'",
+                                        line_num + 1, text_qrels_file);
+        if (error)
+            return (UNDEF);
+        if (line_ptr->rel < MIN_REL_LEVEL || line_ptr->rel > MAX_REL_LEVEL) {
+            fprintf(stderr, "trec_eval.get_qrels_jg: Relevance level '%s' in "
+                    "line %ld of qrels file '%s' is outside %d to %d\n",
+                    rel_ptr, line_num + 1, text_qrels_file,
+                    MIN_REL_LEVEL, MAX_REL_LEVEL);
             return (UNDEF);
         }
         line_ptr++;
@@ -230,21 +243,7 @@ te_get_qrels_jg(EPI * epi, char *text_qrels_file, ALL_REL_INFO * all_rel_info)
             text_jg_ptr->text_qrels = text_qrels_ptr;
         }
         text_qrels_ptr->docno = lines[i].docno;
-        text_qrels_ptr->rel =
-            str_to_long_ctx(lines[i].rel, &error,
-                            "qrels file '%s', topic %s, jg %s, document %s",
-                            text_qrels_file, lines[i].qid, lines[i].jg,
-                            lines[i].docno);
-        if (error)
-            return (UNDEF);
-        if (text_qrels_ptr->rel < MIN_REL_LEVEL ||
-            text_qrels_ptr->rel > MAX_REL_LEVEL) {
-            fprintf(stderr, "trec_eval: Relevance level '%s' of document %s "
-                    "in topic %s is outside %d to %d\n", lines[i].rel,
-                    lines[i].docno, lines[i].qid, MIN_REL_LEVEL,
-                    MAX_REL_LEVEL);
-            return (UNDEF);
-        }
+        text_qrels_ptr->rel = lines[i].rel;
         text_qrels_ptr++;
     }
     /* End last qid and jg */

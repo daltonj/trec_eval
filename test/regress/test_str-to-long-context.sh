@@ -1,5 +1,5 @@
 # A warning or error from reading an integer says where the value comes
-# from: the measure, or the qrels file, topic and document.
+# from: the measure, or the line of the qrels file.
 # Before, it named only the value. The exit statuses are unchanged.
 . test/regress/lib.sh
 D=test/regress/str-to-long-context
@@ -15,10 +15,10 @@ expect_message() {
 w="Warning, value \`1.5' partially read as \`1'"
 expect_message "$w (cutoff of measure 'P')." -m P.1.5 $D/qrels $D/run
 expect_status 0 -m P.1.5 $D/qrels $D/run
-expect_message "$w (qrels file '$D/qrels.partial', topic 1, document d1)." \
+expect_message "$w (line 1 of qrels file '$D/qrels.partial')." \
     -m num_rel $D/qrels.partial $D/run
 expect_status 0 -m num_rel $D/qrels.partial $D/run
-expect_message "$w (qrels file '$D/qrels.partial', topic 1, jg 0, document d1)." \
+expect_message "$w (line 1 of qrels file '$D/qrels.partial')." \
     -R qrels_jg -m map_avgjg $D/qrels.partial $D/run
 expect_status 0 -R qrels_jg -m map_avgjg $D/qrels.partial $D/run
 

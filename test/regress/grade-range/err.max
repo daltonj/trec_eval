@@ -1,1 +1,1 @@
-trec_eval: Relevance level '2147483647' of document d1 in topic 2 is outside -127 to 127
+trec_eval.get_qrels: Relevance level '2147483647' in line 2 of qrels file 'test/regress/grade-range/qrels.max' is outside -127 to 127
