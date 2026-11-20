@@ -30,6 +30,8 @@ class Evaluator(
 - `global_gains` (`str`, optional): Global gain mapping string (e.g. `'1=3.5,2=9.0'`).
 - `qid`, `docno`, `rel` (`str`, optional): Explicit column names when `qrels` is a DataFrame.
 
+Problems that do not stop the evaluation are raised as `UserWarning`, with the messages that the CLI prints on stderr. The constructor warns when a cutoff is read only in part, as `'P.5x'` is read as `P_5`, and when a later request gives other parameters for a measure, as in `['P_5', 'P_10']`: the first list is used and the other is ignored. Reading a qrels or run file warns about a grade or score read only in part, such as `1.5x`, a score outside the range of a double, and a blank line in a qrels file.
+
 ---
 
 ### Methods
