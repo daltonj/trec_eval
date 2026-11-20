@@ -78,7 +78,7 @@ te_calc_utility(const EPI * epi, const REL_INFO * rel_info,
         params[0] * rr.num_rel_ret +
         params[1] * (rr.num_ret - rr.num_rel_ret) +
         params[2] * (rr.num_rel - rr.num_rel_ret) +
-        params[3] * (epi->num_docs_in_coll + rr.num_rel_ret - rr.num_ret -
-                     rr.num_rel);
+        params[3] * (epi->num_docs_in_coll - rr.num_ret -
+                     (rr.num_rel - rr.num_rel_ret));
     return (1);
 }
