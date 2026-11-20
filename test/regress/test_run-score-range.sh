@@ -14,16 +14,16 @@ warns() {
 }
 
 expect_output $D/out.over -q -m relstring $D/qrels $D/run.over
-warns run.over "score '1e401' in line 1 out of range, read as inf"
-warns run.over "score '1e400' in line 2 out of range, read as inf"
-warns run.over "score '-1e400' in line 3 out of range, read as -inf"
+warns run.over "value \`1e401' out of range, read as \`inf' (line 1 of"
+warns run.over "value \`1e400' out of range, read as \`inf' (line 2 of"
+warns run.over "value \`-1e400' out of range, read as \`-inf' (line 3 of"
 
 expect_output $D/out.under -q -m relstring $D/qrels $D/run.under
-warns run.under "score '2e-400' in line 1 out of range, read as 0"
-warns run.under "score '1e-400' in line 2 out of range, read as 0"
-warns run.under "score '-1e-400' in line 3 out of range, read as -0"
+warns run.under "value \`2e-400' out of range, read as \`0' (line 1 of"
+warns run.under "value \`1e-400' out of range, read as \`0' (line 2 of"
+warns run.under "value \`-1e-400' out of range, read as \`-0' (line 3 of"
 
-warns run.comment "score '1e400' in line 2 out of range, read as inf"
+warns run.comment "value \`1e400' out of range, read as \`inf' (line 2 of"
 
 expect_output $D/out.subnormal -q -m relstring $D/qrels $D/run.subnormal
 "$TREC_EVAL" -q -m relstring $D/qrels $D/run.subnormal 2>&1 >/dev/null |

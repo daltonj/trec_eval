@@ -11,7 +11,6 @@
 #include "trec_format.h"
 #include "functions.h"
 #include <ctype.h>
-#include <errno.h>
 #include <sys/types.h>
 
 /* Read all retrieved results information from trec_results_file.
@@ -68,7 +67,8 @@ te_get_trec_results(EPI * epi, char *text_results_file,
     long line_num = 0;
     long num_qid;
     char *run_id_ptr = NULL;
-    char *sim_ptr, *end_ptr;
+    char *sim_ptr;
+    int error = 0;
     /* current pointers into static pools above */
     RESULTS *q_results_ptr;
     TEXT_RESULTS_INFO *text_info_ptr;
@@ -179,25 +179,11 @@ te_get_trec_results(EPI * epi, char *text_results_file,
                     line_num + 1);
             return (UNDEF);
         }
-        errno = 0;
-        line_ptr->sim = strtod(sim_ptr, &end_ptr);
-        if (end_ptr == sim_ptr || isnan(line_ptr->sim)) {
-            fprintf(stderr,
-                    "trec_eval.get_results: Unusable score '%s' in line %ld\n",
-                    sim_ptr, line_num + 1);
+        line_ptr->sim = str_to_double_ctx(sim_ptr, &error,
+                                          "line %ld of results file '%s'",
+                                          line_num + 1, text_results_file);
+        if (error)
             return (UNDEF);
-        }
-        /* Warn for overflow to +-inf or underflow to +-0, not for a
-           subnormal result */
-        if (errno == ERANGE && (isinf(line_ptr->sim) || line_ptr->sim == 0.0))
-            fprintf(stderr, "trec_eval.get_results: Warning, score '%s' in "
-                    "line %ld out of range, read as %g\n",
-                    sim_ptr, line_num + 1, line_ptr->sim);
-        if (*end_ptr != '\0')
-            fprintf(stderr, "trec_eval.get_results: Warning, score '%s' in "
-                    "line %ld partially read as '%.*s'\n",
-                    sim_ptr, line_num + 1,
-                    (int) (end_ptr - sim_ptr), sim_ptr);
         line_ptr++;
         line_num++;
     }
