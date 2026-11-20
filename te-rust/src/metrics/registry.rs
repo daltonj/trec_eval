@@ -8,9 +8,7 @@
 //! `P.10,20`). Groups such as `official` and `all_trec` are name lists resolved
 //! against this table.
 
-use crate::metrics::common::{
-    parse_float_cutoffs, parse_int_cutoffs, parse_rbp_params, MeasureParseError,
-};
+use crate::metrics::common::{parse_float_cutoffs, parse_int_cutoffs, MeasureParseError};
 use crate::metrics::{self, Measure};
 use std::collections::{HashMap, HashSet};
 
@@ -177,11 +175,8 @@ pub fn registry() -> &'static [MeasureSpec] {
         MeasureSpec { name: "ndcg_rel", status: Production, usage: "ndcg_rel[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::ndcg_rel::NdcgRelMeasure::new(p)?)) },
         MeasureSpec { name: "Rndcg", status: Production, usage: "Rndcg[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::rndcg::RndcgMeasure::new(p)?)) },
         MeasureSpec { name: "ndcg_p", status: Production, usage: "ndcg_p[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::ndcg_p::NdcgPMeasure::new(p)?)) },
-        MeasureSpec { name: "rbp", status: Production, usage: "rbp[.p=<float>,<rel>=<gain>,...]  persistence parameter p (default: 0.9) and optional relevance-to-gain mapping (default: gain = relevance level)", factory: |params| Ok(Box::new(metrics::rbp::RbpMeasure::from_params(params)?)) },
-        MeasureSpec { name: "rbp_resid", status: Production, usage: "rbp_resid[.p=<float>]  persistence parameter p (default: 0.9)", factory: |params| {
-            let (p, _) = parse_rbp_params(params)?;
-            Ok(Box::new(metrics::rbp_resid::RbpResidMeasure::new(p, params)))
-        } },
+        MeasureSpec { name: "rbp", status: Production, usage: "rbp[.p=<float>,<rel>=<gain>,...]  persistence parameter p (default: 0.9) and optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::rbp::RbpMeasure::new(p)?)) },
+        MeasureSpec { name: "rbp_resid", status: Production, usage: "rbp_resid[.p=<float>,<rel>=<gain>,...]  persistence parameter p (default: 0.9); a gain mapping is checked as for rbp and not used", factory: |p| Ok(Box::new(metrics::rbp_resid::RbpResidMeasure::new(p)?)) },
         MeasureSpec { name: "map_avgjg", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::map_avgjg::MapAvgjgMeasure::new())) },
         MeasureSpec {
             name: "P_avgjg",

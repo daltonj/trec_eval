@@ -1,5 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{Gains, GainsConfig, MeasureParseError};
+use crate::metrics::common::{parse_rbp_params, Gains, GainsConfig, MeasureParseError};
 
 pub struct RbpMeasure {
     p: f64,
@@ -9,29 +9,21 @@ pub struct RbpMeasure {
 }
 
 impl RbpMeasure {
-    pub fn new(p: f64, params_str: &str) -> Result<Self, MeasureParseError> {
-        crate::metrics::common::rbp_persistence(p)?;
-        let (_, gains_config) = crate::metrics::common::parse_rbp_params(params_str)?;
-        Ok(Self::with_gains(p, params_str, gains_config))
-    }
-
-    pub(crate) fn from_params(params_str: &str) -> Result<Self, MeasureParseError> {
-        let (p, gains_config) = crate::metrics::common::parse_rbp_params(params_str)?;
-        Ok(Self::with_gains(p, params_str, gains_config))
-    }
-
-    fn with_gains(p: f64, params_str: &str, gains_config: GainsConfig) -> Self {
+    /// Reads `params_str` as `p=<persistence>,<rel>=<gain>,...`: `p`, in [0, 1) and 0.9 by
+    /// default, and a gain map.
+    pub fn new(params_str: &str) -> Result<Self, MeasureParseError> {
+        let (p, gains_config) = parse_rbp_params(params_str)?;
         let name = if params_str.is_empty() {
             "rbp".to_string()
         } else {
             format!("rbp_{}", params_str)
         };
-        Self {
+        Ok(Self {
             p,
             gains_config,
             _params_str: params_str.to_string(),
             sub_metrics: vec![name],
-        }
+        })
     }
 }
 
@@ -118,7 +110,7 @@ impl Measure for RbpMeasure {
 
 impl Default for RbpMeasure {
     fn default() -> Self {
-        Self::new(0.9, "").expect("an empty gain map is valid")
+        Self::new("").expect("the default parameters are valid")
     }
 }
 
@@ -129,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_rbp_standard() {
-        let measure = RbpMeasure::new(0.9, "").unwrap();
+        let measure = RbpMeasure::new("").unwrap();
         let config = EvalConfig::default();
         // retrieved: [1, 0, 1]. relevance level = 1.
         // gains at rel levels: rel=0 -> gain=0, rel=1 -> gain=1.
@@ -150,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_rbp_custom_p() {
-        let measure = RbpMeasure::new(0.5, "p=0.5").unwrap();
+        let measure = RbpMeasure::new("p=0.5").unwrap();
         let config = EvalConfig::default();
         // retrieved: [1, 0, 1]. R=2.
         // sum = 1 * 0.5^0 + 0 + 1 * 0.5^2 = 1.0 + 0.25 = 1.25.

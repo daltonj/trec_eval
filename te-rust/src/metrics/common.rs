@@ -185,6 +185,8 @@ impl GainsConfig {
     }
 }
 
+/// Reads the parameters of `rbp` and `rbp_resid`: the persistence `p`, in [0, 1), given at most
+/// once and 0.9 by default, and a gain map from the other pairs.
 pub(crate) fn parse_rbp_params(params: &str) -> Result<(f64, GainsConfig), MeasureParseError> {
     let mut persistence = None;
     let mut gain_pairs = Vec::new();
@@ -354,8 +356,7 @@ pub(crate) fn r_multiples(multiples: &[f64]) -> Result<(), MeasureParseError> {
     Ok(())
 }
 
-pub(crate) fn rbp_persistence(p: f64) -> Result<(), MeasureParseError> {
-    finite_float(p)?;
+fn rbp_persistence(p: f64) -> Result<(), MeasureParseError> {
     if !(0.0..1.0).contains(&p) {
         return Err(MeasureParseError::new(format!(
             "persistence p {} is outside [0, 1)",

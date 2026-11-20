@@ -1,3 +1,4 @@
+use crate::metrics::common::{parse_rbp_params, MeasureParseError};
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
 
 pub struct RbpResidMeasure {
@@ -7,18 +8,21 @@ pub struct RbpResidMeasure {
 }
 
 impl RbpResidMeasure {
-    pub fn new(p: f64, params_str: &str) -> Self {
-        crate::metrics::common::rbp_persistence(p).expect("invalid persistence");
+    /// Reads `params_str` as [`RbpMeasure::new`] does, and does not use the gain map.
+    ///
+    /// [`RbpMeasure::new`]: crate::metrics::rbp::RbpMeasure::new
+    pub fn new(params_str: &str) -> Result<Self, MeasureParseError> {
+        let (p, _) = parse_rbp_params(params_str)?;
         let name = if params_str.is_empty() {
             "rbp_resid".to_string()
         } else {
             format!("rbp_resid_{}", params_str)
         };
-        Self {
+        Ok(Self {
             p,
             _params_str: params_str.to_string(),
             sub_metrics: vec![name],
-        }
+        })
     }
 }
 
@@ -81,7 +85,7 @@ impl Measure for RbpResidMeasure {
 
 impl Default for RbpResidMeasure {
     fn default() -> Self {
-        Self::new(0.9, "")
+        Self::new("").expect("the default parameters are valid")
     }
 }
 
@@ -92,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_rbp_resid_standard() {
-        let measure = RbpResidMeasure::new(0.9, "");
+        let measure = RbpResidMeasure::new("").unwrap();
         let config = EvalConfig::default();
         // retrieved: [1, -1, 1] (index 1 is unjudged).
         // loop:
@@ -112,7 +116,7 @@ mod tests {
 
     #[test]
     fn test_rbp_resid_zero_unjudged() {
-        let measure = RbpResidMeasure::new(0.9, "");
+        let measure = RbpResidMeasure::new("").unwrap();
         let config = EvalConfig::default();
         let state = make_mock_state(vec![1, 0, 1], 2);
         let actual = measure.calc(&config, &EvalState::Standard(state));
