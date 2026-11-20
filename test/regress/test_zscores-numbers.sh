@@ -5,7 +5,7 @@ T=$(mktemp -d) || fail "mktemp -d failed"
 trap 'rm -rf "$T"' EXIT
 
 for field in mean stddev; do
-    values='abc 1x nan inf -inf 1e999'
+    values='abc nan inf -inf 1e999'
     [ "$field" = mean ] || values="$values -1"
     for value in $values; do
         if [ "$field" = mean ]; then
@@ -17,13 +17,23 @@ for field in mean stddev; do
         "$TREC_EVAL" -Z "$T/zscores" -m map "$D/qrels" "$D/results" \
             > "$T/out" 2> "$T/err"
         [ ! -s "$T/out" ] || fail "invalid $field printed scores"
-        printf "trec_eval.get_zscores: Unusable %s '%s' in line 2\ntrec_eval: Quit in file '%s'\n" \
-            "$field" "$value" "$T/zscores" > "$T/want"
+        loc="line 2 of zscores file '$T/zscores'"
+        unusable="trec_eval.get_zscores: Unusable $field '$value' in $loc"
+        case $value in
+        abc) want="Error: value \`abc' could not be parsed ($loc)." ;;
+        nan) want="Error: value \`nan' is not a number ($loc)." ;;
+        1e999) want="Warning, value \`1e999' out of range, read as \`inf' ($loc).
+$unusable" ;;
+        *) want=$unusable ;;
+        esac
+        printf "%s\ntrec_eval: Quit in file '%s'\n" "$want" "$T/zscores" \
+            > "$T/want"
         diff "$T/want" "$T/err" || fail "$field=$value: wrong diagnostic"
     done
 done
 
-for row in '1 map -1 2' '1 map 1 0' '1 map 0 0' '1 map 1 1e-310'; do
+for row in '1 map -1 2' '1 map 1 0' '1 map 0 0' '1 map 1 1e-310' \
+           '1 map 1x 1' '1 map 0 1x'; do
     printf '%s\n' "$row" > "$T/zscores"
     expect_status 0 -Z "$T/zscores" -m map "$D/qrels" "$D/results"
 done

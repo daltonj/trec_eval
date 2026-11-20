@@ -12,7 +12,6 @@
 #include "trec_format.h"
 #include "functions.h"
 #include <ctype.h>
-#include <math.h>
 
 
 /* Read a Zscore file containing means and stddev from a reference set of runs
@@ -72,12 +71,14 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
     FILE* fd;
     long size = 0;
     char *ptr;
-    char *mean_ptr, *stddev_ptr, *end_ptr;
+    char *mean_ptr, *stddev_ptr;
     char *current_qid;
     long i;
     LINES *lines;
     LINES *line_ptr;
     long num_lines;
+    long line_num;
+    int error = 0;
     long num_qid;
     /* current pointers into static pools above */
     ZSCORE_QID *text_zscores_ptr;
@@ -121,25 +122,33 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
     line_ptr = lines;
     ptr = trec_zscores_buf;
     while (*ptr) {
+        line_num = line_ptr - lines + 1;
         if (UNDEF == parse_zscore_line(&ptr, &line_ptr->qid, &line_ptr->meas,
                                        &mean_ptr, &stddev_ptr)) {
             fprintf(stderr, "trec_eval.get_zscores: Malformed line %ld\n",
-                    (long) (line_ptr - lines + 1));
+                    line_num);
             return (UNDEF);
         }
-        line_ptr->mean = strtod(mean_ptr, &end_ptr);
-        if (end_ptr == mean_ptr || *end_ptr || !isfinite(line_ptr->mean)) {
-            fprintf(stderr,
-                    "trec_eval.get_zscores: Unusable mean '%s' in line %ld\n",
-                    mean_ptr, (long) (line_ptr - lines + 1));
+        line_ptr->mean = str_to_double_ctx(mean_ptr, &error,
+                                           "line %ld of zscores file '%s'",
+                                           line_num, zscores_file);
+        if (error)
+            return (UNDEF);
+        if (!isfinite(line_ptr->mean)) {
+            fprintf(stderr, "trec_eval.get_zscores: Unusable mean '%s' in "
+                    "line %ld of zscores file '%s'\n",
+                    mean_ptr, line_num, zscores_file);
             return (UNDEF);
         }
-        line_ptr->stddev = strtod(stddev_ptr, &end_ptr);
-        if (end_ptr == stddev_ptr || *end_ptr || !isfinite(line_ptr->stddev) ||
-            line_ptr->stddev < 0.0) {
-            fprintf(stderr,
-                    "trec_eval.get_zscores: Unusable stddev '%s' in line %ld\n",
-                    stddev_ptr, (long) (line_ptr - lines + 1));
+        line_ptr->stddev = str_to_double_ctx(stddev_ptr, &error,
+                                             "line %ld of zscores file '%s'",
+                                             line_num, zscores_file);
+        if (error)
+            return (UNDEF);
+        if (!isfinite(line_ptr->stddev) || line_ptr->stddev < 0.0) {
+            fprintf(stderr, "trec_eval.get_zscores: Unusable stddev '%s' in "
+                    "line %ld of zscores file '%s'\n",
+                    stddev_ptr, line_num, zscores_file);
             return (UNDEF);
         }
         line_ptr++;
