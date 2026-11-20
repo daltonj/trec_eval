@@ -68,9 +68,9 @@ long te_count_lines(const char *buf, const long size, const char *reader,
         if (buf[i] == '\n')
             num_lines++;
         else if (buf[i] == '\0') {
-            fprintf(stderr,
-                    "trec_eval.%s: NUL character in %s file '%s' at line %ld\n",
-                    reader, kind, file, num_lines + 1);
+            fprintf(stderr, "trec_eval.%s: NUL character "
+                    "in line %ld of %s file '%s'\n",
+                    reader, num_lines + 1, kind, file);
             return (UNDEF);
         } else if (buf[i] == '\r' && buf[i + 1] != '\n') {
             fprintf(stderr, "trec_eval.%s: CR character "

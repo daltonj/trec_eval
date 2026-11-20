@@ -13,7 +13,7 @@ printf '1 Q0 d1 1 3 r\n\000\n1 Q0 d3 3 1 r\n' > "$T/run.nul-line"
 for v in nul-field nul-line; do
     expect_status 2 -m num_ret $D/qrels - < "$T/run.$v"
     "$TREC_EVAL" -m num_ret $D/qrels - < "$T/run.$v" 2>&1 >/dev/null |
-        grep -q "NUL character in results file '-'" ||
+        grep -q "NUL character in line 2 of results file '-'" ||
         fail "trec_eval $D/qrels - < $T/run.$v: no message"
 done
 

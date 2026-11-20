@@ -12,8 +12,8 @@ for z in inside after; do
     "$TREC_EVAL" -Z "$T/$z" -m map "$D/qrels" "$D/results" \
         > "$T/out" 2> "$T/err"
     [ ! -s "$T/out" ] || fail "NUL input printed scores"
-    printf "trec_eval.get_zscores: NUL character in zscores file '%s' at line %s\ntrec_eval: Quit in file '%s'\n" \
-        "$T/$z" "$line" "$T/$z" > "$T/want"
+    printf "trec_eval.get_zscores: NUL character in line %s of zscores file '%s'\ntrec_eval: Quit in file '%s'\n" \
+        "$line" "$T/$z" "$T/$z" > "$T/want"
     diff "$T/want" "$T/err" || fail "$z: wrong NUL diagnostic"
     line=2
 done

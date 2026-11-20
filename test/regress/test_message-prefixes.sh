@@ -14,7 +14,7 @@ check() {
     esac
 }
 
-check "trec_eval.get_qrels_prefs: Cannot read prefs file '$D/missing'" \
+check "trec_eval.get_qrels_prefs: Cannot read qrels file '$D/missing'" \
     -R qrels_prefs -m prefs_num_prefs_poss $D/missing $D/results
 check "trec_eval.get_qrels_jg: duplicate docs d1" \
     -R qrels_jg -m map_avgjg $D/qrels.dup $D/results

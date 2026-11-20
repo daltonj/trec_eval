@@ -24,17 +24,17 @@ check() {
 }
 
 for n in 1 2 3; do
-    check "get_qrels: NUL character in qrels file '$T/qrels.$n' at line $n" \
+    check "get_qrels: NUL character in line $n of qrels file '$T/qrels.$n'" \
         -m num_rel "$T/qrels.$n" $D/run
-    check "get_qrels_jg: NUL character in qrels file '$T/qrels.$n' at line $n" \
+    check "get_qrels_jg: NUL character in line $n of qrels file '$T/qrels.$n'" \
         -R qrels_jg -m map_avgjg "$T/qrels.$n" $D/run
-    check "get_qrels_prefs: NUL character in qrels file '$T/qrels.$n' at line $n" \
+    check "get_qrels_prefs: NUL character in line $n of qrels file '$T/qrels.$n'" \
         -R qrels_prefs -m prefs_num_prefs_poss "$T/qrels.$n" $D/run
 done
-check "get_prefs: NUL character in prefs file '$T/prefs.2' at line 2" \
+check "get_prefs: NUL character in line 2 of prefs file '$T/prefs.2'" \
     -R prefs -m prefs_num_prefs_poss "$T/prefs.2" $D/run
 for n in 1 2; do
-    check "get_results: NUL character in results file '$T/run.$n' at line $n" \
+    check "get_results: NUL character in line $n of results file '$T/run.$n'" \
         -m num_ret $D/qrels "$T/run.$n"
 done
 exit 0

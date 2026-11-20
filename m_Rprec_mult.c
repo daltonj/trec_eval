@@ -56,7 +56,7 @@ te_init_Rprec_mult(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
     for (i = 0; i < tm->meas_params->num_params; i++) {
         if (!(mults[i] > 0.0)) {
             fprintf(stderr,
-                    "trec_eval: multiple %g of R for measure '%s' is not positive\n",
+                    "trec_eval: multiple %g of measure '%s' is not positive\n",
                     mults[i], tm->name);
             return (UNDEF);
         }

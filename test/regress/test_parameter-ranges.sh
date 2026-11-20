@@ -22,13 +22,13 @@ refused "recall level -0.5 of measure '11pt_avg' is not in [0, 1]" \
     11pt_avg.-0.5,.5
 refused "recall level 1.5 of measure '11pt_avg' is not in [0, 1]" \
     11pt_avg..5,1.5
-refused "multiple 0 of R for measure 'Rprec_mult' is not positive" \
+refused "multiple 0 of measure 'Rprec_mult' is not positive" \
     Rprec_mult.0,1
-refused "multiple -1 of R for measure 'Rprec_mult' is not positive" \
+refused "multiple -1 of measure 'Rprec_mult' is not positive" \
     Rprec_mult.-1
-refused "multiple 0 of R for measure 'Rprec_mult_avgjg' is not positive" \
+refused "multiple 0 of measure 'Rprec_mult_avgjg' is not positive" \
     Rprec_mult_avgjg.0
-refused "weight -1 of R for measure 'set_F' is not 0 or more" set_F.-1
+refused "weight -1 of measure 'set_F' is not 0 or more" set_F.-1
 refused "persistence p=1 of measure 'rbp' is not in [0, 1)" rbp.p=1
 refused "persistence p=-0.5 of measure 'rbp' is not in [0, 1)" rbp.p=-0.5
 refused "persistence p=1.5 of measure 'rbp_resid' is not in [0, 1)" \

@@ -52,7 +52,7 @@ te_init_set_F(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
     for (i = 0; i < tm->meas_params->num_params; i++) {
         if (!(weights[i] >= 0.0)) {
             fprintf(stderr,
-                    "trec_eval: weight %g of R for measure '%s' is not 0 or more\n",
+                    "trec_eval: weight %g of measure '%s' is not 0 or more\n",
                     weights[i], tm->name);
             return (UNDEF);
         }
