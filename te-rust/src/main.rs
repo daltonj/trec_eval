@@ -4,7 +4,7 @@ use std::process;
 
 use te_rust::eval::bootstrap::BootstrapConfig;
 use te_rust::eval::{evaluate_run, evaluate_run_jg, EvaluationError, ScoredDuplicate};
-use te_rust::io::{parse_trec_qrels, parse_trec_qrels_jg, parse_trec_run};
+use te_rust::io::{parse_trec_qrels, parse_trec_qrels_jg, parse_trec_run, RunData};
 use te_rust::metrics::{EvalConfig, MetricValue, ValueFormat};
 use te_rust::metrics;
 
@@ -152,6 +152,22 @@ fn leading_count(value: &str) -> Result<usize, String> {
     usize::try_from(leading_integer(value)?).map_err(|_| format!("value '{}' is negative", value))
 }
 
+/// Reads the run file and prints its warnings, or exits with EXIT_INPUT when it cannot.
+fn read_run(path: &str) -> RunData {
+    match parse_trec_run(path) {
+        Ok(data) => {
+            for warning in &data.warnings {
+                eprintln!("Warning in run file '{}': {}", path, warning);
+            }
+            data
+        }
+        Err(e) => {
+            eprintln!("Error parsing run file '{}': {}", path, e);
+            process::exit(EXIT_INPUT);
+        }
+    }
+}
+
 fn handle_help_flags(help_measures: bool, help_measure: Option<&str>) {
     let mut out = io::stdout().lock();
     if help_measures {
@@ -241,22 +257,7 @@ fn main() {
         }
     };
 
-    // 3. Read the run only when the evaluation below dereferences it, so that
-    // problems are reported in trec_eval's order: measures, qrels, then run.
-    let run_data = std::cell::LazyCell::new(|| match parse_trec_run(&run_filename) {
-        Ok(data) => {
-            for warning in &data.warnings {
-                eprintln!("Warning in run file '{}': {}", run_filename, warning);
-            }
-            data
-        }
-        Err(e) => {
-            eprintln!("Error parsing run file '{}': {}", run_filename, e);
-            process::exit(EXIT_INPUT);
-        }
-    });
-
-    // 4. Resolve measures (groups + parameters) via the central registry.
+    // 3. Resolve measures (groups + parameters) via the central registry.
     let default_group = match args.rel_format.to_ascii_lowercase().as_str() {
         "qrels_jg" => "qrels_jg",
         _ => "official",
@@ -280,7 +281,7 @@ fn main() {
     }
     let active_measures = metrics::registry::in_trec_eval_order(resolved.measures);
 
-    // 5. Setup runtime config
+    // 4. Setup runtime config
     let global_gains = args.global_gains;
     let config = EvalConfig {
         query_flag: args.query_flag,
@@ -304,7 +305,7 @@ fn main() {
         None
     };
 
-    // 6. Run evaluation engine based on relevance judgment format
+    // 5. Read the qrels, then the run, as trec_eval does, and evaluate
     let output = match args.rel_format.to_ascii_lowercase().as_str() {
         "qrels_jg" => {
             let qrels_jg_data = match parse_trec_qrels_jg(&qrels_filename) {
@@ -317,6 +318,7 @@ fn main() {
             for warning in &qrels_jg_data.warnings {
                 eprintln!("Warning in qrels_jg file '{}': {}", qrels_filename, warning);
             }
+            let run_data = read_run(&run_filename);
             evaluate_run_jg(
                 &qrels_jg_data,
                 &run_data,
@@ -339,6 +341,7 @@ fn main() {
             for warning in &qrels_data.warnings {
                 eprintln!("Warning in qrels file '{}': {}", qrels_filename, warning);
             }
+            let run_data = read_run(&run_filename);
             evaluate_run(
                 &qrels_data,
                 &run_data,
@@ -361,7 +364,7 @@ fn main() {
         process::exit(EXIT_TOPIC);
     }
 
-    // 7. Print query results
+    // 6. Print query results
     let mut out = io::stdout().lock();
     if config.query_flag {
         for q_eval in &output.query_results {
@@ -371,7 +374,7 @@ fn main() {
         }
     }
 
-    // 8. Print summary results
+    // 7. Print summary results
     if config.summary_flag {
         for s_eval in &output.summary_results {
             if let (Some(ci), true) = (&s_eval.ci, args.ci_pretty) {
