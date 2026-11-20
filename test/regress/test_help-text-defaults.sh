@@ -5,11 +5,11 @@ d=test/regress/help-text-defaults
 Q=test/regress/qrels
 R=test/regress/results
 
-help=$("$TREC_EVAL" -h)
-n="^ -N <num>: Number of docs in collection. Default is 0.$"
-echo "$help" | grep -q "$n" || fail "help text for -N"
-echo "$help" | grep -q "^ --Max_retrieved_per_topic num:$" ||
-    fail "help text for --Max_retrieved_per_topic"
+save_output "$T/help" -h
+grep -F -x ' -N <num>: Number of docs in collection. Default is 0.' \
+    "$T/help" >/dev/null || fail "help text for -N"
+grep -F -x ' --Max_retrieved_per_topic num:' \
+    "$T/help" >/dev/null || fail "help text for --Max_retrieved_per_topic"
 
 # utility.1,-1,0,1 depends on -N; no -N gives the -N 0 values.
 expect_output $d/out.N0 -q -m utility.1,-1,0,1 $Q $R
