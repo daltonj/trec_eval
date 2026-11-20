@@ -88,7 +88,7 @@ impl Measure for RbpMeasure {
         if min_gain < 0.0 || max_gain > 1.0 {
             let range = max_gain - min_gain;
             for g in &mut gains.rel_gains {
-                g.gain = if range > 0.0 { (g.gain - min_gain) / range } else { 0.0 };
+                g.gain = (g.gain - min_gain) / range;
             }
         }
 
