@@ -1,8 +1,7 @@
 # A name=value parameter whose name is not a relevance level is refused
 # when the measure is initialised, with exit status 2, for every measure
 # with such parameters: dcg, ideal_dcg, ndcg, ndcg_rel, Rndcg, G, rbp and
-# rbp_resid. rbp and rbp_resid still read p. Before, the pair was skipped
-# without a message.
+# rbp_resid. A level may have a sign, and rbp and rbp_resid also take p.
 . test/regress/lib.sh
 Q=test/qrels.test
 R=test/results.test

@@ -1,5 +1,5 @@
 # The qrels_prefs and prefs readers refuse a relevance level that is not
-# a number, or is NaN, with a message naming the document and topic. A
+# a number, or is NaN, with a message naming the line and the file. A
 # level with characters after the number gives a warning, and the number
 # is used. The .1 files give d1 the level 1; the .1x files must give the
 # same values.

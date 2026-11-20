@@ -1,8 +1,6 @@
 # A name=value parameter list that gives the same relevance level twice,
-# or the same name twice, is refused with exit status 2. Before, the
-# measure used one of the two gains for the run and could use the other
-# for the ideal ranking: ndcg.1=5,1=2 printed 0.1608, which is
-# 2/5 of the 0.4021 that any one positive gain for level 1 gives here.
+# or the same name twice, is refused with exit status 2. 1, 01 and +1
+# are the same level.
 . test/regress/lib.sh
 D=test/regress/repeated-gain-levels
 Q=test/qrels.test
@@ -17,6 +15,6 @@ expect_message 2 "relevance level 1 of measure 'G' is given more than once" \
 expect_message 2 "parameter 'p' of measure 'rbp' is given more than once" \
     -m rbp.p=0.5,p=0.8 $Q $R
 
-# Distinct levels, and p beside a level, are accepted as before.
+# Distinct levels, and p beside a level, are accepted.
 expect_output $D/out.distinct -m ndcg.0=1,1=3 -m G.0=1,1=3 $Q $R
 expect_status 0 -m rbp.p=0.5,2=3 $Q $R

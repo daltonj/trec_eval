@@ -1,7 +1,5 @@
 # Measure parameters that are NaN or infinite are refused with status 2:
-# cutoffs, parameter lists and name=value pairs. Before, set_F.nan and
-# set_F.inf printed nan, and a NaN cutoff was printed as a measure and
-# escaped the cutoff sort and the duplicate check.
+# cutoffs, parameter lists and name=value pairs.
 . test/regress/lib.sh
 Q=test/qrels.test
 R=test/results.test

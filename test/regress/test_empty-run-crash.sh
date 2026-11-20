@@ -1,5 +1,5 @@
-# A results file with no data lines is refused with exit 2 and a message
-# naming the file; it used to crash.
+# A results file with no data lines, or empty standard input, is refused
+# with exit 2 and a message naming the file.
 . test/regress/lib.sh
 D=test/regress/empty-run-crash
 Q=test/regress/qrels

@@ -1,7 +1,5 @@
 # A negative -l is refused like an unparsable one: exit 1, no output.
-# At -l -1, documents outside the qrels counted as relevant, but num_rel
-# did not count them: here map was 3 and yaap was nan. -l 0 is still
-# accepted.
+# -l 0 is accepted.
 . test/regress/lib.sh
 d=test/regress/negative-level-refused
 m="-q -m num_rel -m map -m yaap $d/qrels $d/results"

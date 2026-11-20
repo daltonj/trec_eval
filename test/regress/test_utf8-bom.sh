@@ -1,7 +1,5 @@
 # A UTF-8 byte-order mark at the start of an input file is skipped, so a
-# file gives the same values with or without one. Before, the mark became
-# part of the first topic id. The files with a mark are written here from
-# the fixtures, so that the fixtures stay text.
+# file gives the same values with or without one.
 . test/regress/lib.sh
 Q=test/regress/qrels
 P=test/regress/prefs

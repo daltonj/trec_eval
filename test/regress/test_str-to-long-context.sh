@@ -1,6 +1,5 @@
-# A warning or error from reading an integer says where the value comes
-# from: the measure, or the line of the qrels file.
-# Before, it named only the value. The exit statuses are unchanged.
+# A warning or error from reading a number says where the value comes
+# from: the measure and its parameter, or the line of the file.
 . test/regress/lib.sh
 D=test/regress/str-to-long-context
 Q=test/regress/qrels
@@ -24,7 +23,7 @@ expect_message 0 "Warning, value \`2x' partially read as \`2' (parameter '1' of 
 expect_message 0 "Warning, value \`0.5x' partially read as \`0.5' (parameter 'p' of measure 'rbp')." \
     -m rbp.p=0.5x $Q $R
 
-# Errors carry the same context, and keep their exit statuses.
+# Errors carry the same context.
 expect_message 2 "Error: value \`x' could not be parsed (cutoff of measure 'P')." \
     -m P.x $Q $R
 expect_message 2 "Error: value \`x' could not be parsed (parameter of measure 'set_F')." \

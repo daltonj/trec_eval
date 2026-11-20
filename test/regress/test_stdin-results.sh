@@ -1,8 +1,7 @@
 # Results read from standard input (-) are checked for a NUL byte as a
-# results file is: exit 2 and a message. Before, a NUL dropped the rest
-# of its line, newline included, and the line was joined to the next.
-# Input of any size is read whole: the reader's buffer starts at 4096
-# bytes, and inputs near that size give the same output as the file.
+# results file is: exit 2 and a message naming the line. Input of any
+# size is read whole: the reader's buffer starts at 4096 bytes, and
+# inputs near that size give the same output as the file.
 . test/regress/lib.sh
 
 printf '1 Q0 d1 1 3 r\n1 Q0 d2\000x 2 2 r\n1 Q0 d3 3 1 r\n' > "$T/run.nul-field"

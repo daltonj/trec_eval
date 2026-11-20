@@ -1,7 +1,6 @@
 # utility takes exactly four coefficients. Another number is refused when
 # the measure is initialised, with exit 2 and no output, as for other
-# unusable measure parameters. Before, it was refused only while scoring
-# the first topic, with exit 4.
+# unusable measure parameters.
 . test/regress/lib.sh
 d=test/regress/utility-coefficient-count
 Q=test/regress/qrels

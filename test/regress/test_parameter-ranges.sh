@@ -1,8 +1,7 @@
 # Measure parameters outside the range in which the measure is defined
 # are refused when the measure is initialized, with exit status 2: recall
 # levels outside [0, 1], multiples of R that are not positive, a negative
-# set_F weight and an rbp persistence p outside [0, 1). They used to be
-# accepted, and gave values such as iprec_at_recall_-1.00 0.4665.
+# set_F weight and an rbp persistence p outside [0, 1).
 . test/regress/lib.sh
 Q=test/qrels.test
 R=test/results.test
@@ -30,8 +29,8 @@ expect_message 2 "persistence p=-0.5 of measure 'rbp' is not in [0, 1)" \
 expect_message 2 "persistence p=1.5 of measure 'rbp_resid' is not in [0, 1)" \
     -m rbp_resid.p=1.5 $Q $R
 
-# The bounds that are part of each range, and the defaults, still work.
-# 11pt_avg may still repeat a recall level, in any order.
+# The bounds that are part of each range, and the defaults, are accepted.
+# 11pt_avg may repeat a recall level, in any order.
 for m in iprec_at_recall.0,1 iprec_at_recall 11pt_avg.1,0 11pt_avg \
          11pt_avg.0.5,0.5 \
          Rprec_mult.0.01 Rprec_mult set_F.0 set_F rbp.p=0 rbp \

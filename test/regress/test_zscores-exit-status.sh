@@ -1,6 +1,6 @@
 # A zscores file (-Z) that cannot be read, or has a malformed line, stops
 # trec_eval with exit status 2 and "Quit in file", as for the judgments
-# and results files. Before, main returned UNDEF and the status was 255.
+# and results files.
 . test/regress/lib.sh
 d=test/regress/zscores-exit-status
 

@@ -1,8 +1,6 @@
 # Lines may end with LF or CRLF. A CR that is not followed by LF is refused
 # unless it ends the file, where the reader appends LF. The message names
-# the line and the file. Before, a CR-only results file was read as one
-# line and evaluated without a message. The CRLF and CR files are written
-# here from the LF fixtures, so that the fixtures stay text.
+# the line and the file.
 . test/regress/lib.sh
 Q=test/regress/qrels
 P=test/regress/prefs

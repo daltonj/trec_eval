@@ -1,7 +1,6 @@
-# The message for a judgments or results file that contains a NUL byte
-# ends with the number of the line with the first NUL, counting every
-# line of the file. Before, it named only the file. The exit status
-# stays 2.
+# A judgments or results file that contains a NUL byte is refused with
+# exit 2 and a message naming the file and the line of the first NUL,
+# counting every line of the file.
 . test/regress/lib.sh
 Q=test/regress/qrels
 R=test/regress/results
