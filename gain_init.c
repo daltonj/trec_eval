@@ -93,6 +93,8 @@ int te_init_meas_s_double_p_rbp(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
         return (UNDEF);
     pairs = (DOUBLE_PARAM_PAIR *) tm->meas_params->param_values;
     num_pairs = tm->meas_params->num_params;
+    if (num_pairs == 0)
+        return (1);
     /* Swap p to the front, so that the pairs after it are the gains */
     for (i = 0; i < num_pairs; i++) {
         if (strcmp(pairs[i].name, "p"))
