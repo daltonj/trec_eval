@@ -441,7 +441,10 @@ fn decode_line(mut bytes: Vec<u8>, line_num: usize, byte_offset: usize) -> Resul
 /// Parses standard qrels relevance judgments file format.
 pub fn parse_trec_qrels<P: AsRef<Path>>(path: P) -> Result<QrelsData, IOError> {
     let file = File::open(path).map_err(IOError::FileReadError)?;
-    let reader = BufReader::new(file);
+    parse_trec_qrels_from(BufReader::new(file))
+}
+
+fn parse_trec_qrels_from(reader: impl BufRead) -> Result<QrelsData, IOError> {
     let mut raw_records = Vec::new();
     let mut comments = Vec::new();
     let mut warnings = Vec::new();
@@ -542,7 +545,10 @@ struct RawQrelsJG {
 /// Parses judgment groups qrels format (qid  jg  docno  rel).
 pub fn parse_trec_qrels_jg<P: AsRef<Path>>(path: P) -> Result<QrelsJGData, IOError> {
     let file = File::open(path).map_err(IOError::FileReadError)?;
-    let reader = BufReader::new(file);
+    parse_trec_qrels_jg_from(BufReader::new(file))
+}
+
+fn parse_trec_qrels_jg_from(reader: impl BufRead) -> Result<QrelsJGData, IOError> {
     let mut raw_records = Vec::new();
     let mut comments = Vec::new();
     let mut warnings = Vec::new();
@@ -659,10 +665,12 @@ pub fn parse_trec_qrels_jg<P: AsRef<Path>>(path: P) -> Result<QrelsJGData, IOErr
 }
 
 /// Parses standard results (run) file format.
-
 pub fn parse_trec_run<P: AsRef<Path>>(path: P) -> Result<RunData, IOError> {
     let file = File::open(path).map_err(IOError::FileReadError)?;
-    let reader = BufReader::new(file);
+    parse_trec_run_from(BufReader::new(file))
+}
+
+fn parse_trec_run_from(reader: impl BufRead) -> Result<RunData, IOError> {
     let mut raw_records = Vec::new();
     let mut comments = Vec::new();
     let mut warnings = Vec::new();
@@ -765,8 +773,299 @@ fn mt_cmp_order(ord: std::cmp::Ordering) -> std::cmp::Ordering {
 
 #[cfg(test)]
 mod tests {
-    use super::{out_of_range, strtod_prefix};
+    use super::*;
 
+    fn qrels(text: &[u8]) -> Result<QrelsData, IOError> {
+        parse_trec_qrels_from(text)
+    }
+
+    fn qrels_jg(text: &[u8]) -> Result<QrelsJGData, IOError> {
+        parse_trec_qrels_jg_from(text)
+    }
+
+    fn run(text: &[u8]) -> Result<RunData, IOError> {
+        parse_trec_run_from(text)
+    }
+
+    fn error<T: std::fmt::Debug>(result: Result<T, IOError>) -> String {
+        result.unwrap_err().to_string()
+    }
+
+    /// The judgments as (qid, docno, rel), in the order of the parsed data.
+    fn judgments(data: &QrelsData) -> Vec<(&str, &str, i64)> {
+        data.queries
+            .iter()
+            .flat_map(|q| {
+                q.records
+                    .iter()
+                    .map(move |r| (q.qid.as_str(), r.docno.as_str(), r.rel))
+            })
+            .collect()
+    }
+
+    /// The judgments of every group as (qid, docno, rel), in the order of the parsed data.
+    fn group_judgments(data: &QrelsJGData) -> Vec<(&str, &str, i64)> {
+        data.queries
+            .iter()
+            .flat_map(|q| {
+                q.groups
+                    .iter()
+                    .flat_map(|g| &g.records)
+                    .map(move |r| (q.qid.as_str(), r.docno.as_str(), r.rel))
+            })
+            .collect()
+    }
+
+    /// The results as (qid, docno, sim), in the order of the parsed data.
+    fn results(data: &RunData) -> Vec<(&str, &str, f64)> {
+        data.queries
+            .iter()
+            .flat_map(|q| {
+                q.records
+                    .iter()
+                    .map(move |r| (q.qid.as_str(), r.docno.as_str(), r.sim))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn leading_integer_skips_only_c_locale_whitespace() {
+        use std::num::IntErrorKind;
+
+        for space in [" ", "\t", "\n", "\x0b", "\x0c", "\r"] {
+            assert_eq!(read_leading_integer(&format!("{space}+2")), Ok((2, false)));
+            assert_eq!(read_leading_integer(&format!("{space}-2x")), Ok((-2, true)));
+            assert_eq!(read_leading_integer(&format!("{space}2 ")), Ok((2, true)));
+            assert_eq!(read_leading_integer(space), Err(IntErrorKind::InvalidDigit));
+        }
+        for value in ["\u{a0}2", "\u{2003}2", " + 2"] {
+            assert_eq!(read_leading_integer(value), Err(IntErrorKind::InvalidDigit));
+        }
+    }
+
+    #[test]
+    fn a_cr_that_does_not_end_a_line_is_refused() {
+        let message = "Format Error: Line 1: CR character without LF";
+        assert_eq!(
+            error(run(b"1 Q0 a 1 3 r\r1 Q0 b 2 2 r\r1 Q0 c 3 1 r\r")),
+            message
+        );
+        assert_eq!(error(qrels(b"1 0 a 1\r1 0 b 0\r1 0 c 1\r")), message);
+        assert_eq!(error(qrels_jg(b"1 0 a 1\r1 0 b 0\r1 0 c 1\r")), message);
+        assert_eq!(error(run(b"1 Q0 a 1 3 r\r \n1 Q0 b 2 2 r\n")), message);
+    }
+
+    #[test]
+    fn crlf_and_a_cr_that_ends_the_file_end_lines() {
+        let lf = run(b"1 Q0 a 1 3 r\n1 Q0 b 2 2 r\n1 Q0 c 3 1 r\n").unwrap();
+        let texts: [&[u8]; 2] = [
+            b"1 Q0 a 1 3 r\r\n1 Q0 b 2 2 r\r\n1 Q0 c 3 1 r\r\n",
+            b"1 Q0 a 1 3 r\n1 Q0 b 2 2 r\n1 Q0 c 3 1 r\r",
+        ];
+        for text in texts {
+            let data = run(text).unwrap();
+            assert_eq!(results(&data), results(&lf));
+            assert_eq!(data.run_id, "r");
+        }
+        let data = qrels(b"1 0 a 1\r\n1 0 b 0\r\n1 0 c 1\r\n").unwrap();
+        assert_eq!(
+            judgments(&data),
+            [("1", "a", 1), ("1", "b", 0), ("1", "c", 1)]
+        );
+    }
+
+    #[test]
+    fn a_nul_byte_is_refused_naming_the_line() {
+        assert_eq!(
+            error(qrels(b"1 0 a 1\n1 0 b\0x 0\n")),
+            "Format Error: Line 2: NUL character"
+        );
+        assert_eq!(
+            error(run(b"1 Q0 a\0x 1 3 r\n")),
+            "Format Error: Line 1: NUL character"
+        );
+        assert_eq!(
+            error(run(b"1 Q0 a 1 3 r\n\0\n1 Q0 c 3 1 r\n")),
+            "Format Error: Line 2: NUL character"
+        );
+    }
+
+    #[test]
+    fn a_data_line_that_is_not_utf8_is_refused_naming_the_byte() {
+        assert_eq!(
+            error(run(b"1 Q0 a 1 3 r\n1 Q0 d\xe9 2 2 r\n")),
+            "Format Error: Line 2: invalid UTF-8 at byte 7"
+        );
+        assert_eq!(
+            error(qrels(b"1 0 d\xe9 1\n")),
+            "Format Error: Line 1: invalid UTF-8 at byte 6"
+        );
+        // The count includes a byte-order mark at the start of the file.
+        let message = "Format Error: Line 1: invalid UTF-8 at byte 9";
+        assert_eq!(error(qrels(b"\xef\xbb\xbf1 0 d\xe9 1\n")), message);
+        assert_eq!(error(qrels_jg(b"\xef\xbb\xbf1 0 d\xe9 1\n")), message);
+        assert_eq!(
+            error(run(b"\xef\xbb\xbf1 Q0 d\xe9 1 3 r\n")),
+            "Format Error: Line 1: invalid UTF-8 at byte 10"
+        );
+    }
+
+    #[test]
+    fn a_comment_may_hold_bytes_that_are_not_utf8_but_not_a_nul_or_a_lone_cr() {
+        let data = qrels(b"# judged by Ren\xe9\n1 0 a 1\n1 0 b 0\n1 0 c 1\n").unwrap();
+        assert_eq!(
+            judgments(&data),
+            [("1", "a", 1), ("1", "b", 0), ("1", "c", 1)]
+        );
+        assert_eq!(
+            error(run(b"# header \0 x\n1 Q0 a 1 3 r\n")),
+            "Format Error: Line 1: NUL character"
+        );
+        assert_eq!(
+            error(run(b"# header\r# more\n1 Q0 a 1 3 r\n")),
+            "Format Error: Line 1: CR character without LF"
+        );
+    }
+
+    #[test]
+    fn a_byte_order_mark_is_removed_only_at_the_start_of_the_file() {
+        let data = run(b"\xef\xbb\xbf1 Q0 d1 1 3 r\n2 Q0 d1 1 2 r\n").unwrap();
+        assert_eq!(results(&data), [("1", "d1", 3.0), ("2", "d1", 2.0)]);
+        let data = run(b"1 Q0 d1 1 3 r\n\xef\xbb\xbf2 Q0 d1 1 2 r\n").unwrap();
+        assert_eq!(results(&data), [("1", "d1", 3.0), ("\u{feff}2", "d1", 2.0)]);
+        let data = qrels(b"\xef\xbb\xbf1 0 d1 1\n2 0 d1 0\n").unwrap();
+        assert_eq!(judgments(&data), [("1", "d1", 1), ("2", "d1", 0)]);
+    }
+
+    #[test]
+    fn only_c_locale_whitespace_separates_fields() {
+        let data = run("1 Q0 d\u{a0}1 9 0.5 r\n1 Q0 x\u{3000}y 2 0.9 r\n".as_bytes()).unwrap();
+        assert_eq!(
+            results(&data),
+            [("1", "d\u{a0}1", 0.5), ("1", "x\u{3000}y", 0.9)]
+        );
+        let data = qrels("1 0 d\u{a0}1 1\n".as_bytes()).unwrap();
+        assert_eq!(judgments(&data), [("1", "d\u{a0}1", 1)]);
+        let data = qrels_jg("1 1 d\u{a0}1 1\n".as_bytes()).unwrap();
+        assert_eq!(group_judgments(&data), [("1", "d\u{a0}1", 1)]);
+        assert_eq!(
+            error(qrels("1 0\u{85}d1 1\n".as_bytes())),
+            "Format Error: Line 1: expected 4 fields, found 3"
+        );
+        let data = qrels(b"1\x0b0\x0cd1\t1\r\n1 0 d2 0\n").unwrap();
+        assert_eq!(judgments(&data), [("1", "d1", 1), ("1", "d2", 0)]);
+    }
+
+    #[test]
+    fn a_non_ascii_space_at_either_end_of_a_line_stays_in_its_field() {
+        let data = run("\u{a0}1 Q0 x 1 0.5 r\n1 Q0 x 1 0.5 r\n".as_bytes()).unwrap();
+        assert_eq!(results(&data), [("1", "x", 0.5), ("\u{a0}1", "x", 0.5)]);
+        assert_eq!(
+            run("1 Q0 x 1 0.5 r\u{a0} \n".as_bytes()).unwrap().run_id,
+            "r\u{a0}"
+        );
+        let data = qrels("\u{a0}1 0 z 1\n1 0 x 1\n".as_bytes()).unwrap();
+        assert_eq!(judgments(&data), [("1", "x", 1), ("\u{a0}1", "z", 1)]);
+        let data = qrels_jg("\u{a0}1 1 z 1\n1 1 x 1\n".as_bytes()).unwrap();
+        assert_eq!(group_judgments(&data), [("1", "x", 1), ("\u{a0}1", "z", 1)]);
+        let data = qrels("1 0 x 1\u{a0} \n".as_bytes()).unwrap();
+        assert_eq!(judgments(&data), [("1", "x", 1)]);
+        assert_eq!(
+            data.warnings,
+            ["Line 1: value '1\u{a0}' partially read as '1'"]
+        );
+    }
+
+    #[test]
+    fn blank_lines_are_skipped_with_a_warning_only_in_judgments() {
+        let text = b"t 0 a 1\n\nt 0 b 0\n   \n";
+        let warnings = ["Line 2: blank line skipped", "Line 4: blank line skipped"];
+        let data = qrels(text).unwrap();
+        assert_eq!(judgments(&data), [("t", "a", 1), ("t", "b", 0)]);
+        assert_eq!(data.warnings, warnings);
+        let data = qrels_jg(text).unwrap();
+        assert_eq!(group_judgments(&data), [("t", "a", 1), ("t", "b", 0)]);
+        assert_eq!(data.warnings, warnings);
+        let data = run(b"t Q0 b 1 2 r\n\nt Q0 a 2 1 r\n").unwrap();
+        assert_eq!(results(&data), [("t", "a", 1.0), ("t", "b", 2.0)]);
+        assert!(data.warnings.is_empty());
+    }
+
+    #[test]
+    fn a_file_of_comments_and_blank_lines_has_no_data_lines() {
+        let comments = b"# judgments for topic 1 follow in another file\n";
+        assert_eq!(error(qrels(comments)), "Format Error: No data lines");
+        assert_eq!(error(qrels_jg(comments)), "Format Error: No data lines");
+        assert_eq!(
+            error(run(b"# run header\n\n# no data\n")),
+            "Format Error: No data lines"
+        );
+        assert_eq!(error(run(b"")), "Format Error: File is empty");
+    }
+
+    #[test]
+    fn a_line_with_the_wrong_number_of_fields_is_refused() {
+        let five = "Format Error: Line 1: expected 4 fields, found 5";
+        assert_eq!(error(qrels(b"1 0 d1 1 extra\n")), five);
+        assert_eq!(error(qrels_jg(b"1 0 d1 1 extra\n")), five);
+        assert_eq!(
+            error(qrels(b"1 0 d1\n")),
+            "Format Error: Line 1: expected 4 fields, found 3"
+        );
+        assert_eq!(
+            error(run(b"1 Q0 d1 1 2\n")),
+            "Format Error: Line 1: expected at least 6 fields, found 5"
+        );
+    }
+
+    #[test]
+    fn a_grade_reads_as_its_leading_integer_with_a_warning() {
+        let text = b"t 0 a 1.5\nt 0 b 0.9\nt 0 c 0\n";
+        let warnings = [
+            "Line 1: value '1.5' partially read as '1'",
+            "Line 2: value '0.9' partially read as '0'",
+        ];
+        let data = qrels(text).unwrap();
+        assert_eq!(
+            judgments(&data),
+            [("t", "a", 1), ("t", "b", 0), ("t", "c", 0)]
+        );
+        assert_eq!(data.warnings, warnings);
+        let data = qrels_jg(text).unwrap();
+        assert_eq!(
+            group_judgments(&data),
+            [("t", "a", 1), ("t", "b", 0), ("t", "c", 0)]
+        );
+        assert_eq!(data.warnings, warnings);
+        assert!(qrels(b"t 0 a 1\nt 0 b 0\n").unwrap().warnings.is_empty());
+        assert_eq!(
+            error(qrels(b"t 0 a .5\nt 0 b 0\n")),
+            "Format Error: Line 1: invalid integer for field 'rel': '.5'"
+        );
+    }
+
+    #[test]
+    fn grades_outside_minus_127_to_127_are_refused() {
+        let edge = b"1 0 d1 127\n1 0 d2 -127\n";
+        assert_eq!(
+            judgments(&qrels(edge).unwrap()),
+            [("1", "d1", 127), ("1", "d2", -127)]
+        );
+        assert_eq!(
+            group_judgments(&qrels_jg(edge).unwrap()),
+            [("1", "d1", 127), ("1", "d2", -127)]
+        );
+        let texts: [(&[u8], i64); 2] = [
+            (b"1 0 d1 1\n2 0 d1 128\n", 128),
+            (b"1 0 d1 1\n2 0 d1 -128\n", -128),
+        ];
+        for (text, grade) in texts {
+            let message =
+                format!("Format Error: Line 2: relevance level {grade} is outside -127 to 127");
+            assert_eq!(error(qrels(text)), message);
+            assert_eq!(error(qrels_jg(text)), message);
+        }
+    }
     #[test]
     fn hex_exponent_cancels_a_long_significand_offset() {
         for s in [

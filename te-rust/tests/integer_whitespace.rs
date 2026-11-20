@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use std::process::Command;
-use te_rust::io::parsers::read_leading_integer;
 
 #[test]
 fn integer_options_skip_leading_c_locale_whitespace() {
@@ -21,20 +20,5 @@ fn integer_options_skip_leading_c_locale_whitespace() {
         assert!(stderr.is_empty(), "{option}: {stderr}");
         let stdout = String::from_utf8(out.stdout).unwrap();
         assert_eq!(stdout.split_whitespace().last(), Some(expected), "{option}");
-    }
-}
-
-#[test]
-fn leading_integer_skips_only_c_locale_whitespace() {
-    use std::num::IntErrorKind;
-
-    for space in [" ", "\t", "\n", "\x0b", "\x0c", "\r"] {
-        assert_eq!(read_leading_integer(&format!("{space}+2")), Ok((2, false)));
-        assert_eq!(read_leading_integer(&format!("{space}-2x")), Ok((-2, true)));
-        assert_eq!(read_leading_integer(&format!("{space}2 ")), Ok((2, true)));
-        assert_eq!(read_leading_integer(space), Err(IntErrorKind::InvalidDigit));
-    }
-    for value in ["\u{a0}2", "\u{2003}2", " + 2"] {
-        assert_eq!(read_leading_integer(value), Err(IntErrorKind::InvalidDigit));
     }
 }
