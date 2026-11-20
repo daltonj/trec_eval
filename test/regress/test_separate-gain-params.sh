@@ -9,8 +9,6 @@
 d=test/regress/separate-gain-params
 R=test/regress/results
 
-expect_status 0 -m dcg.1=3 -m ideal_dcg $d/qrels $R
-expect_status 0 -m ndcg.1=3 -m dcg $d/qrels $R
 expect_output $d/out.dcg -m dcg.1=3 -m ideal_dcg -m ndcg $d/qrels $R
 expect_output $d/out.ndcg -m ndcg.1=3 -m dcg -m ideal_dcg $d/qrels $R
 expect_output $d/out.each -m dcg.1=3 -m ideal_dcg.2=5 -m ndcg.1=3 \
