@@ -34,6 +34,8 @@ results = evaluator.evaluate(run)
 # }
 ```
 
+pytrec_eval itself gives other output in some cases. It ranks documents by their scores rounded to single precision, so scores that differ only beyond that precision tie and are ordered by document number; the wrapper reads scores as `trec_eval` 10.0 does. pytrec-eval-terrier follows `trec_eval` 9.0.8: its `all_trec` has no `rbp`, `rbp_resid` or `unj`, and it computes `iprec_at_recall` and `11pt_avg` as 9.0.8 does. It also names the rows of a parameterised `relstring` or `11pt_avg` without the parameters, as `relstring` where the wrapper gives `relstring_4`.
+
 ### Parsing Utilities
 
 ```python
