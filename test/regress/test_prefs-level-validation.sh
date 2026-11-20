@@ -11,7 +11,7 @@ m="-m prefs_num_prefs_poss -m prefs_simp"
 check() {
     for v in abc nan; do
         expect_status 2 -R $1 $m $D/$2.$v $D/results
-        msg="Unusable relevance level '$v' of document d1 in topic 1"
+        msg="value \`$v' .*(line 1 of $2 file '$D/$2.$v')"
         "$TREC_EVAL" -R $1 $m $D/$2.$v $D/results 2>&1 >/dev/null |
             grep -q "$msg" ||
             fail "-R $1 $D/$2.$v: no message naming the document"
@@ -19,7 +19,7 @@ check() {
     expect_output $D/out.grade1 -R $1 $m $D/$2.1 $D/results
     expect_output $D/out.grade1 -R $1 $m $D/$2.1x $D/results
     "$TREC_EVAL" -R $1 $m $D/$2.1x $D/results 2>&1 >/dev/null |
-        grep -q "level '1x' of document d1 in topic 1 partially read as '1'" ||
+        grep -q "value \`1x' partially read as \`1' (line 1 of $2 file" ||
         fail "-R $1 $D/$2.1x: no warning"
 }
 check qrels_prefs qrels

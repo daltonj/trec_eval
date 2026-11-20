@@ -133,7 +133,7 @@ typedef struct {
     char *jg;
     char *jsg;
     char *docno;
-    char *rel;
+    double rel;
 } LINES;
 
 int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
@@ -142,13 +142,14 @@ int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
     long size = 0;
     char *ptr;
     char *current_qid;
-    char *end_ptr;
+    char *rel_ptr;
     long i;
     LINES *lines;
     LINES *line_ptr;
     long num_lines;
     long line_num = 0;
     long num_qid;
+    int error = 0;
     /* current pointers into static pools above */
     REL_INFO *rel_info_ptr;
     TEXT_PREFS_INFO *text_info_ptr;
@@ -202,11 +203,16 @@ int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
 		}
         if (UNDEF == parse_prefs_line(&ptr, &line_ptr->qid, &line_ptr->jg,
                                       &line_ptr->jsg, &line_ptr->docno,
-                                      &line_ptr->rel)) {
+                                      &rel_ptr)) {
             fprintf(stderr, "trec_eval.get_prefs: Malformed line %ld\n",
                     line_num + 1);
             return (UNDEF);
         }
+        line_ptr->rel = str_to_double_ctx(rel_ptr, &error,
+                                          "line %ld of prefs file '%s'",
+                                          line_num + 1, text_prefs_file);
+        if (error)
+            return (UNDEF);
         line_ptr++;
         line_num++;
     }
@@ -257,18 +263,7 @@ int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
         }
         text_prefs_ptr->jg = lines[i].jg;
         text_prefs_ptr->jsg = lines[i].jsg;
-        text_prefs_ptr->rel_level = strtod(lines[i].rel, &end_ptr);
-        if (end_ptr == lines[i].rel || isnan(text_prefs_ptr->rel_level)) {
-            fprintf(stderr, "trec_eval: Unusable relevance level '%s' of "
-                    "document %s in topic %s\n", lines[i].rel,
-                    lines[i].docno, lines[i].qid);
-            return (UNDEF);
-        }
-        if (*end_ptr != '\0')
-            fprintf(stderr, "trec_eval: Warning, relevance level '%s' of "
-                    "document %s in topic %s partially read as '%.*s'\n",
-                    lines[i].rel, lines[i].docno, lines[i].qid,
-                    (int) (end_ptr - lines[i].rel), lines[i].rel);
+        text_prefs_ptr->rel_level = lines[i].rel;
         text_prefs_ptr->docno = lines[i].docno;
         text_prefs_ptr++;
     }
