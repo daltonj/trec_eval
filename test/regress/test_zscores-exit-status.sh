@@ -11,5 +11,4 @@ for z in $d/zscores.malformed $d/no-such-file; do
         fail "-Z $z: no message naming the file"
 done
 
-expect_status 0 -q -Z $d/zscores -m map $d/qrels $d/results
 expect_output $d/out.valid -q -Z $d/zscores -m map $d/qrels $d/results

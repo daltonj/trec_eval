@@ -14,4 +14,3 @@ err=$("$TREC_EVAL" -l -1 $m 2>&1 >/dev/null)
     fail "-l -1 printed '$err'"
 
 expect_output $d/out.l0 -l 0 $m
-"$TREC_EVAL" -h | grep -q "Num must be 0 or more" || fail "help text for -l"

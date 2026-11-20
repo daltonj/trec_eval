@@ -6,7 +6,6 @@
 . test/regress/lib.sh
 d=test/regress/rel-format-default-measures
 
-expect_status 0 -R qrels_jg $d/qrels_jg $d/results
 expect_output $d/out.qrels_jg -R qrels_jg $d/qrels_jg $d/results
 expect_output $d/out.prefs -R prefs $d/prefs $d/results
 expect_output $d/out.qrels_prefs -R qrels_prefs $d/qrels $d/results

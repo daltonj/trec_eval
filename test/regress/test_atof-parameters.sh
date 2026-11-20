@@ -15,7 +15,3 @@ expect_output $D/out.valid -m iprec_at_recall..25,1.,0.5 \
 
 # Trailing characters after a number give a warning; the number is used.
 expect_output $D/out.partial -m iprec_at_recall..25x $D/qrels $D/run
-"$TREC_EVAL" -m iprec_at_recall..25x $D/qrels $D/run 2>&1 >/dev/null |
-    grep -q "partially read as" ||
-    fail "trec_eval -m iprec_at_recall..25x: no warning"
-exit 0

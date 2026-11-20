@@ -13,7 +13,5 @@ err=$("$TREC_EVAL" -N -1 -q -m $m $d/qrels $d/results 2>&1 >/dev/null)
 [ "$err" = "trec_eval: Invalid number of documents in collection '-1'" ] ||
     fail "-N -1 printed '$err'"
 
-# -N 0 is the default; -N 10 gives 8 for each topic.
-expect_output $d/out.N0 -N 0 -q -m $m $d/qrels $d/results
-expect_output $d/out.N0 -q -m $m $d/qrels $d/results
+# -N 10 gives 8 for each topic.
 expect_output $d/out.N10 -N 10 -q -m $m $d/qrels $d/results

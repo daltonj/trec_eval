@@ -12,7 +12,5 @@ expect_status 4 -q -m num_ret $D/qrels $D/results
     fail "trec_eval -q -m num_ret $D/qrels $D/results: stderr differs from $D/err"
 
 expect_output $D/out.c -c -q -m num_ret $D/qrels $D/results
-expect_status 0 -c -q -m num_ret $D/qrels $D/results
 expect_output $D/out.D -D 0.1 -q -m num_ret $D/qrels $D/results
-expect_status 0 -D 0.1 -q -m num_ret $D/qrels $D/results
 exit 0

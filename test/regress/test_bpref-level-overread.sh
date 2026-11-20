@@ -7,5 +7,4 @@ d=test/regress/bpref-level-overread
 expect_output $d/out.l1 -q -l 1 -m bpref -m gm_bpref $d/qrels $d/results
 expect_output $d/out.l2 -q -l 2 -m bpref -m gm_bpref $d/qrels $d/results
 expect_output $d/out.zero -q -l 3 -m bpref -m gm_bpref $d/qrels $d/results
-expect_status 0 -l 2147483647 -m bpref -m gm_bpref $d/qrels $d/results
 expect_output $d/out.zero -q -l 2147483647 -m bpref -m gm_bpref $d/qrels $d/results

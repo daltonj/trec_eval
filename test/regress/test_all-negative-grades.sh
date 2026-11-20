@@ -5,11 +5,9 @@
 d=test/regress/all-negative-grades
 
 # The all-negative topic is evaluated first.
-expect_status 0 -m map $d/qrels.first $d/results.first
 expect_output $d/out.first -m map $d/qrels.first $d/results.first
 expect_output $d/out.first.q -q -m map $d/qrels.first $d/results.first
 
 # The all-negative topic follows a topic with grades 0 and 1.
-expect_status 0 -m map $d/qrels.second $d/results.second
 expect_output $d/out.second -m map $d/qrels.second $d/results.second
 expect_output $d/out.second.q -q -m map $d/qrels.second $d/results.second

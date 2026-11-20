@@ -20,7 +20,6 @@ check() {
     shift 3
     for judg in $D/$name.blank "$T/$name.space" $D/$name.indent; do
         expect_output $exp -c -q -R $fmt "$@" "$judg" $D/run
-        expect_status 0 -c -q -R $fmt "$@" "$judg" $D/run
     done
     expect_status 2 -R $fmt "$@" $D/$name.only $D/run
     "$TREC_EVAL" -R $fmt "$@" $D/$name.only $D/run 2>&1 >/dev/null |

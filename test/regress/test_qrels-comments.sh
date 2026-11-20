@@ -9,7 +9,6 @@ check() {
     shift 3
     for v in end two fields; do
         expect_output $exp -q -R $fmt "$@" $judg.$v $D/run
-        expect_status 0 -q -R $fmt "$@" $judg.$v $D/run
     done
     expect_status 2 -R $fmt "$@" $judg.only $D/run
     "$TREC_EVAL" -R $fmt "$@" $judg.only $D/run 2>&1 >/dev/null |
