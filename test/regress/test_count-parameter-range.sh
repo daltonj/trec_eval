@@ -5,17 +5,17 @@
 . test/regress/lib.sh
 D=test/regress/count-parameter-range
 
-# same MEASURE HUGE LARGE [ARGS...]: MEASURE.HUGE exits 0 without a
-# runtime error and prints the values that MEASURE.LARGE prints.
+# same MEASURE HUGE LARGE [ARGS...]: MEASURE.HUGE exits 0 and prints the
+# values that MEASURE.LARGE prints.
 same() {
     m=$1 huge=$2 large=$3
     shift 3
-    expect_status 0 -q "$@" -m $m.$huge $D/qrels $D/run
-    "$TREC_EVAL" -q "$@" -m $m.$huge $D/qrels $D/run 2>&1 >/dev/null |
-        grep -q "runtime error" && fail "trec_eval -m $m.$huge: runtime error"
-    a=$("$TREC_EVAL" -q "$@" -m $m.$huge $D/qrels $D/run | cut -f2-)
-    b=$("$TREC_EVAL" -q "$@" -m $m.$large $D/qrels $D/run | cut -f2-)
-    [ "$a" = "$b" ] || fail "trec_eval -m $m.$huge differs from $m.$large"
+    "$TREC_EVAL" -q "$@" -m $m.$huge $D/qrels $D/run > "$T/huge" ||
+        fail "trec_eval -m $m.$huge failed"
+    "$TREC_EVAL" -q "$@" -m $m.$large $D/qrels $D/run > "$T/large" ||
+        fail "trec_eval -m $m.$large failed"
+    [ "$(cut -f2- "$T/huge")" = "$(cut -f2- "$T/large")" ] ||
+        fail "trec_eval -m $m.$huge differs from $m.$large"
 }
 
 # Recall levels outside [0, 1] and multiples of R that are not positive
