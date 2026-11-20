@@ -423,6 +423,14 @@ mod tests {
     }
 
     #[test]
+    fn print_order_lists_every_measure_that_trec_eval_has() {
+        for spec in registry() {
+            let listed = TREC_EVAL_PRINT_ORDER.contains(&spec.name);
+            assert_eq!(listed, spec.name != "ndcg_p", "{}", spec.name);
+        }
+    }
+
+    #[test]
     fn groups_contain_only_production_measures() {
         for group in ["official", "set", "qrels_jg", "all_trec"] {
             for name in expand_group(group).unwrap() {
