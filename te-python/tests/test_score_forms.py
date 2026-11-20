@@ -35,11 +35,23 @@ def test_infinite_scores_are_accepted_from_a_dict(score):
     assert result.per_query()["t"]["relstring"] == ("'213'" if score > 0 else "'132'")
 
 
-def test_nan_scores_are_refused_from_a_file_and_a_dict(tmp_path):
+def test_nan_scores_are_refused_from_a_file(tmp_path):
     run = tmp_path / "nan.run"
     run.write_text("t Q0 a 1 5 r\nt Q0 b 2 nan r\n")
-    evaluator = Evaluator(QRELS, measures=["map"])
     with pytest.raises(ValueError, match="invalid float for field 'sim': 'nan'"):
-        evaluator.evaluate(str(run))
+        Evaluator(QRELS, measures=["map"]).evaluate(str(run))
+
+
+@pytest.mark.parametrize("representation", ["dict", "tuples", "frame", "arrays"])
+def test_nan_scores_are_refused_from_memory(representation, dataframe):
+    qids, docnos, scores = ["t", "t"], ["a", "b"], [5.0, math.nan]
+    evaluator = Evaluator(QRELS, measures=["map"])
     with pytest.raises(ValueError, match="score of document 'b' for query 't' is NaN"):
-        evaluator.evaluate({"t": {"a": 5.0, "b": math.nan}})
+        if representation == "dict":
+            evaluator.evaluate({"t": dict(zip(docnos, scores))})
+        elif representation == "tuples":
+            evaluator.evaluate(iter(zip(qids, docnos, scores)))
+        elif representation == "frame":
+            evaluator.evaluate(dataframe({"qid": qids, "docno": docnos, "score": scores}))
+        else:
+            evaluator.evaluate_arrays(qids, docnos, scores)
