@@ -65,12 +65,16 @@ fn values_match(c_val: &Val, rust_val: &Val) -> bool {
     }
 }
 
+/// The measure and topic of a row, which identify it.
+fn key(row: &Row) -> (&str, &str) {
+    (&row.0, &row.1)
+}
+
 /// Every difference between the two outputs, with C as the reference.
 fn output_differences(c_rows: &[Row], rust_rows: &[Row]) -> Vec<String> {
-    let key = |(measure, qid, _): &Row| (measure.clone(), qid.clone());
     let mut differences = Vec::new();
     for (label, rows) in [("C", c_rows), ("te-rust", rust_rows)] {
-        let mut counts: HashMap<(String, String), usize> = HashMap::new();
+        let mut counts: HashMap<(&str, &str), usize> = HashMap::new();
         for row in rows {
             *counts.entry(key(row)).or_default() += 1;
         }
