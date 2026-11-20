@@ -3,9 +3,10 @@ use std::io::{self, Write};
 use std::process;
 
 use te_rust::eval::bootstrap::BootstrapConfig;
-use te_rust::eval::{evaluate_run, evaluate_run_jg, EvaluationError, ScoredDuplicate};
+use te_rust::eval::{evaluate_run, evaluate_run_jg, EvaluationError, EvaluationOutput, ScoredDuplicate};
 use te_rust::io::{parse_trec_qrels, parse_trec_qrels_jg, parse_trec_run, RunData};
-use te_rust::metrics::{EvalConfig, MetricValue, ValueFormat};
+use te_rust::metrics::registry::MeasureSpec;
+use te_rust::metrics::{EvalConfig, Measure, MetricValue, ValueFormat};
 use te_rust::metrics;
 
 // std's eprintln! panics when stderr cannot be written, as on a full disk.
@@ -103,10 +104,12 @@ struct Args {
 }
 
 // The exit statuses of trec_eval: 1 usage or illegal measure name, 2 unreadable or
-// malformed input or unusable measure parameter, 4 a topic cannot be scored.
+// malformed input or unusable measure parameter, 4 a topic cannot be scored, 8 the
+// output cannot be written.
 const EXIT_USAGE: i32 = 1;
 const EXIT_INPUT: i32 = 2;
 const EXIT_TOPIC: i32 = 4;
+const EXIT_OUTPUT: i32 = 8;
 
 /// Reports an evaluation error with trec_eval's exit status.
 fn refuse_evaluation_error(
@@ -169,17 +172,8 @@ fn read_run(path: &str) -> RunData {
 }
 
 fn handle_help_flags(help_measures: bool, help_measure: Option<&str>) {
-    let mut out = io::stdout().lock();
     if help_measures {
-        check_write(writeln!(out, "{:<22} {:<13} Description", "Measure", "Status"));
-        check_write(writeln!(out, "{}", "-".repeat(70)));
-        for spec in metrics::registry::registry() {
-            if let Ok(m) = (spec.factory)("", &mut Vec::new()) {
-                check_write(writeln!(out, "{:<22} {:<13} {}", m.name(), spec.status.label(), m.short_description()));
-            }
-        }
-        check_write(writeln!(out, "\nRequest measures with -m <name> (repeatable). See --help-measure <name> for details."));
-        check_write(out.flush());
+        check_write(print_measure_list(&mut io::stdout().lock()));
         process::exit(0);
     }
 
@@ -187,27 +181,43 @@ fn handle_help_flags(help_measures: bool, help_measure: Option<&str>) {
         for spec in metrics::registry::registry() {
             if spec.name.eq_ignore_ascii_case(target) {
                 if let Ok(m) = (spec.factory)("", &mut Vec::new()) {
-                    check_write(writeln!(out, "{}", m.name()));
-                    if !spec.status.label().is_empty() {
-                        check_write(writeln!(out, "Status: {}", spec.status.label()));
-                    }
-                    check_write(writeln!(out));
-                    check_write(writeln!(out, "{}", m.explanation()));
-                    check_write(writeln!(out));
-                    // How to request it, and what parameters it accepts.
-                    if spec.usage.is_empty() {
-                        check_write(writeln!(out, "Usage:  -m {}", m.name()));
-                    } else {
-                        check_write(writeln!(out, "Usage:  -m {}", spec.usage));
-                    }
-                    check_write(out.flush());
+                    check_write(print_measure_help(&mut io::stdout().lock(), spec, m.as_ref()));
                     process::exit(0);
                 }
             }
         }
         eprintln!("te-rust: Unknown measure '{}'", target);
-        process::exit(1);
+        process::exit(EXIT_USAGE);
     }
+}
+
+fn print_measure_list(out: &mut impl Write) -> io::Result<()> {
+    writeln!(out, "{:<22} {:<13} Description", "Measure", "Status")?;
+    writeln!(out, "{}", "-".repeat(70))?;
+    for spec in metrics::registry::registry() {
+        if let Ok(m) = (spec.factory)("", &mut Vec::new()) {
+            writeln!(out, "{:<22} {:<13} {}", m.name(), spec.status.label(), m.short_description())?;
+        }
+    }
+    writeln!(out, "\nRequest measures with -m <name> (repeatable). See --help-measure <name> for details.")?;
+    out.flush()
+}
+
+fn print_measure_help(out: &mut impl Write, spec: &MeasureSpec, m: &dyn Measure) -> io::Result<()> {
+    writeln!(out, "{}", m.name())?;
+    if !spec.status.label().is_empty() {
+        writeln!(out, "Status: {}", spec.status.label())?;
+    }
+    writeln!(out)?;
+    writeln!(out, "{}", m.explanation())?;
+    writeln!(out)?;
+    // How to request it, and what parameters it accepts.
+    if spec.usage.is_empty() {
+        writeln!(out, "Usage:  -m {}", m.name())?;
+    } else {
+        writeln!(out, "Usage:  -m {}", spec.usage)?;
+    }
+    out.flush()
 }
 
 // Rust ignores SIGPIPE. Restoring the default lets a closed pipe, as in
@@ -245,7 +255,7 @@ fn main() {
         Some(f) => f,
         None => {
             eprintln!("error: the following required arguments were not provided:\n  <QRELS_FILE>\n  <RUN_FILE>\n\nUsage: te-rust [OPTIONS] <QRELS_FILE> <RUN_FILE>");
-            process::exit(1);
+            process::exit(EXIT_USAGE);
         }
     };
 
@@ -253,7 +263,7 @@ fn main() {
         Some(f) => f,
         None => {
             eprintln!("error: the following required arguments were not provided:\n  <RUN_FILE>\n\nUsage: te-rust [OPTIONS] <QRELS_FILE> <RUN_FILE>");
-            process::exit(1);
+            process::exit(EXIT_USAGE);
         }
     };
 
@@ -364,67 +374,70 @@ fn main() {
         process::exit(EXIT_TOPIC);
     }
 
-    // 6. Print query results
-    let mut out = io::stdout().lock();
+    // 6. Print the query results, then the summary
+    check_write(print_results(&mut io::stdout().lock(), &output, &config, args.ci_pretty));
+}
+
+fn print_results(
+    out: &mut impl Write,
+    output: &EvaluationOutput,
+    config: &EvalConfig,
+    ci_pretty: bool,
+) -> io::Result<()> {
     if config.query_flag {
         for q_eval in &output.query_results {
             for (name, val, format) in &q_eval.scores {
-                print_metric_value(&mut out, name, &q_eval.qid, val, *format);
+                print_metric_value(out, name, &q_eval.qid, val, *format)?;
             }
         }
     }
 
-    // 7. Print summary results
     if config.summary_flag {
         for s_eval in &output.summary_results {
-            if let (Some(ci), true) = (&s_eval.ci, args.ci_pretty) {
+            if let (Some(ci), true) = (&s_eval.ci, ci_pretty) {
                 if let MetricValue::Float(f) = &s_eval.value {
-                    check_write(writeln!(out, "{:<22}\tall\t{:.4} [{:.4}, {:.4}]", s_eval.name, f, ci.lower, ci.upper));
+                    writeln!(out, "{:<22}\tall\t{:.4} [{:.4}, {:.4}]", s_eval.name, f, ci.lower, ci.upper)?;
                 }
             } else {
-                print_metric_value(&mut out, &s_eval.name, "all", &s_eval.value, s_eval.format);
+                print_metric_value(out, &s_eval.name, "all", &s_eval.value, s_eval.format)?;
                 if let Some(ci) = &s_eval.ci {
                     let lower_name = format!("{}_ci_lower", s_eval.name);
                     let upper_name = format!("{}_ci_upper", s_eval.name);
-                    print_metric_value(&mut out, &lower_name, "all", &MetricValue::Float(ci.lower), ValueFormat::Float);
-                    print_metric_value(&mut out, &upper_name, "all", &MetricValue::Float(ci.upper), ValueFormat::Float);
+                    print_metric_value(out, &lower_name, "all", &MetricValue::Float(ci.lower), ValueFormat::Float)?;
+                    print_metric_value(out, &upper_name, "all", &MetricValue::Float(ci.upper), ValueFormat::Float)?;
                 }
             }
         }
     }
-    check_write(out.flush());
+    out.flush()
 }
 
-
-fn print_metric_value(out: &mut impl Write, name: &str, qid: &str, val: &MetricValue, format: ValueFormat) {
+fn print_metric_value(out: &mut impl Write, name: &str, qid: &str, val: &MetricValue, format: ValueFormat) -> io::Result<()> {
     match (val, format) {
         (MetricValue::Float(f), ValueFormat::Float) => {
-            check_write(writeln!(out, "{:<22}\t{}\t{:.4}", name, qid, f));
+            writeln!(out, "{:<22}\t{}\t{:.4}", name, qid, f)
         }
         (MetricValue::Integer(i), ValueFormat::Integer) => {
-            check_write(writeln!(out, "{:<22}\t{}\t{}", name, qid, i));
+            writeln!(out, "{:<22}\t{}\t{}", name, qid, i)
         }
         (MetricValue::Str(s), ValueFormat::Str) => {
-            check_write(writeln!(out, "{:<22}\t{}\t{}", name, qid, s));
+            writeln!(out, "{:<22}\t{}\t{}", name, qid, s)
         }
         (MetricValue::Str(s), ValueFormat::QuotedStr) => {
-            check_write(writeln!(out, "{:<22}\t{}\t'{}'", name, qid, s));
+            writeln!(out, "{:<22}\t{}\t'{}'", name, qid, s)
         }
         _ => {
             // Fallback
             match val {
-                MetricValue::Float(f) => check_write(writeln!(out, "{:<22}\t{}\t{:.4}", name, qid, f)),
-                MetricValue::Integer(i) => check_write(writeln!(out, "{:<22}\t{}\t{}", name, qid, i)),
-                MetricValue::Str(s) => check_write(writeln!(out, "{:<22}\t{}\t{}", name, qid, s)),
+                MetricValue::Float(f) => writeln!(out, "{:<22}\t{}\t{:.4}", name, qid, f),
+                MetricValue::Integer(i) => writeln!(out, "{:<22}\t{}\t{}", name, qid, i),
+                MetricValue::Str(s) => writeln!(out, "{:<22}\t{}\t{}", name, qid, s),
             }
         }
     }
 }
 
-// trec_eval's status when it cannot print a measure.
-const EXIT_OUTPUT: i32 = 8;
-
-/// Exit with EXIT_OUTPUT when a write to stdout fails, as on a full disk, where
+/// Exits with EXIT_OUTPUT when writing to stdout failed, as on a full disk, where
 /// println! would panic. On unix a closed pipe ends the process with SIGPIPE first.
 fn check_write(result: io::Result<()>) {
     if let Err(e) = result {
