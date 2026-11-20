@@ -87,7 +87,7 @@ pub(crate) fn parse_finite_float(tok: &str) -> Result<f64, MeasureParseError> {
     Ok(value)
 }
 
-fn finite_float(value: f64) -> Result<(), MeasureParseError> {
+pub(crate) fn finite_float(value: f64) -> Result<(), MeasureParseError> {
     if value.is_finite() {
         Ok(())
     } else {
@@ -96,18 +96,6 @@ fn finite_float(value: f64) -> Result<(), MeasureParseError> {
             value
         )))
     }
-}
-
-pub(crate) fn utility_coefficients(coeffs: &[f64]) -> Result<(), MeasureParseError> {
-    if coeffs.len() != 4 {
-        return Err(MeasureParseError::new(
-            "utility requires exactly 4 coefficients",
-        ));
-    }
-    for &value in coeffs {
-        finite_float(value)?;
-    }
-    Ok(())
 }
 
 /// Parse a comma-separated list of `key=value` pairs (e.g. "p=0.9").
@@ -357,17 +345,6 @@ fn rbp_persistence(p: f64) -> Result<(), MeasureParseError> {
         return Err(MeasureParseError::new(format!(
             "persistence p {} is outside [0, 1)",
             p
-        )));
-    }
-    Ok(())
-}
-
-pub(crate) fn set_f_weight(weight: f64) -> Result<(), MeasureParseError> {
-    finite_float(weight)?;
-    if weight < 0.0 {
-        return Err(MeasureParseError::new(format!(
-            "set_F weight {} is negative",
-            weight
         )));
     }
     Ok(())

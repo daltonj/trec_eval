@@ -1,5 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{utility_coefficients, MeasureParseError};
+use crate::metrics::common::{finite_float, MeasureParseError};
 
 pub struct UtilityMeasure {
     params: Vec<f64>,
@@ -9,7 +9,14 @@ pub struct UtilityMeasure {
 impl UtilityMeasure {
     /// Refuses anything other than four finite coefficients.
     pub fn new(params: Vec<f64>, params_str: &str) -> Result<Self, MeasureParseError> {
-        utility_coefficients(&params)?;
+        if params.len() != 4 {
+            return Err(MeasureParseError::new(
+                "utility requires exactly 4 coefficients",
+            ));
+        }
+        for &value in &params {
+            finite_float(value)?;
+        }
         let name = if params_str.is_empty() {
             "utility".to_string()
         } else {
