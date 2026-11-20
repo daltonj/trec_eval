@@ -151,17 +151,13 @@ fn parse_grade(value: &str, line_num: usize, warnings: &mut Vec<String>) -> Resu
 /// range of an `f64`, such as `1e400` or `1e-400`, is kept as ±inf or ±0 with a warning. NaN, and
 /// a value with no leading number, are errors.
 fn parse_score(value: &str, line_num: usize, warnings: &mut Vec<String>) -> Result<f64, IOError> {
-    let invalid = || {
+    let (sim, len) = strtod_prefix(value).ok_or_else(|| {
         IOError::FormatError(ParseError::InvalidFloat {
             line_num,
             field: "sim".to_string(),
             value: value.to_string(),
         })
-    };
-    let (sim, len) = strtod_prefix(value).ok_or_else(invalid)?;
-    if sim.is_nan() {
-        return Err(invalid());
-    }
+    })?;
     if out_of_range(&value[..len], sim) {
         warnings.push(format!("Line {}: score '{}' out of range, read as {}", line_num, value, sim));
     }
@@ -190,8 +186,8 @@ fn out_of_range(prefix: &str, value: f64) -> bool {
     significand.bytes().any(|b| b.is_ascii_hexdigit() && b != b'0')
 }
 
-/// The value and length of the longest prefix of `s` that C's `strtod` reads in the C locale, or
-/// `None` when it reads nothing.
+/// The value and length of the longest prefix of `s` that C's `strtod` reads in the C locale as a
+/// decimal, hexadecimal or infinite number, or `None` when there is none, as for a NaN.
 fn strtod_prefix(s: &str) -> Option<(f64, usize)> {
     let bytes = s.as_bytes();
     let sign = usize::from(matches!(bytes.first(), Some(b'+' | b'-')));
@@ -204,12 +200,6 @@ fn strtod_prefix(s: &str) -> Option<(f64, usize)> {
     }
     if has_word(b"inf") {
         return Some((signed(f64::INFINITY), sign + 3));
-    }
-    if has_word(b"nan") {
-        // strtod also reads an optional `(n-char-sequence)` after `nan`.
-        let chars = rest[3..].iter().skip(1).take_while(|c| c.is_ascii_alphanumeric() || **c == b'_').count();
-        let len = if rest.get(3) == Some(&b'(') && rest.get(4 + chars) == Some(&b')') { 5 + chars } else { 3 };
-        return Some((f64::NAN, sign + len));
     }
     if rest.len() > 2 && rest[0] == b'0' && (rest[1] == b'x' || rest[1] == b'X') {
         if let Some((value, len)) = hex_prefix(&rest[2..]) {
@@ -881,12 +871,8 @@ mod tests {
     }
 
     #[test]
-    fn strtod_prefix_reads_nan_and_nothing_as_strtod_does() {
-        for (s, len) in [("nan", 3), ("-NaN", 4), ("nan(12ab)", 9), ("nan(", 3), ("nan()", 5)] {
-            let (v, n) = strtod_prefix(s).unwrap();
-            assert!(v.is_nan() && n == len, "{s}: {v} {n}");
-        }
-        for s in ["", ".", "+", "-", "e5", "in", "abc", "x1"] {
+    fn strtod_prefix_reads_no_nan_and_nothing_without_a_number() {
+        for s in ["nan", "-NaN", "nan(12ab)", "", ".", "+", "-", "e5", "in", "abc", "x1"] {
             assert_eq!(strtod_prefix(s), None, "{s}");
         }
     }
