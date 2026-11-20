@@ -85,9 +85,10 @@ int te_init_meas_s_double_p_gain(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
    gains for relevance levels, which rbp_resid accepts and ignores */
 int te_init_meas_s_double_p_rbp(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
 {
-    DOUBLE_PARAM_PAIR *pairs, pair;
+    DOUBLE_PARAM_PAIR *pairs, *gain_pairs;
     long num_pairs, num_p = 0;
-    long i;
+    long i, num_gains = 0;
+    int status;
 
     if (UNDEF == te_init_meas_s_double_p_pair(epi, tm, eval))
         return (UNDEF);
@@ -95,7 +96,6 @@ int te_init_meas_s_double_p_rbp(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
     num_pairs = tm->meas_params->num_params;
     if (num_pairs == 0)
         return (1);
-    /* Swap p to the front, so that the pairs after it are the gains */
     for (i = 0; i < num_pairs; i++) {
         if (strcmp(pairs[i].name, "p"))
             continue;
@@ -111,12 +111,17 @@ int te_init_meas_s_double_p_rbp(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
                     pairs[i].value, tm->name);
             return (UNDEF);
         }
-        pair = pairs[0];
-        pairs[0] = pairs[i];
-        pairs[i] = pair;
         num_p = 1;
     }
-    return (check_gain_params(tm, pairs + num_p, num_pairs - num_p));
+    if (NULL == (gain_pairs = Malloc(num_pairs, DOUBLE_PARAM_PAIR)))
+        return (UNDEF);
+    for (i = 0; i < num_pairs; i++) {
+        if (strcmp(pairs[i].name, "p"))
+            gain_pairs[num_gains++] = pairs[i];
+    }
+    status = check_gain_params(tm, gain_pairs, num_gains);
+    Free(gain_pairs);
+    return (status);
 }
 
 int setup_gains(const TREC_MEAS * tm, const RES_RELS * res_rels, GAINS * gains)
