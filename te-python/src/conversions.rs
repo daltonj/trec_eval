@@ -168,24 +168,21 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
         let mut doc_iter = doc_series.iter()?;
         let mut rel_iter = rel_series.iter()?;
 
-        let mut grouped: BTreeMap<String, BTreeMap<String, i64>> = BTreeMap::new();
+        let mut grouped: BTreeMap<String, Vec<QrelsRecord>> = BTreeMap::new();
         while let (Some(q_res), Some(d_res), Some(r_res)) = (qid_iter.next(), doc_iter.next(), rel_iter.next()) {
             let qid = q_res?.extract::<String>()?;
             let docno = d_res?.extract::<String>()?;
             let rel = r_res?.extract::<i64>()?;
             check_rel_grade(rel)?;
-            grouped.entry(qid).or_default().insert(docno, rel);
+            grouped
+                .entry(qid)
+                .or_default()
+                .push(QrelsRecord { docno, rel });
         }
 
         let queries = grouped
             .into_iter()
-            .map(|(qid, doc_map)| QrelsQuery {
-                qid,
-                records: doc_map
-                    .into_iter()
-                    .map(|(docno, rel)| QrelsRecord { docno, rel })
-                    .collect(),
-            })
+            .map(|(qid, records)| QrelsQuery { qid, records })
             .collect();
 
         return Ok(QrelsData {
@@ -207,24 +204,21 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
 
 
 fn ingest_qrels_from_iter(iter: Bound<'_, PyIterator>) -> PyResult<QrelsData> {
-    let mut grouped: BTreeMap<String, BTreeMap<String, i64>> = BTreeMap::new();
+    let mut grouped: BTreeMap<String, Vec<QrelsRecord>> = BTreeMap::new();
 
     for item_res in iter {
         let item = item_res?;
         let (qid, docno, rel) = extract_qrel_item(&item)?;
         check_rel_grade(rel)?;
-        grouped.entry(qid).or_default().insert(docno, rel);
+        grouped
+            .entry(qid)
+            .or_default()
+            .push(QrelsRecord { docno, rel });
     }
 
     let queries = grouped
         .into_iter()
-        .map(|(qid, doc_map)| QrelsQuery {
-            qid,
-            records: doc_map
-                .into_iter()
-                .map(|(docno, rel)| QrelsRecord { docno, rel })
-                .collect(),
-        })
+        .map(|(qid, records)| QrelsQuery { qid, records })
         .collect();
 
     Ok(QrelsData {

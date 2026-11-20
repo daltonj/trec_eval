@@ -52,3 +52,40 @@ def test_custom_measures_refuse_scored_duplicates(measures):
         cut.evaluate_arrays(["1", "1"], ["a", "a"], [2.0, 1.0]).aggregate()["custom"]
         == 1.0
     )
+
+
+@pytest.mark.parametrize("representation", ["file", "iterable", "frame"])
+@pytest.mark.parametrize("first_grade", [0, 1])
+def test_python_qrels_keep_repeats_for_the_scored_topic_check(
+    tmp_path, representation, first_grade
+):
+    from test_stage3 import MockDataFrame
+
+    rows = [("1", "a", 1), ("3", "x", first_grade), ("3", "x", 1)]
+    qrels_file = tmp_path / "repeat.qrels"
+    qrels_file.write_text(
+        "".join(f"{qid} 0 {docno} {rel}\n" for qid, docno, rel in rows)
+    )
+
+    def qrels_input():
+        if representation == "file":
+            return qrels_file
+        if representation == "iterable":
+            return iter(rows)
+        return MockDataFrame(
+            {
+                "qid": [qid for qid, _, _ in rows],
+                "docno": [docno for _, docno, _ in rows],
+                "rel": [rel for _, _, rel in rows],
+            }
+        )
+
+    evaluator = Evaluator(qrels_input(), measures=["map"])
+    assert evaluator.evaluate({"1": {"a": 1.0}}).aggregate()["map"] == 1.0
+    with pytest.raises(ValueError, match="qrels: duplicate document 'x' for query '3'"):
+        evaluator.evaluate({"3": {"x": 1.0}})
+    complete = Evaluator(qrels_input(), measures=["map"], complete_set_average=True)
+    with pytest.raises(ValueError, match="qrels: duplicate document 'x' for query '3'"):
+        complete.evaluate({"1": {"a": 1.0}})
+    counted = Evaluator(qrels_input(), measures=["num_q"])
+    assert counted.evaluate({"3": {"x": 1.0}}).aggregate()["num_q"] == 1
