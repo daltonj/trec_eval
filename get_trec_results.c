@@ -9,6 +9,7 @@
 #include "sysfunc.h"
 #include "trec_eval.h"
 #include "trec_format.h"
+#include "functions.h"
 #include <ctype.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -63,7 +64,7 @@ te_get_trec_results(EPI * epi, char *text_results_file,
     long i;
     LINES *lines;
     LINES *line_ptr;
-    size_t num_lines;
+    long num_lines;
     long line_num = 0;
     long num_qid;
     char *run_id_ptr = NULL;
@@ -147,32 +148,12 @@ te_get_trec_results(EPI * epi, char *text_results_file,
         size++;
     }
     trec_results_buf[size] = '\0';
-    if (strlen(trec_results_buf) != size) {
-        long line = 1;
-        for (ptr = trec_results_buf; *ptr; ptr++)
-            if (*ptr == '\n')
-                line++;
-        fprintf(stderr,
-                "trec_eval.get_results: NUL character in results file '%s' at line %ld\n",
-                text_results_file, line);
-        return (UNDEF);
-    }
-    for (ptr = trec_results_buf, i = 1; *ptr; ptr++) {
-        if (*ptr == '\n')
-            i++;
-        else if (*ptr == '\r' && ptr[1] != '\n') {
-            fprintf(stderr, "trec_eval.get_results: CR character "
-                    "without LF in line %ld of results file '%s'\n",
-                    i, text_results_file);
-            return (UNDEF);
-        }
-    }
 
     /* Count number of lines in file */
-    num_lines = 0;
-    for (ptr = trec_results_buf; *ptr; ptr++)
-        if (*ptr == '\n')
-            num_lines++;
+    if (UNDEF == (num_lines = te_count_lines(trec_results_buf, size,
+                                             "get_results", "results",
+                                             text_results_file)))
+        return (UNDEF);
 
     /* Get all lines */
     if (NULL == (lines = Malloc(num_lines, LINES)))

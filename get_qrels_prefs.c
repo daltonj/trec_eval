@@ -9,6 +9,7 @@
 #include "sysfunc.h"
 #include "trec_eval.h"
 #include "trec_format.h"
+#include "functions.h"
 #include <ctype.h>
 
 
@@ -151,32 +152,12 @@ te_get_qrels_prefs(EPI * epi, char *text_prefs_file,
         size++;
     }
     trec_prefs_buf[size] = '\0';
-    if (strlen(trec_prefs_buf) != (size_t) size) {
-        long line = 1;
-        for (ptr = trec_prefs_buf; *ptr; ptr++)
-            if (*ptr == '\n')
-                line++;
-        fprintf(stderr,
-                "trec_eval.get_qrels_prefs: NUL character in qrels file '%s' at line %ld\n",
-                text_prefs_file, line);
-        return (UNDEF);
-    }
-    for (ptr = trec_prefs_buf, i = 1; *ptr; ptr++) {
-        if (*ptr == '\n')
-            i++;
-        else if (*ptr == '\r' && ptr[1] != '\n') {
-            fprintf(stderr, "trec_eval.get_qrels_prefs: CR character "
-                    "without LF in line %ld of qrels file '%s'\n",
-                    i, text_prefs_file);
-            return (UNDEF);
-        }
-    }
 
     /* Count number of lines in file */
-    num_lines = 0;
-    for (ptr = trec_prefs_buf; *ptr; ptr++)
-        if (*ptr == '\n')
-            num_lines++;
+    if (UNDEF == (num_lines = te_count_lines(trec_prefs_buf, size,
+                                             "get_qrels_prefs", "qrels",
+                                             text_prefs_file)))
+        return (UNDEF);
 
     /* Get all lines */
     if (NULL == (lines = Malloc(num_lines, LINES)))

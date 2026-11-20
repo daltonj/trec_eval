@@ -15,6 +15,8 @@ void *te_chk_and_malloc(void *ptr, long *current_bound,
                         const long needed, const size_t size);
 void *te_chk_and_realloc(void *ptr, long *current_bound,
                          const long needed, const int size);
+long te_count_lines(const char *buf, const long size, const char *reader,
+                    const char *kind, const char *file);
 /* Functions for dealing with zscores */
 int te_get_zscores(const EPI * epi, const char *zscores_file,
                    ALL_ZSCORES * zscores);

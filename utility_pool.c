@@ -53,3 +53,31 @@ void *te_chk_and_realloc(void *ptr, long *current_bound,
     *current_bound += needed;
     return ((void *) realloc(ptr, *current_bound * size));
 }
+
+/* Count the lines of an input file read into buf: size bytes that end in
+   a newline, followed by a NUL. A NUL byte, or a CR that does not end a
+   CRLF line ending, is an error: print a message naming the reader, the
+   kind of file and the file, and return UNDEF. */
+long te_count_lines(const char *buf, const long size, const char *reader,
+                    const char *kind, const char *file)
+{
+    long i;
+    long num_lines = 0;
+
+    for (i = 0; i < size; i++) {
+        if (buf[i] == '\n')
+            num_lines++;
+        else if (buf[i] == '\0') {
+            fprintf(stderr,
+                    "trec_eval.%s: NUL character in %s file '%s' at line %ld\n",
+                    reader, kind, file, num_lines + 1);
+            return (UNDEF);
+        } else if (buf[i] == '\r' && buf[i + 1] != '\n') {
+            fprintf(stderr, "trec_eval.%s: CR character "
+                    "without LF in line %ld of %s file '%s'\n",
+                    reader, num_lines + 1, kind, file);
+            return (UNDEF);
+        }
+    }
+    return (num_lines);
+}
