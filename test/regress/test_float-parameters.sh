@@ -1,7 +1,7 @@
 # Floating-point measure parameters that are not numbers are refused with
 # exit status 2, as integer cutoffs are (-m P.x).
 . test/regress/lib.sh
-D=test/regress/atof-parameters
+D=test/regress/float-parameters
 Q=test/regress/qrels
 R=test/regress/results
 

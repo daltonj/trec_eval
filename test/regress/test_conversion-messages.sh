@@ -1,7 +1,7 @@
 # A warning or error from reading a number says where the value comes
 # from: the measure and its parameter, or the line of the file.
 . test/regress/lib.sh
-D=test/regress/str-to-long-context
+D=test/regress/conversion-messages
 Q=test/regress/qrels
 R=test/regress/results
 

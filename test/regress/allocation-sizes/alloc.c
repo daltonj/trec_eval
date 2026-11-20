@@ -1,6 +1,6 @@
 /* Checks the byte counts that Malloc and Realloc in common.h pass to
    malloc and realloc, through stubs that record the count without
-   allocating. test_large-file-sizes.sh builds it with "make alloc-test";
+   allocating. test_allocation-sizes.sh builds it with "make alloc-test";
    the exit status is 0 if every check holds. */
 #include <limits.h>
 #include <stdint.h>

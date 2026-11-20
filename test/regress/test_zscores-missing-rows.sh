@@ -4,6 +4,6 @@
 # taken from topic 2's line, and the search for topic 3 must stay inside
 # the table.
 . test/regress/lib.sh
-d=test/regress/zscore-search-bounds
+d=test/regress/zscores-missing-rows
 expect_output $d/out -q -n -Z $d/zscores -m num_ret -m num_rel \
     $d/qrels $d/results

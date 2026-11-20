@@ -1,7 +1,7 @@
 # te_calc_rbp rescales gains to [0,1] using a range that starts at 0.
 # With p = 0.9, rbp = 0.1 * sum over ranks of 0.9^(rank-1) * gain.
 . test/regress/lib.sh
-d=test/regress/rbp-uninitialised-range
+d=test/regress/rbp-gain-range
 
 # One relevant document at rank 1, default gains 0 and 1: 0.1 * 1.
 expect_output $d/out.one -m rbp $d/qrels.one $d/results.one

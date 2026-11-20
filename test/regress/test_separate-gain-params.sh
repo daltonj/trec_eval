@@ -6,7 +6,7 @@
 # 4.2619 and ndcg 1, because the run is then in ideal order. Gain 5 for
 # grade 2 gives ideal_dcg 5 + 1/log2(3) = 5.6309.
 . test/regress/lib.sh
-d=test/regress/shared-gain-params
+d=test/regress/separate-gain-params
 R=test/regress/results
 
 expect_status 0 -m dcg.1=3 -m ideal_dcg $d/qrels $R
