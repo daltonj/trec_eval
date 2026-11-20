@@ -74,12 +74,6 @@ impl std::fmt::Display for FieldCount {
     }
 }
 
-/// The error for a file that yielded no records after `line_count` lines.
-fn no_records(line_count: usize) -> IOError {
-    let error = if line_count == 0 { ParseError::EmptyFile } else { ParseError::NoDataLines };
-    IOError::FormatError(error)
-}
-
 #[derive(Debug)]
 pub enum IOError {
     FileReadError(io::Error),
@@ -390,11 +384,12 @@ fn split_fields(line: &str) -> Vec<&str> {
 
 const UTF8_BOM: &[u8] = b"\xEF\xBB\xBF";
 
-/// Reads lines as `BufRead::lines` does, and checks each line's bytes with `decode_line`. A UTF-8
-/// byte-order mark at the start of the file is removed; elsewhere it is part of the line.
-fn read_lines(mut reader: impl BufRead) -> impl Iterator<Item = Result<String, IOError>> {
+/// Reads lines as `BufRead::lines` does, numbered from 1, and checks each line's bytes with
+/// `decode_line`. A UTF-8 byte-order mark at the start of the file is removed; elsewhere it is part
+/// of the line. A file with no lines is an `EmptyFile` error.
+fn read_lines(mut reader: impl BufRead) -> impl Iterator<Item = Result<(usize, String), IOError>> {
     let mut line_num = 0;
-    std::iter::from_fn(move || {
+    let mut lines = std::iter::from_fn(move || {
         let mut bytes = Vec::new();
         match reader.read_until(b'\n', &mut bytes) {
             Ok(0) => None,
@@ -406,11 +401,14 @@ fn read_lines(mut reader: impl BufRead) -> impl Iterator<Item = Result<String, I
                 } else {
                     0
                 };
-                Some(decode_line(bytes, line_num, byte_offset))
+                Some(decode_line(bytes, line_num, byte_offset).map(|line| (line_num, line)))
             }
             Err(e) => Some(Err(IOError::FileReadError(e))),
         }
     })
+    .peekable();
+    let empty = lines.peek().is_none().then_some(Err(IOError::FormatError(ParseError::EmptyFile)));
+    empty.into_iter().chain(lines)
 }
 
 /// Removes the line ending (LF, CRLF, or a CR that ends the file) and refuses bytes that would make
@@ -446,12 +444,10 @@ pub fn parse_trec_qrels<P: AsRef<Path>>(path: P) -> Result<QrelsData, IOError> {
     let reader = BufReader::new(file);
     let mut raw_records = Vec::new();
     let mut comments = Vec::new();
-    let mut line_num = 0;
     let mut warnings = Vec::new();
 
-    for line_res in read_lines(reader) {
-        line_num += 1;
-        let line = line_res?;
+    for line in read_lines(reader) {
+        let (line_num, line) = line?;
         let trimmed = line.trim_matches(is_field_sep);
 
         if trimmed.is_empty() {
@@ -490,7 +486,7 @@ pub fn parse_trec_qrels<P: AsRef<Path>>(path: P) -> Result<QrelsData, IOError> {
     }
 
     if raw_records.is_empty() {
-        return Err(no_records(line_num));
+        return Err(IOError::FormatError(ParseError::NoDataLines));
     }
 
     // Sort by qid first, then docno lexicographically ascending
@@ -549,12 +545,10 @@ pub fn parse_trec_qrels_jg<P: AsRef<Path>>(path: P) -> Result<QrelsJGData, IOErr
     let reader = BufReader::new(file);
     let mut raw_records = Vec::new();
     let mut comments = Vec::new();
-    let mut line_num = 0;
     let mut warnings = Vec::new();
 
-    for line_res in read_lines(reader) {
-        line_num += 1;
-        let line = line_res?;
+    for line in read_lines(reader) {
+        let (line_num, line) = line?;
         let trimmed = line.trim_matches(is_field_sep);
 
         if trimmed.is_empty() {
@@ -600,7 +594,7 @@ pub fn parse_trec_qrels_jg<P: AsRef<Path>>(path: P) -> Result<QrelsJGData, IOErr
     }
 
     if raw_records.is_empty() {
-        return Err(no_records(line_num));
+        return Err(IOError::FormatError(ParseError::NoDataLines));
     }
 
     // Sort by qid first, then jg, then docno lexicographically ascending
@@ -672,12 +666,10 @@ pub fn parse_trec_run<P: AsRef<Path>>(path: P) -> Result<RunData, IOError> {
     let mut raw_records = Vec::new();
     let mut comments = Vec::new();
     let mut warnings = Vec::new();
-    let mut line_num = 0;
     let mut last_run_id = String::new();
 
-    for line_res in read_lines(reader) {
-        line_num += 1;
-        let line = line_res?;
+    for line in read_lines(reader) {
+        let (line_num, line) = line?;
         let trimmed = line.trim_matches(is_field_sep);
 
         if trimmed.is_empty() {
@@ -716,7 +708,7 @@ pub fn parse_trec_run<P: AsRef<Path>>(path: P) -> Result<RunData, IOError> {
     }
 
     if raw_records.is_empty() {
-        return Err(no_records(line_num));
+        return Err(IOError::FormatError(ParseError::NoDataLines));
     }
 
     // Sort raw records by qid first, then docno lexicographically ascending
