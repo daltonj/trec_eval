@@ -500,7 +500,7 @@ fn parse_trec_qrels_from(reader: impl BufRead) -> Result<QrelsData, IOError> {
         }
     });
 
-    // A repeated document stays: `evaluate_run` refuses it where trec_eval would.
+    // Preserve duplicates: evaluation rejects them only in scored topics when a measure reads the ranking.
 
     // Group into QrelsQuery records in a linear pass
     let mut queries = Vec::new();
@@ -727,7 +727,8 @@ fn parse_trec_run_from(reader: impl BufRead) -> Result<RunData, IOError> {
         }
     });
 
-    // A repeated document stays: `evaluate_run` and `evaluate_run_jg` refuse it where trec_eval would.
+    // Evaluation checks duplicates only in scored topics when a measure reads the ranking,
+    // after truncating the run.
 
     // Group into RunQuery records in a linear pass
     let mut queries = Vec::new();

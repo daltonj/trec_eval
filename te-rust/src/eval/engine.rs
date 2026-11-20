@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::eval::alignment::{align_query_jg_with_validation, align_query_with_validation};
+use crate::eval::alignment::{align_query_jg_with_duplicate_check, align_query_with_duplicate_check};
 use crate::eval::bootstrap::{bootstrap_ci_with_aggregator, bootstrap_mean_ci, BootstrapConfig, ConfidenceInterval};
 use crate::eval::EvaluationError;
 use crate::io::{QrelsData, QrelsJGData, QrelsJGQuery, QrelsQuery, RunData, RunQuery};
@@ -93,7 +93,7 @@ pub fn evaluate_run(
         let qrels_q = qrels_by_qid.get(qid).unwrap();
         let run_q = run_by_qid.get(qid).copied();
 
-        let q_state = align_query_with_validation(
+        let q_state = align_query_with_duplicate_check(
             run_q,
             qrels_q,
             &run.run_id,
@@ -242,7 +242,7 @@ pub fn evaluate_run_jg(
         let qrels_q = qrels_by_qid.get(qid).unwrap();
         let run_q = run_by_qid.get(qid).copied();
 
-        let q_states = align_query_jg_with_validation(
+        let q_states = align_query_jg_with_duplicate_check(
             run_q,
             qrels_q,
             &run.run_id,
