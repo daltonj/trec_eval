@@ -860,9 +860,16 @@ mod complete_set {
         assert_eq!(summary(&out, "map"), "0.0000");
         // The floor of 1e-5 rounds to 0.0000 at four decimals.
         assert_eq!(summary(&out, "gm_map"), "0.0000");
+        let run = write("topic-1.run", "1 Q0 d1 1 1 r\n");
+        let out = eval(&options, &fixture("topics.qrels"), &run);
+        assert_eq!(summary(&out, "num_q"), "2");
+        assert_eq!(summary(&out, "map"), "0.2500");
+        assert_eq!(summary(&out, "gm_map"), "0.0022");
         let options = ["-R", "qrels_jg", "-c", "-m", "map_avgjg"];
         let out = eval(&options, &fixture("topics.qrels"), &topic_3_run());
         assert_eq!(summary(&out, "map_avgjg"), "0.0000");
+        let out = eval(&options, &fixture("topics.qrels"), &run);
+        assert_eq!(summary(&out, "map_avgjg"), "0.2500");
     }
 
     #[test]
