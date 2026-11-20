@@ -78,7 +78,13 @@ pub(crate) fn parse_finite_float(tok: &str) -> Result<f64, MeasureParseError> {
     let value = tok
         .parse::<f64>()
         .map_err(|_| MeasureParseError::new(format!("invalid float value '{}'", tok)))?;
-    finite_float(value)
+    if !value.is_finite() {
+        return Err(MeasureParseError::new(format!(
+            "float value '{}' is not a finite number",
+            tok
+        )));
+    }
+    Ok(value)
 }
 
 pub(crate) fn finite_float(value: f64) -> Result<f64, MeasureParseError> {
@@ -278,8 +284,11 @@ pub(crate) fn checked_rank_cutoffs(mut cutoffs: Vec<usize>) -> Result<Vec<usize>
     if cutoffs.iter().any(|&cutoff| i64::try_from(cutoff).is_err()) {
         return Err(MeasureParseError::new("integer cutoff is out of range"));
     }
-    if cutoffs.windows(2).any(|pair| pair[0] == pair[1]) {
-        return Err(MeasureParseError::new("duplicate cutoffs"));
+    if let Some(pair) = cutoffs.windows(2).find(|pair| pair[0] == pair[1]) {
+        return Err(MeasureParseError::new(format!(
+            "cutoff {} is given more than once",
+            pair[0]
+        )));
     }
     Ok(cutoffs)
 }
@@ -292,8 +301,11 @@ pub(crate) fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, Meas
         finite_float(value)?;
     }
     list.sort_by(f64::total_cmp);
-    if list.windows(2).any(|pair| pair[0] == pair[1]) {
-        return Err(MeasureParseError::new("duplicate cutoffs"));
+    if let Some(pair) = list.windows(2).find(|pair| pair[0] == pair[1]) {
+        return Err(MeasureParseError::new(format!(
+            "cutoff {} is given more than once",
+            pair[0]
+        )));
     }
     // Each row is named with the cutoff to two decimals (`Rprec_mult_1.00`). Rounding is
     // monotone, so in the sorted list two cutoffs that print the same name are neighbours.
@@ -468,6 +480,8 @@ mod parser_tests {
         for bad in ["nan", "NaN", "inf", "-inf", "infinity", "1e400", "0.5,nan"] {
             assert!(parse_float_cutoffs(bad, &[]).is_err(), "{bad}");
         }
+        let err = parse_float_cutoffs("0.5, 1e400", &[]).unwrap_err();
+        assert_eq!(err.message, "float value '1e400' is not a finite number");
         assert_eq!(parse_float_cutoffs("1e300,-0.5", &[]).unwrap(), vec![1e300, -0.5]);
     }
 

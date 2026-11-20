@@ -116,13 +116,13 @@ fn zero_rank_cutoff_is_refused() {
 #[test]
 fn repeated_rank_cutoff_is_refused() {
     let error = PrecisionCutMeasure::new(vec![5, 2, 5]).err().unwrap();
-    assert_eq!(error.message, "duplicate cutoffs");
+    assert_eq!(error.message, "cutoff 5 is given more than once");
 }
 
 #[test]
 fn repeated_float_cutoff_is_refused() {
     let error = RprecMultMeasure::new(vec![1.0, 0.5, 1.0]).err().unwrap();
-    assert_eq!(error.message, "duplicate cutoffs");
+    assert_eq!(error.message, "cutoff 1 is given more than once");
 }
 
 #[test]
