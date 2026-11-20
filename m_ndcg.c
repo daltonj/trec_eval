@@ -15,9 +15,6 @@ double log2(double x);
 static int
 te_calc_ndcg(const EPI * epi, const REL_INFO * rel_info,
              const RESULTS * results, const TREC_MEAS * tm, TREC_EVAL * eval);
-/* One parameter list per measure: te_init_meas_s_double_p_pair stores
-   each measure's -m parameters in its list, and
-   te_print_final_meas_s_double_p frees them. */
 static PARAMS default_dcg_gains = { NULL, 0, NULL };
 static PARAMS default_ideal_dcg_gains = { NULL, 0, NULL };
 static PARAMS default_ndcg_gains = { NULL, 0, NULL };
