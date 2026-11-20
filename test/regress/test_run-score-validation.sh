@@ -4,17 +4,15 @@
 . test/regress/lib.sh
 D=test/regress/run-score-validation
 
-for r in nan abc; do
-    expect_status 2 -q -m relstring $D/qrels $D/run.$r
-    "$TREC_EVAL" -q -m relstring $D/qrels $D/run.$r 2>&1 >/dev/null |
-        grep -q "value \`$r' .*(line 2 of results file '$D/run.$r')" ||
-        fail "trec_eval $D/run.$r: no message naming the line"
-done
+m="-q -m relstring $D/qrels"
 
-expect_output $D/out.trail -q -m relstring $D/qrels $D/run.trail
-"$TREC_EVAL" -q -m relstring $D/qrels $D/run.trail 2>&1 >/dev/null |
-    grep -q "value \`1.5x' partially read as \`1.5' (line 2 of results file" ||
-    fail "trec_eval $D/run.trail: no warning"
+expect_message 2 "value \`nan' is not a number (line 2 of results file '$D/run.nan')." \
+    $m $D/run.nan
+expect_message 2 "value \`abc' could not be parsed (line 2 of results file '$D/run.abc')." \
+    $m $D/run.abc
 
-expect_output $D/out.inf -q -m relstring $D/qrels $D/run.inf
-exit 0
+expect_output $D/out.trail $m $D/run.trail
+expect_message 0 "value \`1.5x' partially read as \`1.5' (line 2 of results file" \
+    $m $D/run.trail
+
+expect_output $D/out.inf $m $D/run.inf

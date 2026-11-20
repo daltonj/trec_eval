@@ -5,8 +5,6 @@
 # here from the LF fixtures, so that the fixtures stay text.
 . test/regress/lib.sh
 D=test/regress/cr-line-endings
-T=$(mktemp -d) || fail "mktemp -d failed"
-trap 'rm -rf "$T"' EXIT
 
 for f in qrels prefs results zscores; do
     awk '{ printf "%s\r\n", $0 }' $D/$f > "$T/$f.crlf"
@@ -28,28 +26,20 @@ expect_output $D/out.prefs -q -R prefs -m prefs_num_prefs_poss \
     "$T/prefs.crlf" $D/results
 expect_output $D/out.zscores -q -Z "$T/zscores.crlf" -m map $D/qrels $D/results
 
-# refused LINE FILE ARGS...: exit 2 and a message naming LINE and FILE.
-refused() {
-    line=$1 file=$2
-    shift 2
-    expect_status 2 "$@"
-    "$TREC_EVAL" "$@" 2>&1 >/dev/null |
-        grep -q "CR character without LF in line $line of .* file '$file'" ||
-        fail "trec_eval $*: no message naming line $line of $file"
-}
-refused 1 "$T/results.cr" -m num_ret $D/qrels "$T/results.cr"
-refused 1 "$T/qrels.cr" -m num_rel "$T/qrels.cr" $D/results
-refused 1 "$T/qrels.cr" -R qrels_jg -m map_avgjg "$T/qrels.cr" $D/results
-refused 1 "$T/qrels.cr" -R qrels_prefs -m prefs_num_prefs_poss \
-    "$T/qrels.cr" $D/results
-refused 1 "$T/prefs.cr" -R prefs -m prefs_num_prefs_poss \
-    "$T/prefs.cr" $D/results
-refused 2 "$T/qrels.mixed" -m num_rel "$T/qrels.mixed" $D/results
-expect_status 2 -m num_ret $D/qrels - < "$T/results.cr"
-"$TREC_EVAL" -m num_ret $D/qrels - < "$T/results.cr" 2>&1 >/dev/null |
-    grep -q "CR character without LF in line 1 of results file '-'" ||
-    fail "results on stdin: no message naming the line"
-# A zscores file gets the same message.
-"$TREC_EVAL" -Z "$T/zscores.cr" -m map $D/qrels $D/results 2>&1 >/dev/null |
-    grep -q "CR character without LF in line 1 of zscores file" ||
-    fail "-Z $T/zscores.cr: no message naming the line"
+cr="CR character without LF in line"
+expect_message 2 "$cr 1 of results file '$T/results.cr'" \
+    -m num_ret $D/qrels "$T/results.cr"
+expect_message 2 "$cr 1 of results file '-'" \
+    -m num_ret $D/qrels - < "$T/results.cr"
+expect_message 2 "$cr 1 of qrels file '$T/qrels.cr'" \
+    -m num_rel "$T/qrels.cr" $D/results
+expect_message 2 "$cr 1 of qrels file '$T/qrels.cr'" \
+    -R qrels_jg -m map_avgjg "$T/qrels.cr" $D/results
+expect_message 2 "$cr 1 of qrels file '$T/qrels.cr'" \
+    -R qrels_prefs -m prefs_num_prefs_poss "$T/qrels.cr" $D/results
+expect_message 2 "$cr 1 of prefs file '$T/prefs.cr'" \
+    -R prefs -m prefs_num_prefs_poss "$T/prefs.cr" $D/results
+expect_message 2 "$cr 1 of zscores file '$T/zscores.cr'" \
+    -Z "$T/zscores.cr" -m map $D/qrels $D/results
+expect_message 2 "$cr 2 of qrels file '$T/qrels.mixed'" \
+    -m num_rel "$T/qrels.mixed" $D/results

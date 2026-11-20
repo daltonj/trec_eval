@@ -3,21 +3,18 @@
 . test/regress/lib.sh
 D=test/regress/qrels-comments
 
-# check FORMAT JUDGMENTS EXPECTED ARGS... (lib.sh uses the name "file")
+# check FORMAT NAME EXPECTED ARGS...: NAME is qrels or prefs.
 check() {
-    fmt=$1 judg=$2 exp=$3
+    fmt=$1 name=$2 exp=$3
     shift 3
     for v in end two fields; do
-        expect_output $exp -q -R $fmt "$@" $judg.$v $D/run
+        expect_output $exp -q -R $fmt "$@" $D/$name.$v $D/run
     done
-    expect_status 2 -R $fmt "$@" $judg.only $D/run
-    "$TREC_EVAL" -R $fmt "$@" $judg.only $D/run 2>&1 >/dev/null |
-        grep -q "No data lines in .* file '$judg.only'" ||
-        fail "trec_eval -R $fmt $judg.only: no message naming the file"
+    expect_message 2 "No data lines in $name file '$D/$name.only'" \
+        -R $fmt "$@" $D/$name.only $D/run
 }
 
-check qrels $D/qrels $D/out.num_rel -m num_rel
-check qrels_jg $D/qrels $D/out.map_avgjg -m map_avgjg
-check qrels_prefs $D/qrels $D/out.prefs -m prefs_num_prefs_poss
-check prefs $D/prefs $D/out.prefs -m prefs_num_prefs_poss
-exit 0
+check qrels qrels $D/out.num_rel -m num_rel
+check qrels_jg qrels $D/out.map_avgjg -m map_avgjg
+check qrels_prefs qrels $D/out.prefs -m prefs_num_prefs_poss
+check prefs prefs $D/out.prefs -m prefs_num_prefs_poss

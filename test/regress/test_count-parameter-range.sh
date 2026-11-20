@@ -28,17 +28,15 @@ same Rprec_mult_avgjg 1e300 1000000 -R qrels_jg
 
 expect_output $D/out.relstring -q -m relstring.1e300 $D/qrels $D/run
 
-tmp=$(mktemp -d "${TMPDIR:-/tmp}/count-parameter-range.XXXXXX") || exit 1
-trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 for m in Rprec_mult Rprec_mult_avgjg; do
     format=qrels
     [ "$m" = Rprec_mult_avgjg ] && format=qrels_jg
-    "$TREC_EVAL" -R "$format" -m "$m.1e300" $D/qrels $D/run > "$tmp/out" ||
+    "$TREC_EVAL" -R "$format" -m "$m.1e300" $D/qrels $D/run > "$T/out" ||
         fail "$m: cannot get row name"
-    awk '{print "1", $1, "0", "1e-19"}' "$tmp/out" > "$tmp/zscores"
-    "$TREC_EVAL" -q -R "$format" -m "$m.1e300" -Z "$tmp/zscores" \
-        $D/qrels $D/run > "$tmp/out" || fail "$m: cannot compute zscore"
-    awk '{print $2, $3}' "$tmp/out" > "$tmp/values"
-    diff "$tmp/values" $D/out.huge-zscore || fail "$m: clamped denominator"
+    awk '{print "1", $1, "0", "1e-19"}' "$T/out" > "$T/zscores"
+    "$TREC_EVAL" -q -R "$format" -m "$m.1e300" -Z "$T/zscores" \
+        $D/qrels $D/run > "$T/out" || fail "$m: cannot compute zscore"
+    awk '{print $2, $3}' "$T/out" > "$T/values"
+    diff "$T/values" $D/out.huge-zscore || fail "$m: clamped denominator"
 done
 exit 0

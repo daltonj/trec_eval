@@ -4,8 +4,6 @@
 # the fixtures, so that the fixtures stay text.
 . test/regress/lib.sh
 D=test/regress/utf8-bom
-T=$(mktemp -d) || fail "mktemp -d failed"
-trap 'rm -rf "$T"' EXIT
 
 for f in qrels prefs results zscores; do
     { printf '\357\273\277'; cat $D/$f; } > "$T/$f"

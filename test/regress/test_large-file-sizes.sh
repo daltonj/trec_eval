@@ -3,8 +3,6 @@
 # Judgments files of 2 GiB or more are impractical here, so a small
 # program checks the byte counts the macros pass to malloc and realloc.
 . test/regress/lib.sh
-T=$(mktemp -d) || fail "mktemp -d failed"
-trap 'rm -rf "$T"' EXIT
 
 make -s alloc-test TEST_ALLOC="$T/alloc" || fail "cannot build the allocation test"
 "$T/alloc" || fail "Malloc or Realloc requested a wrong size"

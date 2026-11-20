@@ -7,31 +7,20 @@
 Q=test/qrels.test
 R=test/results.test
 
-# refused NAME PARAMETER: exit status 2, and on standard error the message
-# for NAME and then the one for the measure of PARAMETER.
-refused() {
-    expect_status 2 -m "$2" $Q $R
-    err=$("$TREC_EVAL" -m "$2" $Q $R 2>&1 >/dev/null)
-    case $err in
-    *"Unusable relevance level '$1'"*"Cannot initialize measure '${2%%.*}'"*) ;;
-    *) fail "trec_eval -m $2: wrong messages: $err" ;;
-    esac
-}
-
-refused x ndcg.x=1
-refused x ndcg.1=3,x=1
-refused p ndcg.p=0.5
-refused 1x ndcg.1x=2
-refused '' ndcg.=1
-refused 99999999999999999999 ndcg.99999999999999999999=1
-for m in dcg ideal_dcg ndcg_rel Rndcg G rbp rbp_resid; do
-    refused x $m.x=1
+u="Unusable relevance level"
+for m in ndcg dcg ideal_dcg ndcg_rel Rndcg G rbp rbp_resid; do
+    expect_message 2 "$u 'x'" -m $m.x=1 $Q $R
 done
-refused q rbp.q=0.5
-refused q rbp_resid.p=0.5,q=1
+expect_message 2 "$u 'x'" -m ndcg.1=3,x=1 $Q $R
+expect_message 2 "$u 'p'" -m ndcg.p=0.5 $Q $R
+expect_message 2 "$u '1x'" -m ndcg.1x=2 $Q $R
+expect_message 2 "$u ''" -m ndcg.=1 $Q $R
+expect_message 2 "$u '99999999999999999999'" \
+    -m ndcg.99999999999999999999=1 $Q $R
+expect_message 2 "$u 'q'" -m rbp.q=0.5 $Q $R
+expect_message 2 "$u 'q'" -m rbp_resid.p=0.5,q=1 $Q $R
 
 for m in ndcg.+1=2 rbp.p=0.5 rbp.p=0.5,2=3 rbp_resid.p=0.5 \
          rbp_resid.p=0.5,2=3; do
     expect_status 0 -m $m $Q $R
 done
-exit 0

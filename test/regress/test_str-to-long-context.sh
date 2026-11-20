@@ -4,44 +4,28 @@
 . test/regress/lib.sh
 D=test/regress/str-to-long-context
 
-# expect_message TEXT ARGS...: standard error must contain TEXT.
-expect_message() {
-    text=$1
-    shift
-    "$TREC_EVAL" "$@" 2>&1 >/dev/null | grep -F -q "$text" ||
-        fail "trec_eval $*: no message containing: $text"
-}
-
 w="Warning, value \`1.5' partially read as \`1'"
-expect_message "$w (cutoff of measure 'P')." -m P.1.5 $D/qrels $D/run
-expect_status 0 -m P.1.5 $D/qrels $D/run
-expect_message "$w (line 1 of qrels file '$D/qrels.partial')." \
+expect_message 0 "$w (cutoff of measure 'P')." -m P.1.5 $D/qrels $D/run
+expect_message 0 "$w (line 1 of qrels file '$D/qrels.partial')." \
     -m num_rel $D/qrels.partial $D/run
-expect_status 0 -m num_rel $D/qrels.partial $D/run
-expect_message "$w (line 1 of qrels file '$D/qrels.partial')." \
+expect_message 0 "$w (line 1 of qrels file '$D/qrels.partial')." \
     -R qrels_jg -m map_avgjg $D/qrels.partial $D/run
-expect_status 0 -R qrels_jg -m map_avgjg $D/qrels.partial $D/run
 
 # Floating-point parameters: cutoffs, plain parameters and name=value
 # pairs.
-expect_message "Warning, value \`.25x' partially read as \`.25' (cutoff of measure 'iprec_at_recall')." \
+expect_message 0 "Warning, value \`.25x' partially read as \`.25' (cutoff of measure 'iprec_at_recall')." \
     -m iprec_at_recall..25x $D/qrels $D/run
-expect_message "Warning, value \`0.5x' partially read as \`0.5' (parameter of measure 'set_F')." \
+expect_message 0 "Warning, value \`0.5x' partially read as \`0.5' (parameter of measure 'set_F')." \
     -m set_F.0.5x $D/qrels $D/run
-expect_message "Warning, value \`2x' partially read as \`2' (parameter '1' of measure 'ndcg')." \
+expect_message 0 "Warning, value \`2x' partially read as \`2' (parameter '1' of measure 'ndcg')." \
     -m ndcg.1=2x $D/qrels $D/run
-expect_message "Warning, value \`0.5x' partially read as \`0.5' (parameter 'p' of measure 'rbp')." \
+expect_message 0 "Warning, value \`0.5x' partially read as \`0.5' (parameter 'p' of measure 'rbp')." \
     -m rbp.p=0.5x $D/qrels $D/run
-expect_status 0 -m set_F.0.5x $D/qrels $D/run
 
 # Errors carry the same context, and keep their exit statuses.
-expect_message "Error: value \`x' could not be parsed (cutoff of measure 'P')." \
+expect_message 2 "Error: value \`x' could not be parsed (cutoff of measure 'P')." \
     -m P.x $D/qrels $D/run
-expect_status 2 -m P.x $D/qrels $D/run
-expect_message "Error: value \`x' could not be parsed (parameter of measure 'set_F')." \
+expect_message 2 "Error: value \`x' could not be parsed (parameter of measure 'set_F')." \
     -m set_F.x $D/qrels $D/run
-expect_status 2 -m set_F.x $D/qrels $D/run
-expect_message "trec_eval: cutoff inf of measure 'iprec_at_recall' is not finite" \
+expect_message 2 "trec_eval: cutoff inf of measure 'iprec_at_recall' is not finite" \
     -m iprec_at_recall.inf $D/qrels $D/run
-expect_status 2 -m iprec_at_recall.inf $D/qrels $D/run
-exit 0

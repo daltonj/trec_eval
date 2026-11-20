@@ -5,14 +5,12 @@
 . test/regress/lib.sh
 d=test/regress/utility-coefficient-count
 
-# check PARAMS COUNT
-check() {
-    expect_output_status 2 $d/out.empty -q -m utility.$1 $d/qrels $d/results
-    "$TREC_EVAL" -q -m utility.$1 $d/qrels $d/results 2>&1 >/dev/null |
-        grep -q "improper number of coefficients: $2 given, 4 needed" ||
-        fail "-m utility.$1: no message naming the count"
-}
-check 1,2 2
-check 1,2,3,4,5 5
+for p in 1,2 1,2,3,4,5; do
+    expect_output_status 2 $d/out.empty -q -m utility.$p $d/qrels $d/results
+done
+expect_message 2 "improper number of coefficients: 2 given, 4 needed" \
+    -q -m utility.1,2 $d/qrels $d/results
+expect_message 2 "improper number of coefficients: 5 given, 4 needed" \
+    -q -m utility.1,2,3,4,5 $d/qrels $d/results
 
 expect_output $d/out.valid -q -m utility.2,-1,0,0 $d/qrels $d/results

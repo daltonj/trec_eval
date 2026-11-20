@@ -5,16 +5,12 @@
 # bytes, and inputs near that size give the same output as the file.
 . test/regress/lib.sh
 D=test/regress/stdin-results
-T=$(mktemp -d) || fail "mktemp -d failed"
-trap 'rm -rf "$T"' EXIT
 
 printf '1 Q0 d1 1 3 r\n1 Q0 d2\000x 2 2 r\n1 Q0 d3 3 1 r\n' > "$T/run.nul-field"
 printf '1 Q0 d1 1 3 r\n\000\n1 Q0 d3 3 1 r\n' > "$T/run.nul-line"
 for v in nul-field nul-line; do
-    expect_status 2 -m num_ret $D/qrels - < "$T/run.$v"
-    "$TREC_EVAL" -m num_ret $D/qrels - < "$T/run.$v" 2>&1 >/dev/null |
-        grep -q "NUL character in line 2 of results file '-'" ||
-        fail "trec_eval $D/qrels - < $T/run.$v: no message"
+    expect_message 2 "NUL character in line 2 of results file '-'" \
+        -m num_ret $D/qrels - < "$T/run.$v"
 done
 
 expect_output test/out.test test/qrels.test - < test/results.test
@@ -31,4 +27,3 @@ for n in 4093 4094 4095 8190; do
         fail "trec_eval $T/qrels.301 $T/run.$n failed"
     expect_output "$T/out.$n" -q "$T/qrels.301" - < "$T/run.$n"
 done
-exit 0

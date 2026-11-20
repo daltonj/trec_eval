@@ -4,10 +4,6 @@
 D=test/regress/empty-run-crash
 
 for run in $D/run.blank $D/run.comment; do
-    expect_status 2 $D/qrels $run
-    "$TREC_EVAL" $D/qrels $run 2>&1 >/dev/null |
-        grep -q "No data lines in results file '$run'" ||
-        fail "trec_eval $D/qrels $run: no message naming the file"
+    expect_message 2 "No data lines in results file '$run'" $D/qrels $run
 done
-expect_status 2 $D/qrels - </dev/null
-exit 0
+expect_message 2 "No data lines in results file '-'" $D/qrels - < /dev/null

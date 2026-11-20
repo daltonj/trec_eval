@@ -7,32 +7,28 @@
 Q=test/qrels.test
 R=test/results.test
 
-# refused TEXT PARAMETER: exit status 2, and TEXT on standard error.
-refused() {
-    expect_status 2 -m "$2" $Q $R
-    "$TREC_EVAL" -m "$2" $Q $R 2>&1 >/dev/null | grep -F -q "$1" ||
-        fail "trec_eval -m $2: no message containing: $1"
-}
-
-refused "recall level -1 of measure 'iprec_at_recall' is not in [0, 1]" \
-    iprec_at_recall.-1,.5
-refused "recall level 1.5 of measure 'iprec_at_recall' is not in [0, 1]" \
-    iprec_at_recall..5,1.5
-refused "recall level -0.5 of measure '11pt_avg' is not in [0, 1]" \
-    11pt_avg.-0.5,.5
-refused "recall level 1.5 of measure '11pt_avg' is not in [0, 1]" \
-    11pt_avg..5,1.5
-refused "multiple 0 of measure 'Rprec_mult' is not positive" \
-    Rprec_mult.0,1
-refused "multiple -1 of measure 'Rprec_mult' is not positive" \
-    Rprec_mult.-1
-refused "multiple 0 of measure 'Rprec_mult_avgjg' is not positive" \
-    Rprec_mult_avgjg.0
-refused "weight -1 of measure 'set_F' is not 0 or more" set_F.-1
-refused "persistence p=1 of measure 'rbp' is not in [0, 1)" rbp.p=1
-refused "persistence p=-0.5 of measure 'rbp' is not in [0, 1)" rbp.p=-0.5
-refused "persistence p=1.5 of measure 'rbp_resid' is not in [0, 1)" \
-    rbp_resid.p=1.5
+expect_message 2 "recall level -1 of measure 'iprec_at_recall' is not in [0, 1]" \
+    -m iprec_at_recall.-1,.5 $Q $R
+expect_message 2 "recall level 1.5 of measure 'iprec_at_recall' is not in [0, 1]" \
+    -m iprec_at_recall..5,1.5 $Q $R
+expect_message 2 "recall level -0.5 of measure '11pt_avg' is not in [0, 1]" \
+    -m 11pt_avg.-0.5,.5 $Q $R
+expect_message 2 "recall level 1.5 of measure '11pt_avg' is not in [0, 1]" \
+    -m 11pt_avg..5,1.5 $Q $R
+expect_message 2 "multiple 0 of measure 'Rprec_mult' is not positive" \
+    -m Rprec_mult.0,1 $Q $R
+expect_message 2 "multiple -1 of measure 'Rprec_mult' is not positive" \
+    -m Rprec_mult.-1 $Q $R
+expect_message 2 "multiple 0 of measure 'Rprec_mult_avgjg' is not positive" \
+    -m Rprec_mult_avgjg.0 $Q $R
+expect_message 2 "weight -1 of measure 'set_F' is not 0 or more" \
+    -m set_F.-1 $Q $R
+expect_message 2 "persistence p=1 of measure 'rbp' is not in [0, 1)" \
+    -m rbp.p=1 $Q $R
+expect_message 2 "persistence p=-0.5 of measure 'rbp' is not in [0, 1)" \
+    -m rbp.p=-0.5 $Q $R
+expect_message 2 "persistence p=1.5 of measure 'rbp_resid' is not in [0, 1)" \
+    -m rbp_resid.p=1.5 $Q $R
 
 # The bounds that are part of each range, and the defaults, still work.
 # 11pt_avg may still repeat a recall level, in any order.
@@ -42,4 +38,3 @@ for m in iprec_at_recall.0,1 iprec_at_recall 11pt_avg.1,0 11pt_avg \
          rbp_resid.p=0.99 rbp_resid; do
     expect_status 0 -m $m $Q $R
 done
-exit 0

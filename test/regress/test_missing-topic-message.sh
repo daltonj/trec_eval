@@ -4,12 +4,5 @@
 . test/regress/lib.sh
 D=test/regress/missing-topic-message
 
-expect_status 4 -m num_ret $D/qrels $D/results
-"$TREC_EVAL" -m num_ret $D/qrels $D/results 2>&1 >/dev/null |
-    diff - $D/err >/dev/null ||
-    fail "trec_eval -m num_ret $D/qrels $D/results: stderr differs from $D/err"
-
-expect_status 0 -m num_ret $D/qrels $D/results.extra
-[ -z "$("$TREC_EVAL" -m num_ret $D/qrels $D/results.extra 2>&1 >/dev/null)" ] ||
-    fail "trec_eval -m num_ret $D/qrels $D/results.extra: unexpected message"
-exit 0
+expect_stderr 4 $D/err -m num_ret $D/qrels $D/results
+expect_stderr 0 /dev/null -m num_ret $D/qrels $D/results.extra

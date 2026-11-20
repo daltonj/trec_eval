@@ -8,8 +8,6 @@ d=test/regress/cutoff-sort-overflow
 expect_output $d/out.P.portable -m P.2147483647,1 $d/qrels $d/results
 expect_output $d/out.recall.portable -m recall.2,2147483647,1 $d/qrels $d/results
 
-T=$(mktemp -d) || fail "mktemp -d failed"
-trap 'rm -rf "$T"' EXIT
 if "$TREC_EVAL" -m P.4294967297,1 $d/qrels $d/results >"$T/out" 2>"$T/err"; then
     diff $d/out.P "$T/out" || fail "wrong precision at large cutoffs"
 elif grep -F "Error: value \`4294967297' out of range" "$T/err" >/dev/null; then

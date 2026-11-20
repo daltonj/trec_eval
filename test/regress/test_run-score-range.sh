@@ -7,25 +7,20 @@
 . test/regress/lib.sh
 D=test/regress/run-score-range
 
-# warns RUN TEXT: the warnings for RUN include TEXT.
-warns() {
-    "$TREC_EVAL" -q -m relstring $D/qrels $D/$1 2>&1 >/dev/null |
-        grep -q "$2" || fail "trec_eval $D/$1: no warning '$2'"
-}
+m="-q -m relstring $D/qrels"
+w="out of range, read as"
 
-expect_output $D/out.over -q -m relstring $D/qrels $D/run.over
-warns run.over "value \`1e401' out of range, read as \`inf' (line 1 of"
-warns run.over "value \`1e400' out of range, read as \`inf' (line 2 of"
-warns run.over "value \`-1e400' out of range, read as \`-inf' (line 3 of"
+expect_output $D/out.over $m $D/run.over
+expect_message 0 "value \`1e401' $w \`inf' (line 1 of" $m $D/run.over
+expect_message 0 "value \`1e400' $w \`inf' (line 2 of" $m $D/run.over
+expect_message 0 "value \`-1e400' $w \`-inf' (line 3 of" $m $D/run.over
 
-expect_output $D/out.under -q -m relstring $D/qrels $D/run.under
-warns run.under "value \`2e-400' out of range, read as \`0' (line 1 of"
-warns run.under "value \`1e-400' out of range, read as \`0' (line 2 of"
-warns run.under "value \`-1e-400' out of range, read as \`-0' (line 3 of"
+expect_output $D/out.under $m $D/run.under
+expect_message 0 "value \`2e-400' $w \`0' (line 1 of" $m $D/run.under
+expect_message 0 "value \`1e-400' $w \`0' (line 2 of" $m $D/run.under
+expect_message 0 "value \`-1e-400' $w \`-0' (line 3 of" $m $D/run.under
 
-warns run.comment "value \`1e400' out of range, read as \`inf' (line 2 of"
+expect_message 0 "value \`1e400' $w \`inf' (line 2 of" $m $D/run.comment
 
-expect_output $D/out.subnormal -q -m relstring $D/qrels $D/run.subnormal
-"$TREC_EVAL" -q -m relstring $D/qrels $D/run.subnormal 2>&1 >/dev/null |
-    grep -q "out of range" && fail "trec_eval $D/run.subnormal: a warning"
-exit 0
+expect_output $D/out.subnormal $m $D/run.subnormal
+expect_stderr 0 /dev/null $m $D/run.subnormal

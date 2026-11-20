@@ -8,21 +8,15 @@ D=test/regress/repeated-gain-levels
 Q=test/qrels.test
 R=test/results.test
 
-# refused TEXT PARAMETER: exit status 2, and TEXT on standard error.
-refused() {
-    expect_status 2 -m "$2" $Q $R
-    "$TREC_EVAL" -m "$2" $Q $R 2>&1 >/dev/null | grep -F -q "$1" ||
-        fail "trec_eval -m $2: no message containing: $1"
-}
-
 for m in ndcg.1=2,1=5 ndcg.1=5,1=2 ndcg.1=2,01=5 ndcg.2=1,1=2,+1=3; do
-    refused "relevance level 1 of measure 'ndcg' is given more than once" $m
+    expect_message 2 "relevance level 1 of measure 'ndcg' is given more than once" \
+        -m $m $Q $R
 done
-refused "relevance level 1 of measure 'G' is given more than once" G.1=2,1=3
-refused "parameter 'p' of measure 'rbp' is given more than once" \
-    rbp.p=0.5,p=0.8
+expect_message 2 "relevance level 1 of measure 'G' is given more than once" \
+    -m G.1=2,1=3 $Q $R
+expect_message 2 "parameter 'p' of measure 'rbp' is given more than once" \
+    -m rbp.p=0.5,p=0.8 $Q $R
 
 # Distinct levels, and p beside a level, are accepted as before.
 expect_output $D/out.distinct -m ndcg.0=1,1=3 -m G.0=1,1=3 $Q $R
 expect_status 0 -m rbp.p=0.5,2=3 $Q $R
-exit 0
