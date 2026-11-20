@@ -293,7 +293,10 @@ fn canonicalize_measure_spec(arg: &str) -> (String, String) {
 
 /// `P.`, `P@` and `P_` introduce a parameter list and then give none.
 fn has_empty_param_list(arg: &str) -> bool {
-    arg.ends_with(['@', '_']) || arg.split_once('.').is_some_and(|(_, params)| params.is_empty())
+    match arg.split_once('@').or_else(|| arg.split_once('.')) {
+        Some((_, params)) => params.is_empty(),
+        None => arg.ends_with('_'),
+    }
 }
 
 /// The spec that `arg` names and its parameters, or the error for an illegal name.
@@ -644,6 +647,13 @@ mod tests {
             let measures = resolve_measures(&[request.to_string()]).unwrap().measures;
             assert_eq!(measures[0].sub_metrics(), rows, "{request}");
         }
+    }
+
+    #[test]
+    fn a_list_that_ends_in_an_underscore_is_read_in_part() {
+        let resolved = resolve_measures(&["P.5_".to_string()]).unwrap();
+        assert_eq!(resolved.measures[0].sub_metrics(), ["P_5"]);
+        assert_eq!(resolved.warnings.len(), 1, "{:?}", resolved.warnings);
     }
 
     #[test]
