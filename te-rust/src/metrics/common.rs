@@ -255,7 +255,15 @@ impl Gains {
     }
 }
 
+fn require_cutoffs<T>(cutoffs: &[T]) -> Result<(), MeasureParseError> {
+    if cutoffs.is_empty() {
+        return Err(MeasureParseError::new("at least one cutoff is required"));
+    }
+    Ok(())
+}
+
 fn checked_rank_cutoffs(mut cutoffs: Vec<usize>) -> Result<Vec<usize>, MeasureParseError> {
+    require_cutoffs(&cutoffs)?;
     cutoffs.sort_unstable();
     if cutoffs.first() == Some(&0) {
         return Err(MeasureParseError::new("rank cutoff must be at least 1"));
@@ -270,6 +278,7 @@ fn checked_rank_cutoffs(mut cutoffs: Vec<usize>) -> Result<Vec<usize>, MeasurePa
 }
 
 fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, MeasureParseError> {
+    require_cutoffs(&list)?;
     for &value in &list {
         finite_float(value)?;
     }
@@ -298,7 +307,7 @@ fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, MeasureParseErr
 ///
 /// # Panics
 ///
-/// Panics on zero, repeated cutoffs or a cutoff larger than i64::MAX.
+/// Panics on an empty list, zero, repeated cutoffs or a cutoff larger than i64::MAX.
 pub(crate) fn sorted_rank_cutoffs(cutoffs: Vec<usize>) -> Vec<usize> {
     checked_rank_cutoffs(cutoffs).expect("invalid rank cutoffs")
 }
@@ -307,13 +316,14 @@ pub(crate) fn sorted_rank_cutoffs(cutoffs: Vec<usize>) -> Vec<usize> {
 ///
 /// # Panics
 ///
-/// Panics on non-finite cutoffs or cutoffs that print the same row name.
+/// Panics on an empty list, non-finite cutoffs or cutoffs that print the same row name.
 pub(crate) fn sorted_float_cutoffs(cutoffs: Vec<f64>) -> Vec<f64> {
     checked_float_cutoffs(cutoffs).expect("invalid float cutoffs")
 }
 
 /// Refuse recall levels outside [0, 1], for `iprec_at_recall` and `11pt_avg`.
 pub(crate) fn recall_levels(levels: &[f64]) -> Result<(), MeasureParseError> {
+    require_cutoffs(levels)?;
     for &level in levels {
         finite_float(level)?;
         if !(0.0..=1.0).contains(&level) {
