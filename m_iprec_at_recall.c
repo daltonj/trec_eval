@@ -45,7 +45,8 @@ TREC_MEAS te_meas_iprec_at_recall = { "iprec_at_recall",
 };
 
 /* Recall levels must be between 0 and 1 */
-int te_check_recall_levels(const TREC_MEAS * tm)
+int
+te_check_recall_levels(const TREC_MEAS * tm)
 {
     double *levels = (double *) tm->meas_params->param_values;
     long i;

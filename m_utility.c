@@ -51,7 +51,9 @@ TREC_MEAS te_meas_utility = { "utility",
     (void *) &default_utility_params, -1
 };
 
-static int te_init_utility(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
+/* Utility takes exactly four coefficients */
+static int
+te_init_utility(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
 {
     if (UNDEF == te_init_meas_s_double_p_double(epi, tm, eval))
         return (UNDEF);
