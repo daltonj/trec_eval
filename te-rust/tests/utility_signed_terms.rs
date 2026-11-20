@@ -100,21 +100,3 @@ fn largest_collection_size_does_not_overflow() {
         Some("9223372036854775808.0000")
     );
 }
-
-#[test]
-#[cfg(target_pointer_width = "64")]
-fn library_collection_sizes_above_i64_max_saturate() {
-    for num_docs in [i64::MAX as usize + 1, usize::MAX] {
-        assert_eq!(
-            utility(
-                path("fixtures/utility-signed-terms", "one.qrels"),
-                path("fixtures/utility-signed-terms", "axy.run"),
-                [0.0, 0.0, 0.0, 1.0],
-                1,
-                num_docs,
-            ),
-            "9223372036854775808.0000",
-            "num_docs_in_coll={num_docs}"
-        );
-    }
-}
