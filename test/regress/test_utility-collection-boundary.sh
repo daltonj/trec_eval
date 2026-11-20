@@ -5,7 +5,7 @@ Q=$T/qrels
 R=$T/run
 printf '1 0 a 1\n' > "$Q"
 printf '1 Q0 a 1 1 r\n' > "$R"
-expect_output $D/out.portable -N 2147483647 -m utility.0,0,0,1 "$Q" "$R"
+expect_result 0 $D/out.portable /dev/null -N 2147483647 -m utility.0,0,0,1 "$Q" "$R"
 
 if "$TREC_EVAL" -N 9223372036854775807 -m utility.0,0,0,1 "$Q" "$R" \
         > "$T/out" 2> "$T/err"; then
