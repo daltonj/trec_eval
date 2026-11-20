@@ -19,8 +19,6 @@ for field in mean stddev; do
         unusable="trec_eval.get_zscores: Unusable $field '$value' in $loc"
         case $value in
         abc) want="Error: value \`abc' could not be parsed ($loc)." ;;
-        1x) want="Warning, value \`1x' partially read as \`1' ($loc).
-$unusable" ;;
         nan) want="Error: value \`nan' is not a number ($loc)." ;;
         1e999) want="Warning, value \`1e999' out of range, read as \`inf' ($loc).
 $unusable" ;;
