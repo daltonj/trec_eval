@@ -9,8 +9,7 @@
 //! against this table.
 
 use crate::metrics::common::{
-    parse_float_cutoffs, parse_int_cutoffs, parse_rbp_params, parse_sorted_float_cutoffs,
-    MeasureParseError,
+    parse_float_cutoffs, parse_int_cutoffs, parse_rbp_params, MeasureParseError,
 };
 use crate::metrics::{self, Measure};
 use std::collections::{HashMap, HashSet};
@@ -79,83 +78,67 @@ pub fn registry() -> &'static [MeasureSpec] {
             name: "P",
             status: Production,
             usage: "P[.<c1,c2,...>]  precision at integer rank cutoffs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::precision::PrecisionCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?))),
+            factory: |p| Ok(Box::new(metrics::precision::PrecisionCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
         },
         MeasureSpec {
             name: "recall",
             status: Production,
             usage: "recall[.<c1,c2,...>]  recall at integer rank cutoffs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::recall::RecallCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?))),
+            factory: |p| Ok(Box::new(metrics::recall::RecallCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
         },
         MeasureSpec {
             name: "ndcg_cut",
             status: Production,
             usage: "ndcg_cut[.<c1,c2,...>]  nDCG at integer rank cutoffs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::ndcg_cut::NdcgCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?))),
+            factory: |p| Ok(Box::new(metrics::ndcg_cut::NdcgCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
         },
         MeasureSpec {
             name: "map_cut",
             status: Production,
             usage: "map_cut[.<c1,c2,...>]  MAP at integer rank cutoffs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::map_cut::MapCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?))),
+            factory: |p| Ok(Box::new(metrics::map_cut::MapCutMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
         },
         MeasureSpec {
             name: "relative_P",
             status: Production,
             usage: "relative_P[.<c1,c2,...>]  relative precision at integer rank cutoffs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::relative_p::RelativePMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?))),
+            factory: |p| Ok(Box::new(metrics::relative_p::RelativePMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
         },
         MeasureSpec {
             name: "success",
             status: Production,
             usage: "success[.<c1,c2,...>]  success at integer rank cutoffs (default: 1,5,10)",
-            factory: |p| Ok(Box::new(metrics::success::SuccessCutMeasure::new(parse_int_cutoffs(p, DEFAULT_SUCCESS_CUTOFFS)?))),
+            factory: |p| Ok(Box::new(metrics::success::SuccessCutMeasure::new(parse_int_cutoffs(p, DEFAULT_SUCCESS_CUTOFFS)?)?)),
         },
         MeasureSpec {
             name: "unj",
             status: Production,
             usage: "unj[.<c1,c2,...>]  unjudged fraction at integer rank cutoffs (default: 5,10,20)",
-            factory: |p| Ok(Box::new(metrics::unj::UnjMeasure::new(parse_int_cutoffs(p, DEFAULT_UNJ_CUTOFFS)?))),
+            factory: |p| Ok(Box::new(metrics::unj::UnjMeasure::new(parse_int_cutoffs(p, DEFAULT_UNJ_CUTOFFS)?)?)),
         },
         MeasureSpec {
             name: "11pt_avg",
             status: Production,
             usage: "11pt_avg[.<r1,r2,...>]  interpolated precision at recall levels (default: 0.0,0.1,...,1.0)",
-            factory: |p| {
-                let cutoffs = parse_float_cutoffs(p, DEFAULT_RECALL_LEVELS)?;
-                metrics::common::recall_levels(&cutoffs)?;
-                Ok(Box::new(metrics::avg_11pt::Avg11PtMeasure::new(cutoffs, p)))
-            },
+            factory: |p| Ok(Box::new(metrics::avg_11pt::Avg11PtMeasure::new(parse_float_cutoffs(p, DEFAULT_RECALL_LEVELS)?, p)?)),
         },
         MeasureSpec {
             name: "iprec_at_recall",
             status: Production,
             usage: "iprec_at_recall[.<r1,r2,...>]  interpolated precision at recall levels (default: 0.0,0.1,...,1.0)",
-            factory: |p| {
-                let cutoffs = parse_sorted_float_cutoffs(p, DEFAULT_RECALL_LEVELS)?;
-                metrics::common::recall_levels(&cutoffs)?;
-                Ok(Box::new(metrics::iprec_at_recall::IprecAtRecallMeasure::new(cutoffs)))
-            },
+            factory: |p| Ok(Box::new(metrics::iprec_at_recall::IprecAtRecallMeasure::new(parse_float_cutoffs(p, DEFAULT_RECALL_LEVELS)?)?)),
         },
         MeasureSpec {
             name: "Rprec_mult",
             status: Production,
             usage: "Rprec_mult[.<m1,m2,...>]  R-precision at multiples of R (default: 0.2,0.4,...,2.0)",
-            factory: |p| {
-                let cutoffs = parse_sorted_float_cutoffs(p, DEFAULT_RPREC_MULT)?;
-                metrics::common::r_multiples(&cutoffs)?;
-                Ok(Box::new(metrics::rprec_mult::RprecMultMeasure::new(cutoffs)))
-            },
+            factory: |p| Ok(Box::new(metrics::rprec_mult::RprecMultMeasure::new(parse_float_cutoffs(p, DEFAULT_RPREC_MULT)?)?)),
         },
         MeasureSpec {
             name: "utility",
             status: Production,
             usage: "utility.<rr,rn,nr,nn>  four utility coefficients (default: 1.0,-1.0,0.0,0.0)",
-            factory: |p| {
-                let coeffs = parse_float_cutoffs(p, DEFAULT_UTILITY_COEFFS)?;
-                metrics::common::utility_coefficients(&coeffs)?;
-                Ok(Box::new(metrics::utility::UtilityMeasure::new(coeffs, p)))
-            },
+            factory: |p| Ok(Box::new(metrics::utility::UtilityMeasure::new(parse_float_cutoffs(p, DEFAULT_UTILITY_COEFFS)?, p)?)),
         },
         MeasureSpec {
             name: "set_F",
@@ -167,8 +150,7 @@ pub fn registry() -> &'static [MeasureSpec] {
                 } else {
                     metrics::common::parse_finite_float(p)?
                 };
-                metrics::common::set_f_weight(beta)?;
-                Ok(Box::new(metrics::set_f::SetFMeasure::new(beta, p)))
+                Ok(Box::new(metrics::set_f::SetFMeasure::new(beta, p)?))
             },
         },
         MeasureSpec {
@@ -205,17 +187,13 @@ pub fn registry() -> &'static [MeasureSpec] {
             name: "P_avgjg",
             status: Production,
             usage: "P_avgjg[.<c1,c2,...>]  precision at integer rank cutoffs averaged over JGs (default: 5,10,15,20,30,100,200,500,1000)",
-            factory: |p| Ok(Box::new(metrics::precision_avgjg::PrecisionAvgjgMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?))),
+            factory: |p| Ok(Box::new(metrics::precision_avgjg::PrecisionAvgjgMeasure::new(parse_int_cutoffs(p, DEFAULT_RANK_CUTOFFS)?)?)),
         },
         MeasureSpec {
             name: "Rprec_mult_avgjg",
             status: Production,
             usage: "Rprec_mult_avgjg[.<m1,m2,...>]  R-precision at multiples of R averaged over JGs (default: 0.2,0.4,...,2.0)",
-            factory: |p| {
-                let cutoffs = parse_sorted_float_cutoffs(p, DEFAULT_RPREC_MULT)?;
-                metrics::common::r_multiples(&cutoffs)?;
-                Ok(Box::new(metrics::rprec_mult_avgjg::RprecMultAvgjgMeasure::new(cutoffs)))
-            },
+            factory: |p| Ok(Box::new(metrics::rprec_mult_avgjg::RprecMultAvgjgMeasure::new(parse_float_cutoffs(p, DEFAULT_RPREC_MULT)?)?)),
         },
         MeasureSpec { name: "yaap", status: Experimental, usage: "", factory: |_| Ok(Box::new(metrics::yaap::YaapMeasure::new())) },
 

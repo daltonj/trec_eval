@@ -1,4 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
+use crate::metrics::common::{checked_float_cutoffs, recall_levels, MeasureParseError};
 
 pub struct IprecAtRecallMeasure {
     cutoff_percents: Vec<f64>,
@@ -6,12 +7,13 @@ pub struct IprecAtRecallMeasure {
 }
 
 impl IprecAtRecallMeasure {
-    /// Sorts `cutoff_percents`, and panics on a repeated cutoff.
-    pub fn new(cutoff_percents: Vec<f64>) -> Self {
-        let cutoff_percents = crate::metrics::common::sorted_float_cutoffs(cutoff_percents);
-        crate::metrics::common::recall_levels(&cutoff_percents).expect("invalid recall_levels");
+    /// Sorts `cutoff_percents`, and refuses an empty list, a recall level outside [0, 1], and
+    /// levels that repeat or print the same row name.
+    pub fn new(cutoff_percents: Vec<f64>) -> Result<Self, MeasureParseError> {
+        let cutoff_percents = checked_float_cutoffs(cutoff_percents)?;
+        recall_levels(&cutoff_percents)?;
         let sub_metrics = cutoff_percents.iter().map(|p| format!("iprec_at_recall_{:.2}", p)).collect();
-        Self { cutoff_percents, sub_metrics }
+        Ok(Self { cutoff_percents, sub_metrics })
     }
 }
 
@@ -109,6 +111,7 @@ impl Measure for IprecAtRecallMeasure {
 impl Default for IprecAtRecallMeasure {
     fn default() -> Self {
         Self::new(vec![0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+            .expect("default recall levels are valid")
     }
 }
 
@@ -119,7 +122,7 @@ mod tests {
 
     #[test]
     fn test_iprec_at_recall_standard() {
-        let measure = IprecAtRecallMeasure::new(vec![0.0, 0.5, 1.0]);
+        let measure = IprecAtRecallMeasure::new(vec![0.0, 0.5, 1.0]).unwrap();
         let config = EvalConfig::default();
         // retrieved: [1, 0, 1], num_rel = 2, num_ret = 3, num_rel_ret = 2.
         // percents: [0.0, 0.5, 1.0]

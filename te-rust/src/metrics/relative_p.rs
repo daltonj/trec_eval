@@ -1,4 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
+use crate::metrics::common::{checked_rank_cutoffs, MeasureParseError};
 use std::cmp::min;
 
 pub struct RelativePMeasure {
@@ -7,11 +8,12 @@ pub struct RelativePMeasure {
 }
 
 impl RelativePMeasure {
-    /// Sorts `cutoffs`, and panics on a cutoff of 0 or a repeated cutoff.
-    pub fn new(cutoffs: Vec<usize>) -> Self {
-        let cutoffs = crate::metrics::common::sorted_rank_cutoffs(cutoffs);
+    /// Sorts `cutoffs`, and refuses an empty list, a repeated cutoff, and a cutoff of 0 or
+    /// above `i64::MAX`.
+    pub fn new(cutoffs: Vec<usize>) -> Result<Self, MeasureParseError> {
+        let cutoffs = checked_rank_cutoffs(cutoffs)?;
         let sub_metrics = cutoffs.iter().map(|c| format!("relative_P_{}", c)).collect();
-        Self { cutoffs, sub_metrics }
+        Ok(Self { cutoffs, sub_metrics })
     }
 }
 
@@ -97,7 +99,7 @@ impl Measure for RelativePMeasure {
 
 impl Default for RelativePMeasure {
     fn default() -> Self {
-        Self::new(vec![5, 10, 15, 20, 30, 100, 200, 500, 1000])
+        Self::new(vec![5, 10, 15, 20, 30, 100, 200, 500, 1000]).expect("default cutoffs are valid")
     }
 }
 
@@ -108,7 +110,7 @@ mod tests {
 
     #[test]
     fn test_relative_p_standard() {
-        let measure = RelativePMeasure::new(vec![1, 2, 3]);
+        let measure = RelativePMeasure::new(vec![1, 2, 3]).unwrap();
         let config = EvalConfig::default();
         // retrieved: [1, 0, 1], num_rel = 2
         // Rank 1: rel=1 -> rel_so_far=1. At i=1, relative_P@1 = rel_so_far / min(1, 2) = 1 / 1 = 1.0.

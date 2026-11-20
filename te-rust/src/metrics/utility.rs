@@ -1,4 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
+use crate::metrics::common::{utility_coefficients, MeasureParseError};
 
 pub struct UtilityMeasure {
     params: Vec<f64>,
@@ -6,15 +7,15 @@ pub struct UtilityMeasure {
 }
 
 impl UtilityMeasure {
-    pub fn new(params: Vec<f64>, params_str: &str) -> Self {
-        crate::metrics::common::utility_coefficients(&params)
-            .expect("invalid utility coefficients");
+    /// Refuses anything other than four finite coefficients.
+    pub fn new(params: Vec<f64>, params_str: &str) -> Result<Self, MeasureParseError> {
+        utility_coefficients(&params)?;
         let name = if params_str.is_empty() {
             "utility".to_string()
         } else {
             format!("utility_{}", params_str)
         };
-        Self { params, sub_metrics: vec![name] }
+        Ok(Self { params, sub_metrics: vec![name] })
     }
 }
 
@@ -83,7 +84,7 @@ impl Measure for UtilityMeasure {
 
 impl Default for UtilityMeasure {
     fn default() -> Self {
-        Self::new(vec![1.0, -1.0, 0.0, 0.0], "")
+        Self::new(vec![1.0, -1.0, 0.0, 0.0], "").expect("default coefficients are valid")
     }
 }
 
@@ -119,7 +120,7 @@ mod tests {
     fn utility_counts_each_cell_once() {
         // retrieved [1, 0, 0], num_rel = 2, 10 documents in the collection:
         // a = 1, b = 2, c = 1 and d = 10 - 3 - 1 = 6.
-        let measure = UtilityMeasure::new(vec![1000.0, 100.0, 10.0, 1.0], "1000,100,10,1");
+        let measure = UtilityMeasure::new(vec![1000.0, 100.0, 10.0, 1.0], "1000,100,10,1").unwrap();
         let config = EvalConfig { num_docs_in_coll: 10, ..EvalConfig::default() };
         let state = make_mock_state(vec![1, 0, 0], 2);
         let actual = measure.calc(&config, &EvalState::Standard(state));

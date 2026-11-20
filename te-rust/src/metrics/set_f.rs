@@ -1,4 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
+use crate::metrics::common::{set_f_weight, MeasureParseError};
 
 pub struct SetFMeasure {
     beta: f64,
@@ -6,14 +7,15 @@ pub struct SetFMeasure {
 }
 
 impl SetFMeasure {
-    pub fn new(beta: f64, params_str: &str) -> Self {
-        crate::metrics::common::set_f_weight(beta).expect("invalid set_F weight");
+    /// Refuses a weight that is negative or not finite.
+    pub fn new(beta: f64, params_str: &str) -> Result<Self, MeasureParseError> {
+        set_f_weight(beta)?;
         let name = if params_str.is_empty() {
             "set_F".to_string()
         } else {
             format!("set_F_{}", params_str)
         };
-        Self { beta, sub_metrics: vec![name] }
+        Ok(Self { beta, sub_metrics: vec![name] })
     }
 }
 
@@ -71,7 +73,7 @@ impl Measure for SetFMeasure {
 
 impl Default for SetFMeasure {
     fn default() -> Self {
-        Self::new(1.0, "")
+        Self::new(1.0, "").expect("the default weight is valid")
     }
 }
 
@@ -82,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_set_f_standard() {
-        let measure = SetFMeasure::new(1.0, "");
+        let measure = SetFMeasure::new(1.0, "").unwrap();
         let config = EvalConfig::default();
         // retrieved: 3, relevant: 2, relevant retrieved: 2.
         // P = 2 / 3, R = 2 / 2 = 1.0.
@@ -94,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_set_f_custom_beta() {
-        let measure = SetFMeasure::new(0.5, "0.5");
+        let measure = SetFMeasure::new(0.5, "0.5").unwrap();
         let config = EvalConfig::default();
         // P = 2 / 3, R = 1.0.
         // beta = 0.5.

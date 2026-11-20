@@ -1,3 +1,4 @@
+use crate::metrics::common::{checked_float_cutoffs, r_multiples, MeasureParseError};
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
 
 pub struct RprecMultAvgjgMeasure {
@@ -6,18 +7,19 @@ pub struct RprecMultAvgjgMeasure {
 }
 
 impl RprecMultAvgjgMeasure {
-    /// Sorts `cutoff_percents`, and panics on a repeated cutoff.
-    pub fn new(cutoff_percents: Vec<f64>) -> Self {
-        let cutoff_percents = crate::metrics::common::sorted_float_cutoffs(cutoff_percents);
-        crate::metrics::common::r_multiples(&cutoff_percents).expect("invalid r_multiples");
+    /// Sorts `cutoff_percents`, and refuses an empty list, a multiple of R that is not positive
+    /// and finite, and multiples that repeat or print the same row name.
+    pub fn new(cutoff_percents: Vec<f64>) -> Result<Self, MeasureParseError> {
+        let cutoff_percents = checked_float_cutoffs(cutoff_percents)?;
+        r_multiples(&cutoff_percents)?;
         let sub_metrics = cutoff_percents
             .iter()
             .map(|p| format!("Rprec_mult_avgjg_{:.2}", p))
             .collect();
-        Self {
+        Ok(Self {
             cutoff_percents,
             sub_metrics,
-        }
+        })
     }
 }
 
@@ -125,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_rprec_mult_avgjg_standard() {
-        let measure = RprecMultAvgjgMeasure::new(vec![0.5, 1.0]);
+        let measure = RprecMultAvgjgMeasure::new(vec![0.5, 1.0]).unwrap();
         let config = EvalConfig::default();
 
         let state1 = QueryEvalState {

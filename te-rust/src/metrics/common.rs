@@ -28,8 +28,7 @@ impl fmt::Display for MeasureParseError {
 
 impl std::error::Error for MeasureParseError {}
 
-/// Parse a comma-separated list of integer cutoffs (e.g. "5,10,20") into
-/// ascending order, which the single-pass measures rely on. A cutoff must fit
+/// Parse a comma-separated list of integer cutoffs (e.g. "5,10,20"). A cutoff must fit
 /// in an `i64`, as trec_eval's `long` cutoffs must.
 /// An empty string yields the provided defaults.
 pub fn parse_int_cutoffs(params: &str, default: &[usize]) -> Result<Vec<usize>, MeasureParseError> {
@@ -55,7 +54,7 @@ pub fn parse_int_cutoffs(params: &str, default: &[usize]) -> Result<Vec<usize>, 
         }
         list.push(usize::try_from(v).map_err(|_| invalid())?);
     }
-    checked_rank_cutoffs(list)
+    Ok(list)
 }
 
 /// Parse a comma-separated list of float cutoffs/coefficients (e.g. "0.0,0.5,1.0").
@@ -101,13 +100,6 @@ pub(crate) fn utility_coefficients(coeffs: &[f64]) -> Result<(), MeasureParseErr
         finite_float(value)?;
     }
     Ok(())
-}
-
-/// Parse a comma-separated list of float cutoffs into ascending order, for
-/// measures that walk the list in step with the ranking. Lists whose order
-/// carries meaning (`utility`) or that may repeat a value (`11pt_avg`) use [`parse_float_cutoffs`].
-pub fn parse_sorted_float_cutoffs(params: &str, default: &[f64]) -> Result<Vec<f64>, MeasureParseError> {
-    checked_float_cutoffs(parse_float_cutoffs(params, default)?)
 }
 
 /// Parse a comma-separated list of `key=value` pairs (e.g. "p=0.9").
@@ -289,7 +281,9 @@ fn require_cutoffs<T>(cutoffs: &[T]) -> Result<(), MeasureParseError> {
     Ok(())
 }
 
-fn checked_rank_cutoffs(mut cutoffs: Vec<usize>) -> Result<Vec<usize>, MeasureParseError> {
+/// Sorts rank cutoffs, which the single-pass measures rely on, and refuses an empty list, a
+/// repeated cutoff, and a cutoff of 0 or above `i64::MAX`.
+pub(crate) fn checked_rank_cutoffs(mut cutoffs: Vec<usize>) -> Result<Vec<usize>, MeasureParseError> {
     require_cutoffs(&cutoffs)?;
     cutoffs.sort_unstable();
     if cutoffs.first() == Some(&0) {
@@ -304,7 +298,9 @@ fn checked_rank_cutoffs(mut cutoffs: Vec<usize>) -> Result<Vec<usize>, MeasurePa
     Ok(cutoffs)
 }
 
-fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, MeasureParseError> {
+/// Sorts float cutoffs, for measures that walk them in step with the ranking, and refuses an
+/// empty list, a value that is not finite, and values that repeat or print the same row name.
+pub(crate) fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, MeasureParseError> {
     require_cutoffs(&list)?;
     for &value in &list {
         finite_float(value)?;
@@ -330,29 +326,10 @@ fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, MeasureParseErr
     Ok(list)
 }
 
-/// Sorts rank cutoffs and applies the same checks as the registry parser.
-///
-/// # Panics
-///
-/// Panics on an empty list, zero, repeated cutoffs or a cutoff larger than i64::MAX.
-pub(crate) fn sorted_rank_cutoffs(cutoffs: Vec<usize>) -> Vec<usize> {
-    checked_rank_cutoffs(cutoffs).expect("invalid rank cutoffs")
-}
-
-/// Sorts float cutoffs and applies the same checks as the registry parser.
-///
-/// # Panics
-///
-/// Panics on an empty list, non-finite cutoffs or cutoffs that print the same row name.
-pub(crate) fn sorted_float_cutoffs(cutoffs: Vec<f64>) -> Vec<f64> {
-    checked_float_cutoffs(cutoffs).expect("invalid float cutoffs")
-}
-
 /// Refuse recall levels outside [0, 1], for `iprec_at_recall` and `11pt_avg`.
 pub(crate) fn recall_levels(levels: &[f64]) -> Result<(), MeasureParseError> {
     require_cutoffs(levels)?;
     for &level in levels {
-        finite_float(level)?;
         if !(0.0..=1.0).contains(&level) {
             return Err(MeasureParseError::new(format!(
                 "recall level {} is outside [0, 1]",
@@ -478,13 +455,13 @@ mod parser_tests {
     }
 
     #[test]
-    fn sorted_float_cutoffs_refuse_names_that_collide() {
-        for bad in ["0.999,1.001", "0.101,0.104", "0.005,0.01", "1.0,0.996"] {
-            let err = parse_sorted_float_cutoffs(bad, &[]).unwrap_err();
-            assert!(err.message.contains("both print as"), "{bad}: {}", err.message);
+    fn checked_float_cutoffs_refuse_names_that_collide() {
+        for bad in [[0.999, 1.001], [0.101, 0.104], [0.005, 0.01], [1.0, 0.996]] {
+            let err = checked_float_cutoffs(bad.to_vec()).unwrap_err();
+            assert!(err.message.contains("both print as"), "{bad:?}: {}", err.message);
         }
         // 0.105 is stored just below 0.105 and prints as 0.10, 0.106 as 0.11.
-        let distinct = parse_sorted_float_cutoffs("0.106,0.105", &[]).unwrap();
+        let distinct = checked_float_cutoffs(vec![0.106, 0.105]).unwrap();
         assert_eq!(distinct, vec![0.105, 0.106]);
     }
 

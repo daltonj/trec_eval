@@ -1,4 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
+use crate::metrics::common::{checked_rank_cutoffs, MeasureParseError};
 
 pub struct UnjMeasure {
     cutoffs: Vec<usize>,
@@ -6,11 +7,12 @@ pub struct UnjMeasure {
 }
 
 impl UnjMeasure {
-    /// Sorts `cutoffs`, and panics on a cutoff of 0 or a repeated cutoff.
-    pub fn new(cutoffs: Vec<usize>) -> Self {
-        let cutoffs = crate::metrics::common::sorted_rank_cutoffs(cutoffs);
+    /// Sorts `cutoffs`, and refuses an empty list, a repeated cutoff, and a cutoff of 0 or
+    /// above `i64::MAX`.
+    pub fn new(cutoffs: Vec<usize>) -> Result<Self, MeasureParseError> {
+        let cutoffs = checked_rank_cutoffs(cutoffs)?;
         let sub_metrics = cutoffs.iter().map(|c| format!("unj_{}", c)).collect();
-        Self { cutoffs, sub_metrics }
+        Ok(Self { cutoffs, sub_metrics })
     }
 }
 
@@ -78,7 +80,7 @@ impl Measure for UnjMeasure {
 
 impl Default for UnjMeasure {
     fn default() -> Self {
-        Self::new(vec![5, 10, 20])
+        Self::new(vec![5, 10, 20]).expect("default cutoffs are valid")
     }
 }
 
@@ -89,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_unj_standard() {
-        let measure = UnjMeasure::new(vec![2, 5]);
+        let measure = UnjMeasure::new(vec![2, 5]).unwrap();
         let config = EvalConfig::default();
         // retrieved: [-1, 1, -2, 0, 0]. First is unjudged (NONPOOL), third is unjudged (UNJUDGED).
         // unj_2: unj_so_far at i=2 is 1 (NONPOOL at index 0). result = 1 / 2 = 0.5.

@@ -16,7 +16,8 @@ fn path(dir: &str, name: &str) -> PathBuf {
 fn utility(qrels: PathBuf, run: PathBuf, coeffs: [f64; 4], level: i64, num_docs: usize) -> String {
     let qrels = parse_trec_qrels(qrels).unwrap();
     let run = parse_trec_run(run).unwrap();
-    let measures: Vec<Box<dyn Measure>> = vec![Box::new(UtilityMeasure::new(coeffs.to_vec(), ""))];
+    let measures: Vec<Box<dyn Measure>> =
+        vec![Box::new(UtilityMeasure::new(coeffs.to_vec(), "").unwrap())];
     let config = EvalConfig {
         relevance_level: level,
         num_docs_in_coll: num_docs,

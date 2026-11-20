@@ -6,9 +6,9 @@ use te_rust::metrics::{
 
 #[test]
 fn constructors_refuse_empty_cutoff_vectors() {
-    assert!(std::panic::catch_unwind(|| Avg11PtMeasure::new(vec![], "")).is_err());
-    assert!(std::panic::catch_unwind(|| PrecisionCutMeasure::new(vec![])).is_err());
-    assert!(std::panic::catch_unwind(|| IprecAtRecallMeasure::new(vec![])).is_err());
-    assert!(std::panic::catch_unwind(|| RprecMultMeasure::new(vec![])).is_err());
-    assert!(std::panic::catch_unwind(|| RprecMultAvgjgMeasure::new(vec![])).is_err());
+    assert!(Avg11PtMeasure::new(vec![], "").is_err());
+    assert!(PrecisionCutMeasure::new(vec![]).is_err());
+    assert!(IprecAtRecallMeasure::new(vec![]).is_err());
+    assert!(RprecMultMeasure::new(vec![]).is_err());
+    assert!(RprecMultAvgjgMeasure::new(vec![]).is_err());
 }

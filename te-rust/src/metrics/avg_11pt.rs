@@ -1,4 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
+use crate::metrics::common::{recall_levels, MeasureParseError};
 
 pub struct Avg11PtMeasure {
     cutoffs: Vec<f64>,
@@ -7,16 +8,17 @@ pub struct Avg11PtMeasure {
 
 impl Avg11PtMeasure {
     /// `calc` walks the recall levels from the highest down, so they are sorted here.
-    /// A level may repeat, and then counts once for each time it is given.
-    pub fn new(mut cutoffs: Vec<f64>, params_str: &str) -> Self {
+    /// A level may repeat, and then counts once for each time it is given. Refuses an empty
+    /// list and a level outside [0, 1].
+    pub fn new(mut cutoffs: Vec<f64>, params_str: &str) -> Result<Self, MeasureParseError> {
         cutoffs.sort_by(f64::total_cmp);
+        recall_levels(&cutoffs)?;
         let name = if params_str.is_empty() {
             "11pt_avg".to_string()
         } else {
             format!("11pt_avg_{}", params_str)
         };
-        crate::metrics::common::recall_levels(&cutoffs).expect("invalid recall levels");
-        Self { cutoffs, sub_metrics: vec![name] }
+        Ok(Self { cutoffs, sub_metrics: vec![name] })
     }
 }
 
@@ -114,6 +116,7 @@ impl Measure for Avg11PtMeasure {
 impl Default for Avg11PtMeasure {
     fn default() -> Self {
         Self::new(vec![0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], "")
+            .expect("default recall levels are valid")
     }
 }
 

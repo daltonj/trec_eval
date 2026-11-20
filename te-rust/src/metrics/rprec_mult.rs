@@ -1,4 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
+use crate::metrics::common::{checked_float_cutoffs, r_multiples, MeasureParseError};
 
 pub struct RprecMultMeasure {
     cutoff_percents: Vec<f64>,
@@ -6,12 +7,13 @@ pub struct RprecMultMeasure {
 }
 
 impl RprecMultMeasure {
-    /// Sorts `cutoff_percents`, and panics on a repeated cutoff.
-    pub fn new(cutoff_percents: Vec<f64>) -> Self {
-        let cutoff_percents = crate::metrics::common::sorted_float_cutoffs(cutoff_percents);
-        crate::metrics::common::r_multiples(&cutoff_percents).expect("invalid r_multiples");
+    /// Sorts `cutoff_percents`, and refuses an empty list, a multiple of R that is not positive
+    /// and finite, and multiples that repeat or print the same row name.
+    pub fn new(cutoff_percents: Vec<f64>) -> Result<Self, MeasureParseError> {
+        let cutoff_percents = checked_float_cutoffs(cutoff_percents)?;
+        r_multiples(&cutoff_percents)?;
         let sub_metrics = cutoff_percents.iter().map(|p| format!("Rprec_mult_{:.2}", p)).collect();
-        Self { cutoff_percents, sub_metrics }
+        Ok(Self { cutoff_percents, sub_metrics })
     }
 }
 
@@ -99,6 +101,7 @@ impl Measure for RprecMultMeasure {
 impl Default for RprecMultMeasure {
     fn default() -> Self {
         Self::new(vec![0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0])
+            .expect("default multiples are valid")
     }
 }
 
@@ -109,7 +112,7 @@ mod tests {
 
     #[test]
     fn test_rprec_mult_standard() {
-        let measure = RprecMultMeasure::new(vec![0.5, 1.0, 1.5]);
+        let measure = RprecMultMeasure::new(vec![0.5, 1.0, 1.5]).unwrap();
         let config = EvalConfig::default();
         // retrieved: [1, 0, 1], num_rel = 2. num_ret = 3, num_rel_ret = 2.
         // percents: [0.5, 1.0, 1.5]

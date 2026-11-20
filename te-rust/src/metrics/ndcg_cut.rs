@@ -1,5 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{Gains, GainsConfig};
+use crate::metrics::common::{checked_rank_cutoffs, Gains, GainsConfig, MeasureParseError};
 
 pub struct NdcgCutMeasure {
     cutoffs: Vec<usize>,
@@ -8,15 +8,16 @@ pub struct NdcgCutMeasure {
 }
 
 impl NdcgCutMeasure {
-    /// Sorts `cutoffs`, and panics on a cutoff of 0 or a repeated cutoff.
-    pub fn new(cutoffs: Vec<usize>) -> Self {
-        let cutoffs = crate::metrics::common::sorted_rank_cutoffs(cutoffs);
+    /// Sorts `cutoffs`, and refuses an empty list, a repeated cutoff, and a cutoff of 0 or
+    /// above `i64::MAX`.
+    pub fn new(cutoffs: Vec<usize>) -> Result<Self, MeasureParseError> {
+        let cutoffs = checked_rank_cutoffs(cutoffs)?;
         let sub_metrics = cutoffs.iter().map(|c| format!("ndcg_cut_{}", c)).collect();
-        Self {
+        Ok(Self {
             cutoffs,
             gains_config: GainsConfig::default(),
             sub_metrics,
-        }
+        })
     }
 }
 
@@ -141,7 +142,7 @@ impl Measure for NdcgCutMeasure {
 
 impl Default for NdcgCutMeasure {
     fn default() -> Self {
-        Self::new(vec![5, 10, 15, 20, 30, 100, 200, 500, 1000])
+        Self::new(vec![5, 10, 15, 20, 30, 100, 200, 500, 1000]).expect("default cutoffs are valid")
     }
 }
 
@@ -152,7 +153,7 @@ mod tests {
 
     #[test]
     fn test_ndcg_cut_standard() {
-        let measure = NdcgCutMeasure::new(vec![1, 3]);
+        let measure = NdcgCutMeasure::new(vec![1, 3]).unwrap();
         let config = EvalConfig::default();
         // retrieved: [1, 0, 1], num_rel = 2.
         // dcg@1 = 1.0. dcg@3 = 1.0 + 0.0 + 1.0 / log2(4) = 1.5.
@@ -171,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_ndcg_cut_global_gains() {
-        let measure = NdcgCutMeasure::new(vec![1, 3]);
+        let measure = NdcgCutMeasure::new(vec![1, 3]).unwrap();
         let mut config = EvalConfig::default();
         config.global_gains = Some(GainsConfig::parse("1=5.0,2=10.0").unwrap());
         

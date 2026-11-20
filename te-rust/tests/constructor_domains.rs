@@ -18,12 +18,9 @@ fn rbp_constructors_require_finite_persistence_in_the_unit_interval() {
 #[test]
 fn set_f_constructor_requires_a_finite_nonnegative_weight() {
     for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.1] {
-        assert!(
-            std::panic::catch_unwind(|| SetFMeasure::new(bad, "")).is_err(),
-            "set_F {bad}"
-        );
+        assert!(SetFMeasure::new(bad, "").is_err(), "set_F {bad}");
     }
     for good in [0.0, 1.0, 1e300] {
-        SetFMeasure::new(good, "");
+        SetFMeasure::new(good, "").unwrap();
     }
 }

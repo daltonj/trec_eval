@@ -1,4 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
+use crate::metrics::common::{checked_rank_cutoffs, MeasureParseError};
 
 pub struct PrecisionAvgjgMeasure {
     cutoffs: Vec<usize>,
@@ -6,11 +7,12 @@ pub struct PrecisionAvgjgMeasure {
 }
 
 impl PrecisionAvgjgMeasure {
-    /// Sorts `cutoffs`, and panics on a cutoff of 0 or a repeated cutoff.
-    pub fn new(cutoffs: Vec<usize>) -> Self {
-        let cutoffs = crate::metrics::common::sorted_rank_cutoffs(cutoffs);
+    /// Sorts `cutoffs`, and refuses an empty list, a repeated cutoff, and a cutoff of 0 or
+    /// above `i64::MAX`.
+    pub fn new(cutoffs: Vec<usize>) -> Result<Self, MeasureParseError> {
+        let cutoffs = checked_rank_cutoffs(cutoffs)?;
         let sub_metrics = cutoffs.iter().map(|c| format!("P_avgjg_{}", c)).collect();
-        Self { cutoffs, sub_metrics }
+        Ok(Self { cutoffs, sub_metrics })
     }
 }
 
@@ -82,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_precision_avgjg_standard() {
-        let measure = PrecisionAvgjgMeasure::new(vec![5, 10]);
+        let measure = PrecisionAvgjgMeasure::new(vec![5, 10]).unwrap();
         let config = EvalConfig::default();
 
         let state1 = QueryEvalState {
