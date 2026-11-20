@@ -155,8 +155,7 @@ int main(int argc, char * argv[])
     ALL_ZSCORES all_zscores;
 
     /* Bogus results for a missing topic */
-    TEXT_RESULTS bogus_result = { "ceci_nest_pas_un_docno", 1.0 };
-    TEXT_RESULTS_INFO bogus_info = { 0, 1, &bogus_result };
+    TEXT_RESULTS_INFO bogus_info = { 0, 0, NULL };
     RESULTS bogus_ranking = { NULL, NULL, "trec_results", &bogus_info };
     RESULTS *this_result;
     RESULTS **topic_results;
