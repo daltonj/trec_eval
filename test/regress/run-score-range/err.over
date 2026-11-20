@@ -1,0 +1,3 @@
+Warning, value `1e401' out of range, read as `inf' (line 1 of results file 'test/regress/run-score-range/run.over').
+Warning, value `1e400' out of range, read as `inf' (line 2 of results file 'test/regress/run-score-range/run.over').
+Warning, value `-1e400' out of range, read as `-inf' (line 3 of results file 'test/regress/run-score-range/run.over').

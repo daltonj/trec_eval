@@ -4,10 +4,9 @@
 . test/regress/lib.sh
 d=test/regress/zscores-exit-status
 
-for z in $d/zscores.malformed $d/no-such-file; do
-    expect_output_status 2 /dev/null -q -Z $z -m map $d/qrels $d/results
-    expect_message 2 "trec_eval: Quit in file '$z'" \
-        -q -Z $z -m map $d/qrels $d/results
+for z in malformed missing; do
+    expect_result 2 /dev/null $d/err.$z -q -Z $d/zscores.$z -m map \
+        $d/qrels $d/results
 done
 
 expect_output $d/out.valid -q -Z $d/zscores -m map $d/qrels $d/results

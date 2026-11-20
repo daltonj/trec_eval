@@ -28,8 +28,7 @@ $unusable" ;;
         esac
         printf "%s\ntrec_eval: Quit in file '%s'\n" "$want" "$T/zscores" \
             > "$T/want"
-        expect_output_status 2 /dev/null -Z "$T/zscores" -m map "$Q" "$R"
-        expect_stderr 2 "$T/want" -Z "$T/zscores" -m map "$Q" "$R"
+        expect_result 2 /dev/null "$T/want" -Z "$T/zscores" -m map "$Q" "$R"
     done
 done
 

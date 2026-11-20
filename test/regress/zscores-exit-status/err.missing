@@ -1,0 +1,2 @@
+trec_eval.get_zscores: Cannot read zscores file 'test/regress/zscores-exit-status/zscores.missing'
+trec_eval: Quit in file 'test/regress/zscores-exit-status/zscores.missing'

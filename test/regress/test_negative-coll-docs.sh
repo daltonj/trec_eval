@@ -8,11 +8,10 @@ R=test/regress/results
 m=utility.1,-1,0,1
 
 # A negative -N is refused like an unparsable one: exit 1, no output.
+echo "trec_eval: Invalid number of documents in collection '-1'" > "$T/err"
 for n in "-N -1" -N-1; do
-    expect_output_status 1 /dev/null $n -q -m $m $Q $R
+    expect_result 1 /dev/null "$T/err" $n -q -m $m $Q $R
 done
-expect_message 1 "trec_eval: Invalid number of documents in collection '-1'" \
-    -N -1 -q -m $m $Q $R
 
 # -N 10 gives 8 for each topic.
 expect_output $d/out.N10 -N 10 -q -m $m $Q $R

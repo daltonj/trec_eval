@@ -11,8 +11,8 @@ expect_message 2 "value \`nan' is not a number (line 2 of results file '$D/run.n
 expect_message 2 "value \`abc' could not be parsed (line 2 of results file '$D/run.abc')." \
     $m $D/run.abc
 
-expect_output $D/out.trail $m $D/run.trail
-expect_message 0 "value \`1.5x' partially read as \`1.5' (line 2 of results file" \
-    $m $D/run.trail
+echo "Warning, value \`1.5x' partially read as \`1.5' (line 2 of results file '$D/run.trail')." \
+    > "$T/err"
+expect_result 0 $D/out.trail "$T/err" $m $D/run.trail
 
 expect_output $D/out.inf $m $D/run.inf
