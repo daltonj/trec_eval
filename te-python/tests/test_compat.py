@@ -42,6 +42,10 @@ def test_pytrec_eval_drop_in_relevance_evaluator():
         ({"ndcg_cut_5", "ndcg_cut_10"}, {"ndcg_cut_5": 1.0, "ndcg_cut_10": 1.0}),
         (["P.5", "P.10"], {"P_5": 0.2, "P_10": 0.1}),
         (["P.5", "P_10"], {"P_5": 0.2, "P_10": 0.1}),
+        (
+            ["P.5,10", "P_10,20"],
+            {"P_5": 0.2, "P_10": 0.1, "P_20": 0.05},
+        ),
         (["Rprec_mult.0.5", "Rprec_mult_2"], {"Rprec_mult_0.50": 1.0, "Rprec_mult_2.00": 0.5}),
         (["Rprec_mult.1.", "Rprec_mult.2."], {"Rprec_mult_1.00": 1.0, "Rprec_mult_2.00": 0.5}),
         (["iprec_at_recall.0.5", "iprec_at_recall_1.0"], {"iprec_at_recall_0.50": 1.0, "iprec_at_recall_1.00": 1.0}),
@@ -63,6 +67,17 @@ def test_pytrec_eval_retains_requested_cutoffs(measures, expected):
 def test_pytrec_eval_passes_other_parameters_unchanged(measures, expected):
     evaluator = pytrec_eval.RelevanceEvaluator({"1": {"a": 1}}, measures)
     assert evaluator.evaluate({"1": {"a": 1.0}}) == {"1": expected}
+
+
+def test_pytrec_eval_passes_repeated_coefficient_lists_unchanged():
+    with pytest.warns(UserWarning, match="parameters ignored"):
+        evaluator = pytrec_eval.RelevanceEvaluator(
+            {"1": {"a": 1}},
+            ["utility.1,0,0,0", "utility.0,1,0,0"],
+        )
+    assert evaluator.evaluate({"1": {"a": 1.0}}) == {
+        "1": {"utility_1,0,0,0": 1.0}
+    }
 
 
 def test_pytrec_eval_parse_helpers():
