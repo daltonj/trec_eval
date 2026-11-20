@@ -59,8 +59,9 @@ long str_to_long_ctx(const char * str, int * error, const char * fmt, ...) {
 
 /*
  * Convert a string to a double, with the error checking of
- * str_to_long_ctx. NaN is an error. A value out of range is kept as
- * strtod reads it, an infinity or zero, with a warning. Characters
+ * str_to_long_ctx. NaN is an error. Overflow to infinity and underflow
+ * to zero produce warnings; finite subnormal results are accepted
+ * without a range warning. Characters
  * after the number give a warning when endptr is NULL; otherwise the end
  * of the number is stored in endptr, as by strtod, for the caller to check.
  */
