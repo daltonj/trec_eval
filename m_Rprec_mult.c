@@ -80,7 +80,9 @@ te_calc_Rprec_mult(const EPI * epi, const REL_INFO * rel_info,
         return (UNDEF);
 
     /* translate percentage of rels as given in the measure params, to
-       an actual cutoff number of docs. */
+       an actual cutoff number of docs. A cutoff stays a double, so that
+       one beyond num_ret can still be a denominator; it is cast to long
+       only after the check against num_ret. */
     if (NULL == (cutoffs = Malloc(tm->meas_params->num_params, double)))
          return (UNDEF);
     for (i = 0; i < tm->meas_params->num_params; i++)
