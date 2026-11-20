@@ -194,16 +194,13 @@ fn handle_help_flags(help_measures: bool, help_measure: Option<&str>) {
     }
 }
 
-// Rust ignores SIGPIPE by default, which turns `te-rust ... | head` into a panic.
+// Rust ignores SIGPIPE. Restoring the default lets a closed pipe, as in
+// `te-rust ... | head`, end te-rust as it ends trec_eval.
 #[cfg(unix)]
 fn restore_default_sigpipe() {
-    extern "C" {
-        fn signal(signum: i32, handler: usize) -> usize;
-    }
-    const SIGPIPE: i32 = 13;
-    const SIG_DFL: usize = 0;
+    // SAFETY: no other thread exists yet, and SIG_DFL is a valid disposition.
     unsafe {
-        signal(SIGPIPE, SIG_DFL);
+        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
     }
 }
 

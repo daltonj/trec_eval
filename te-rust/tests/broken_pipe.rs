@@ -32,5 +32,5 @@ fn closed_stdout_ends_with_sigpipe_and_no_panic() {
         .unwrap();
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(!stderr.contains("panicked"), "{stderr}");
-    assert_eq!(output.status.signal(), Some(13), "{:?}", output.status);
+    assert_eq!(output.status.signal(), Some(libc::SIGPIPE), "{:?}", output.status);
 }
