@@ -33,6 +33,13 @@ pub struct EvaluationOutput {
 }
 
 /// Evaluates a run against relevance judgments using the supplied active measures and configuration.
+///
+/// # Errors
+///
+/// Returns the first error that [`align_query`](crate::eval::align_query) gives for a scored
+/// topic: a qrels topic that the run has, or any qrels topic when
+/// `config.average_complete_flag` is set. Repeated documents are refused only when a measure
+/// reads the ranking ([`Measure::reads_ranking`]).
 pub fn evaluate_run(
     qrels: &QrelsData,
     run: &RunData,
@@ -81,7 +88,7 @@ pub fn evaluate_run(
 
     let mut query_results = Vec::with_capacity(if config.query_flag { eval_qids.len() } else { 0 });
 
-    let reads_ranking = measures.iter().any(|m| m.reads_ranking());
+    let check_duplicates = measures.iter().any(|m| m.reads_ranking());
     for qid in &eval_qids {
         let qrels_q = qrels_by_qid.get(qid).unwrap();
         let run_q = run_by_qid.get(qid).copied();
@@ -93,7 +100,7 @@ pub fn evaluate_run(
             config.relevance_level,
             config.max_num_docs_per_topic,
             config.judged_docs_only_flag,
-            reads_ranking,
+            check_duplicates,
         )?;
 
         let eval_state = EvalState::Standard(q_state);
@@ -177,6 +184,10 @@ pub fn evaluate_run(
 }
 
 /// Evaluates a run against judgment group relevance judgments using the supplied active measures.
+///
+/// # Errors
+///
+/// As [`evaluate_run`], with the errors of [`align_query_jg`](crate::eval::align_query_jg).
 pub fn evaluate_run_jg(
     qrels: &QrelsJGData,
     run: &RunData,
@@ -226,7 +237,7 @@ pub fn evaluate_run_jg(
     let mut query_results =
         Vec::with_capacity(if config.query_flag { eval_qids.len() } else { 0 });
 
-    let reads_ranking = measures.iter().any(|m| m.reads_ranking());
+    let check_duplicates = measures.iter().any(|m| m.reads_ranking());
     for qid in &eval_qids {
         let qrels_q = qrels_by_qid.get(qid).unwrap();
         let run_q = run_by_qid.get(qid).copied();
@@ -238,7 +249,7 @@ pub fn evaluate_run_jg(
             config.relevance_level,
             config.max_num_docs_per_topic,
             config.judged_docs_only_flag,
-            reads_ranking,
+            check_duplicates,
         )?;
 
         let eval_state = EvalState::JudgmentGroups(q_states);

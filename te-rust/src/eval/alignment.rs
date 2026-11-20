@@ -66,6 +66,12 @@ pub fn check_rel_level(qid: &str, docno: &str, rel: i64) -> Result<(), Evaluatio
 }
 
 /// Aligns standard run results with qrels judgments for a single query.
+///
+/// # Errors
+///
+/// Returns an [`EvaluationError`] when a run score is NaN, when a document repeats within the
+/// first `max_docs_per_topic` documents of the ranking or within the judgments, or when a
+/// relevance level is outside [`REL_LEVELS`].
 pub fn align_query(
     run_query: Option<&RunQuery>,
     qrels_query: &QrelsQuery,
@@ -92,13 +98,13 @@ pub(crate) fn align_query_with_validation(
     relevance_level_cutoff: i64,
     max_docs_per_topic: usize,
     judged_docs_only_flag: bool,
-    reads_ranking: bool,
+    check_duplicates: bool,
 ) -> Result<QueryEvalState, EvaluationError> {
     let doc_infos = rank_documents(
         run_query,
         &qrels_query.qid,
         max_docs_per_topic,
-        reads_ranking,
+        check_duplicates,
     )?;
     align_ranked_query(
         &doc_infos,
@@ -106,7 +112,7 @@ pub(crate) fn align_query_with_validation(
         run_id,
         relevance_level_cutoff,
         judged_docs_only_flag,
-        reads_ranking,
+        check_duplicates,
     )
 }
 
@@ -114,7 +120,7 @@ fn rank_documents<'a>(
     run_query: Option<&'a RunQuery>,
     qid: &str,
     max_docs_per_topic: usize,
-    reads_ranking: bool,
+    check_duplicates: bool,
 ) -> Result<Vec<&'a RunRecord>, EvaluationError> {
     let mut doc_infos: Vec<_> = run_query.into_iter().flat_map(|q| &q.records).collect();
     if let Some(doc) = doc_infos.iter().find(|doc| doc.sim.is_nan()) {
@@ -142,7 +148,7 @@ fn rank_documents<'a>(
         doc_infos.truncate(max_docs_per_topic);
     }
 
-    if reads_ranking {
+    if check_duplicates {
         let mut seen = HashSet::with_capacity(doc_infos.len());
         for doc in &doc_infos {
             if !seen.insert(&doc.docno) {
@@ -164,13 +170,13 @@ fn align_ranked_query(
     run_id: &str,
     relevance_level_cutoff: i64,
     judged_docs_only_flag: bool,
-    reads_ranking: bool,
+    check_duplicates: bool,
 ) -> Result<QueryEvalState, EvaluationError> {
     let qid = qrels_query.qid.clone();
 
     let mut qrels_map = HashMap::with_capacity(qrels_query.records.len());
     for record in &qrels_query.records {
-        if qrels_map.insert(&record.docno, record.rel).is_some() && reads_ranking {
+        if qrels_map.insert(&record.docno, record.rel).is_some() && check_duplicates {
             return Err(EvaluationError::DuplicateDocument {
                 source: DuplicateSource::Qrels,
                 qid,
@@ -257,6 +263,11 @@ fn align_ranked_query(
 }
 
 /// Aligns standard run results with judgment group relevance judgments for a single query.
+///
+/// # Errors
+///
+/// As [`align_query`], where a document repeats within the judgments when it repeats within
+/// one group.
 pub fn align_query_jg(
     run_query: Option<&RunQuery>,
     qrels_jg_query: &QrelsJGQuery,
@@ -283,13 +294,13 @@ pub(crate) fn align_query_jg_with_validation(
     relevance_level_cutoff: i64,
     max_docs_per_topic: usize,
     judged_docs_only_flag: bool,
-    reads_ranking: bool,
+    check_duplicates: bool,
 ) -> Result<Vec<QueryEvalState>, EvaluationError> {
     let doc_infos = rank_documents(
         run_query,
         &qrels_jg_query.qid,
         max_docs_per_topic,
-        reads_ranking,
+        check_duplicates,
     )?;
     qrels_jg_query
         .groups
@@ -305,7 +316,7 @@ pub(crate) fn align_query_jg_with_validation(
                 run_id,
                 relevance_level_cutoff,
                 judged_docs_only_flag,
-                reads_ranking,
+                check_duplicates,
             )
         })
         .collect()
