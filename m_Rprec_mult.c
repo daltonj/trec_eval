@@ -84,15 +84,13 @@ te_calc_Rprec_mult(const EPI * epi, const REL_INFO * rel_info,
        an actual cutoff number of docs. */
     if (NULL == (cutoffs = Malloc(tm->meas_params->num_params, double)))
          return (UNDEF);
-    for (i = 0; i < tm->meas_params->num_params; i++) {
+    for (i = 0; i < tm->meas_params->num_params; i++)
         cutoffs[i] = floor(cutoff_percents[i] * rr.num_rel + 0.9);
-    }
     precis = (double) rr.num_rel_ret / (double) rr.num_ret;
     int_precis = precis;
 
     current_cut = tm->meas_params->num_params - 1;
-    while (current_cut >= 0 && (cutoffs[current_cut] >= (double) LONG_MAX ||
-                               cutoffs[current_cut] > rr.num_ret)) {
+    while (current_cut >= 0 && cutoffs[current_cut] > rr.num_ret) {
         eval->values[tm->eval_index + current_cut].value =
             (double) rr.num_rel_ret / cutoffs[current_cut];
         current_cut--;

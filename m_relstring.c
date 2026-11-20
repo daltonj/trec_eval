@@ -58,7 +58,7 @@ te_calc_relstring(const EPI * epi, const REL_INFO * rel_info,
     if (UNDEF == te_form_res_rels(epi, rel_info, results, &res_rels))
         return (UNDEF);
 
-    /* Clamp the length to 0..num_ret before converting it; NaN gives 0 */
+    /* Clamp the length to 0..num_ret before converting it */
     if (params[0] >= (double) res_rels.num_ret)
         len = res_rels.num_ret;
     else if (params[0] > 0.0)
