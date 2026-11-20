@@ -10,7 +10,7 @@ import trec_eval.compat.pytrec_eval as pytrec_eval
 import collections
 import io
 from typing import Any, Dict, Iterable, Set, Union
-from trec_eval._trec_eval import Evaluator, __version__
+from trec_eval._trec_eval import Evaluator, NoSharedTopicError, __version__
 
 
 # Known measures supported by pytrec_eval
@@ -109,11 +109,9 @@ class RelevanceEvaluator:
         """Evaluate run and return nested dict matching pytrec_eval output format."""
         try:
             eval_result = self._evaluator.evaluate(run)
-        except ValueError as error:
-            # Ingest and validate every representation before applying this exemption.
-            if str(error).startswith("no topic has both results and judgments;"):
-                return {}
-            raise
+        except NoSharedTopicError:
+            # pytrec_eval returns {} for a run that shares no topic with the qrels.
+            return {}
         return eval_result.to_dict()
 
 

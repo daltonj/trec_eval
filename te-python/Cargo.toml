@@ -16,5 +16,5 @@ te-rust = { path = "../te-rust" }
 default = []
 extension-module = ["pyo3/extension-module"]
 
-
-
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("gil-refs"))'] }

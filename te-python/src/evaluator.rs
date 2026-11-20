@@ -204,11 +204,18 @@ fn evaluation_error(error: EvaluationError) -> PyErr {
     PyValueError::new_err(format!("{}: {}", kind, error))
 }
 
+pyo3::create_exception!(
+    trec_eval._trec_eval,
+    NoSharedTopicError,
+    PyValueError,
+    "Raised by `evaluate` and `evaluate_arrays` for a run that shares no topic with the qrels."
+);
+
 /// As the CLI does, refuse a run that shares no topic with the qrels, unless
 /// `complete_set_average` scores the qrels topics.
 fn require_shared_topic(output: &EvaluationOutput, config: &EvalConfig) -> PyResult<()> {
     if !config.average_complete_flag && output.num_queries_evaluated == 0 {
-        return Err(PyValueError::new_err(
+        return Err(NoSharedTopicError::new_err(
             "no topic has both results and judgments; complete_set_average=True evaluates each qrels topic missing from the run as an empty ranking",
         ));
     }
