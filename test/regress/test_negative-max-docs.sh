@@ -4,7 +4,7 @@
 d=test/regress/negative-max-docs
 
 # A negative -M is refused like an unparsable one: exit 1, no output.
-expect_output_status 1 $d/out.empty -M -1 -m num_ret -q $d/qrels $d/results
+expect_output_status 1 /dev/null -M -1 -m num_ret -q $d/qrels $d/results
 expect_message 1 "trec_eval: Invalid maximum number of documents per topic '-1'" \
     -M -1 -m num_ret -q $d/qrels $d/results
 

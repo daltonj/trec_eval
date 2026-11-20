@@ -5,7 +5,7 @@
 d=test/regress/zscores-exit-status
 
 for z in $d/zscores.malformed $d/no-such-file; do
-    expect_output_status 2 $d/out.empty -q -Z $z -m map $d/qrels $d/results
+    expect_output_status 2 /dev/null -q -Z $z -m map $d/qrels $d/results
     expect_message 2 "trec_eval: Quit in file '$z'" \
         -q -Z $z -m map $d/qrels $d/results
 done

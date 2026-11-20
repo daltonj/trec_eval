@@ -6,7 +6,7 @@
 d=test/regress/utility-coefficient-count
 
 for p in 1,2 1,2,3,4,5; do
-    expect_output_status 2 $d/out.empty -q -m utility.$p $d/qrels $d/results
+    expect_output_status 2 /dev/null -q -m utility.$p $d/qrels $d/results
 done
 expect_message 2 "improper number of coefficients: 2 given, 4 needed" \
     -q -m utility.1,2 $d/qrels $d/results

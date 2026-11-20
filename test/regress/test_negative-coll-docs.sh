@@ -7,7 +7,7 @@ m=utility.1,-1,0,1
 
 # A negative -N is refused like an unparsable one: exit 1, no output.
 for n in "-N -1" -N-1; do
-    expect_output_status 1 $d/out.empty $n -q -m $m $d/qrels $d/results
+    expect_output_status 1 /dev/null $n -q -m $m $d/qrels $d/results
 done
 expect_message 1 "trec_eval: Invalid number of documents in collection '-1'" \
     -N -1 -q -m $m $d/qrels $d/results

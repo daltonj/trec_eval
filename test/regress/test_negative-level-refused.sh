@@ -7,7 +7,7 @@ d=test/regress/negative-level-refused
 m="-q -m num_rel -m map -m yaap $d/qrels $d/results"
 
 for l in "-l -1" -l-2 --level_for_rel=-1; do
-    expect_output_status 1 $d/out.empty $l $m
+    expect_output_status 1 /dev/null $l $m
 done
 expect_message 1 "trec_eval: Unusable relevance level '-1'" -l -1 $m
 
