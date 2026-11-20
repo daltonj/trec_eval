@@ -1,5 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{parse_rbp_params, Gains, GainsConfig, MeasureParseError};
+use crate::metrics::common::{parse_rbp_params, topic_gains, GainsConfig, MeasureParseError};
 
 pub struct RbpMeasure {
     p: f64,
@@ -62,15 +62,7 @@ impl Measure for RbpMeasure {
             None => return self.initial_values(),
         };
 
-        let gains_config = if !self.gains_config.custom_gains.is_empty() {
-            &self.gains_config
-        } else if let Some(ref gg) = config.global_gains {
-            gg
-        } else {
-            &self.gains_config
-        };
-
-        let mut gains = Gains::setup(gains_config, &q_state.rel_levels);
+        let mut gains = topic_gains(&self.gains_config, config, q_state);
 
         // Find min and max gains to normalize if needed
         let mut min_gain = 0.0;

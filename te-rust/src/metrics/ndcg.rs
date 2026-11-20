@@ -1,6 +1,6 @@
 use crate::eval::QueryEvalState;
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{Gains, GainsConfig, MeasureParseError};
+use crate::metrics::common::{topic_gains, Gains, GainsConfig, MeasureParseError};
 
 pub struct NdcgMeasure {
     gains_config: GainsConfig,
@@ -19,23 +19,6 @@ impl NdcgMeasure {
             sub_metrics: vec![name],
         })
     }
-}
-
-/// The gains of a topic's levels. A measure's own gain map comes first, then
-/// `--global-gains`, then the default gains.
-pub(crate) fn topic_gains(
-    own_gains: &GainsConfig,
-    config: &EvalConfig,
-    q_state: &QueryEvalState,
-) -> Gains {
-    let gains_config = if !own_gains.custom_gains.is_empty() {
-        own_gains
-    } else if let Some(ref gg) = config.global_gains {
-        gg
-    } else {
-        own_gains
-    };
-    Gains::setup(gains_config, &q_state.rel_levels)
 }
 
 /// Document i, counting from 0, has rank i + 1 and discount log2(i + 2).

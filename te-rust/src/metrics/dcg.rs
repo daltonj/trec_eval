@@ -1,9 +1,9 @@
 //! `dcg` and `ideal_dcg`, the numerator and the denominator of `ndcg`, which
 //! `m_ndcg.c` registers beside it.
 
-use crate::metrics::common::{GainsConfig, MeasureParseError};
+use crate::metrics::common::{topic_gains, GainsConfig, MeasureParseError};
 use crate::metrics::invariants::{self, Invariant};
-use crate::metrics::ndcg::{ideal_dcg, ranking_dcg, topic_gains};
+use crate::metrics::ndcg::{ideal_dcg, ranking_dcg};
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
 
 /// Which of the two sums of `ndcg` a measure reports.
