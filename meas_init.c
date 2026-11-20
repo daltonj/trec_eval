@@ -410,7 +410,7 @@ static int get_double_params(PARAMS * params, char *param_string,
 {
     long num_params;
     char *ptr, *start_ptr;
-    double *values = NULL;
+    double *values;
     int error = 0;
 
     /* Count number of parameters in param_string (comma separated) */
@@ -424,7 +424,7 @@ static int get_double_params(PARAMS * params, char *param_string,
     if (NULL == (params->printable_params =
                  Malloc(strlen(param_string) + 1, char)) ||
         NULL == (values = Malloc(num_params, double)))
-         goto fail;
+         return (UNDEF);
 
     (void) strncpy(params->printable_params,
                    param_string, strlen(param_string) + 1);
@@ -440,7 +440,7 @@ static int get_double_params(PARAMS * params, char *param_string,
             if (error) {
                 fprintf(stderr, "trec_eval: Illegal parameter '%s'\n",
                         start_ptr);
-                goto fail;
+                return (UNDEF);
             }
             start_ptr = ptr + 1;
         }
@@ -450,17 +450,11 @@ static int get_double_params(PARAMS * params, char *param_string,
     if (error) {
         fprintf(stderr, "trec_eval: Illegal parameter '%s'\n",
                 start_ptr);
-        goto fail;
+        return (UNDEF);
     }
     params->param_values = values;
     params->num_params = num_params;
     return (1);
-
-  fail:
-    Free(values);
-    Free(params->printable_params);
-    params->printable_params = NULL;
-    return (UNDEF);
 }
 
 /* Params are in comma separated form name=double. Eg, -m ndcg.1=4.0,2=8.0 */
@@ -469,7 +463,7 @@ static int get_param_pairs(PARAMS * params, char *param_string)
     long num_params;
     char last_seen;
     char *ptr, *start_ptr;
-    DOUBLE_PARAM_PAIR *values = NULL;
+    DOUBLE_PARAM_PAIR *values;
     int error = 0;
 
     /* Count number of parameters in param_string (comma separated), all
@@ -500,7 +494,7 @@ static int get_param_pairs(PARAMS * params, char *param_string)
     if (NULL == (params->printable_params =
                  Malloc(strlen(param_string) + 1, char)) ||
         NULL == (values = Malloc(num_params, DOUBLE_PARAM_PAIR)))
-        goto fail;
+        return (UNDEF);
 
     (void) strncpy(params->printable_params,
                    param_string, strlen(param_string) + 1);
@@ -522,7 +516,7 @@ static int get_param_pairs(PARAMS * params, char *param_string)
             if (error) {
                 fprintf(stderr, "trec_eval: Illegal parameter value '%s'\n",
                         start_ptr);
-                goto fail;
+                return (UNDEF);
             }
             start_ptr = ptr + 1;
         }
@@ -534,19 +528,13 @@ static int get_param_pairs(PARAMS * params, char *param_string)
     if (error) {
         fprintf(stderr, "trec_eval: Illegal parameter value '%s'\n",
                 start_ptr);
-        goto fail;
+        return (UNDEF);
     }
 
     params->param_values = values;
     params->num_params = num_params;
 
     return (1);
-
-  fail:
-    Free(values);
-    Free(params->printable_params);
-    params->printable_params = NULL;
-    return (UNDEF);
 }
 
 /* Convert a string to a finite double, with the error checking of

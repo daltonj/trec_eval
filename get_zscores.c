@@ -143,7 +143,6 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
                                        &mean_ptr, &stddev_ptr)) {
             fprintf(stderr, "trec_eval.get_zscores: Malformed line %ld\n",
                     (long) (line_ptr - lines + 1));
-            Free(lines);
             return (UNDEF);
         }
         line_ptr->mean = strtod(mean_ptr, &end_ptr);
@@ -151,7 +150,6 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
             fprintf(stderr,
                     "trec_eval.get_zscores: Unusable mean '%s' in line %ld\n",
                     mean_ptr, (long) (line_ptr - lines + 1));
-            Free(lines);
             return (UNDEF);
         }
         line_ptr->stddev = strtod(stddev_ptr, &end_ptr);
@@ -160,7 +158,6 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
             fprintf(stderr,
                     "trec_eval.get_zscores: Unusable stddev '%s' in line %ld\n",
                     stddev_ptr, (long) (line_ptr - lines + 1));
-            Free(lines);
             return (UNDEF);
         }
         line_ptr++;
