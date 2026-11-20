@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use pyo3::exceptions::{PyTypeError, PyUserWarning, PyValueError};
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PySequence, PySet, PyString};
 use te_rust::eval::alignment::align_query;
@@ -10,7 +10,7 @@ use te_rust::eval::{
 use te_rust::io::{QrelsData, QrelsQuery, RunData, RunQuery};
 use te_rust::metrics::{registry::resolve_measures, EvalConfig, MetricValue, ValueFormat};
 
-use crate::conversions::{ingest_qrels, ingest_run, ingest_run_arrays, ColumnMapping};
+use crate::conversions::{ingest_qrels, ingest_run, ingest_run_arrays, warn_all, ColumnMapping};
 use crate::query_state::QueryState;
 use crate::result::EvalResult;
 
@@ -66,10 +66,7 @@ impl Evaluator {
             let resolved = resolve_measures(&measure_names).map_err(|e| {
                 PyValueError::new_err(format!("Invalid measure configuration: {}", e))
             })?;
-            let category = qrels.py().get_type_bound::<PyUserWarning>();
-            for warning in &resolved.warnings {
-                PyErr::warn_bound(qrels.py(), category.as_any(), warning, 1)?;
-            }
+            warn_all(qrels.py(), &resolved.warnings)?;
         }
 
         let parsed_gains = global_gains

@@ -21,6 +21,15 @@ fn extract_path_string(obj: &Bound<'_, PyAny>) -> Option<String> {
     None
 }
 
+/// Raises each warning as a Python `UserWarning`.
+pub fn warn_all(py: Python<'_>, warnings: impl IntoIterator<Item = impl std::fmt::Display>) -> PyResult<()> {
+    let category = py.get_type_bound::<PyUserWarning>();
+    for warning in warnings {
+        PyErr::warn_bound(py, category.as_any(), &warning.to_string(), 1)?;
+    }
+    Ok(())
+}
+
 /// Options for mapping DataFrame column names.
 #[derive(Debug, Default, Clone)]
 pub struct ColumnMapping {
@@ -70,11 +79,8 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
             let qrels = parse_trec_qrels(path).map_err(|e| {
                 PyValueError::new_err(format!("Failed to parse qrels file '{}': {}", path_str, e))
             })?;
-            let category = obj.py().get_type_bound::<PyUserWarning>();
-            for warning in &qrels.warnings {
-                let message = format!("qrels file '{}': {}", path_str, warning);
-                PyErr::warn_bound(obj.py(), category.as_any(), &message, 1)?;
-            }
+            let warnings = qrels.warnings.iter().map(|w| format!("qrels file '{}': {}", path_str, w));
+            warn_all(obj.py(), warnings)?;
             return Ok(qrels);
         }
         return Err(PyFileNotFoundError::new_err(format!(
@@ -274,11 +280,8 @@ pub fn ingest_run(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> Py
             let run = parse_trec_run(path).map_err(|e| {
                 PyValueError::new_err(format!("Failed to parse run file '{}': {}", path_str, e))
             })?;
-            let category = obj.py().get_type_bound::<PyUserWarning>();
-            for warning in &run.warnings {
-                let message = format!("run file '{}': {}", path_str, warning);
-                PyErr::warn_bound(obj.py(), category.as_any(), &message, 1)?;
-            }
+            let warnings = run.warnings.iter().map(|w| format!("run file '{}': {}", path_str, w));
+            warn_all(obj.py(), warnings)?;
             return Ok(run);
         }
         return Err(PyFileNotFoundError::new_err(format!(
