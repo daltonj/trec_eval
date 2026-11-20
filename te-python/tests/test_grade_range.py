@@ -15,7 +15,7 @@ def test_in_memory_qrels_refuse_out_of_range_grades(grade, representation):
         "objects": iter([SimpleNamespace(query_id="q", doc_id="d", relevance=grade)]),
     }
     with pytest.raises(
-        ValueError, match=f"relevance level {grade} is outside -127 to 127"
+        ValueError, match=f"relevance level {grade} for document 'd' in query 'q' is outside -127 to 127"
     ):
         Evaluator(inputs[representation], measures=["map"])
 

@@ -48,6 +48,23 @@ pub struct QueryEvalState {
     pub rel_levels: Vec<usize>,
 }
 
+/// Checks the relevance level `rel` of document `docno` in query `qid`.
+///
+/// # Errors
+///
+/// Returns [`EvaluationError::RelevanceOutOfBounds`] when `rel` is outside [`REL_LEVELS`].
+pub fn check_rel_level(qid: &str, docno: &str, rel: i64) -> Result<(), EvaluationError> {
+    if REL_LEVELS.contains(&rel) {
+        Ok(())
+    } else {
+        Err(EvaluationError::RelevanceOutOfBounds {
+            qid: qid.to_string(),
+            docno: docno.to_string(),
+            value: rel,
+        })
+    }
+}
+
 /// Aligns standard run results with qrels judgments for a single query.
 pub fn align_query(
     run_query: Option<&RunQuery>,
@@ -165,13 +182,7 @@ fn align_ranked_query(
     // Calculate max relevance grade and populate rel_levels counts
     let mut max_rel_grade = 0;
     for record in &qrels_query.records {
-        if !REL_LEVELS.contains(&record.rel) {
-            return Err(EvaluationError::RelevanceOutOfBounds {
-                qid,
-                docno: record.docno.clone(),
-                value: record.rel,
-            });
-        }
+        check_rel_level(&qid, &record.docno, record.rel)?;
         if record.rel > max_rel_grade {
             max_rel_grade = record.rel;
         }
