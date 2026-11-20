@@ -91,10 +91,10 @@ impl std::fmt::Display for IOError {
 
 impl std::error::Error for IOError {}
 
-/// Reads the leading integer of `value` as `trec_eval`'s `str_to_long` (`get_qrels.c:18`) does:
-/// C-locale whitespace, an optional sign, then decimal digits. Returns the integer and whether
-/// characters follow it, so `1.5` reads as `(1, true)`. A value with no leading digit is
-/// `InvalidDigit`, and an integer that does not fit in an `i64` is `PosOverflow` or `NegOverflow`.
+/// Reads the leading integer of `value` as `trec_eval`'s `str_to_long` does: C-locale whitespace,
+/// an optional sign, then decimal digits. Returns the integer and whether characters follow it, so
+/// `1.5` reads as `(1, true)`. A value with no leading digit is `InvalidDigit`, and an integer that
+/// does not fit in an `i64` is `PosOverflow` or `NegOverflow`.
 pub fn read_leading_integer(value: &str) -> Result<(i64, bool), std::num::IntErrorKind> {
     let number = value.trim_start_matches(is_field_sep);
     let start = usize::from(number.starts_with(['+', '-']));
@@ -117,14 +117,14 @@ pub fn read_leading_integer(value: &str) -> Result<(i64, bool), std::num::IntErr
     Ok((integer, end < number.len()))
 }
 
-/// The relevance levels a qrels or qrels_jg file may use. `get_qrels.c:43` documents -127 to 127,
-/// and `trec_eval` refuses other levels with #123. The highest level of a topic sizes its table of
-/// grade counts, so the upper bound also limits that allocation.
+/// The relevance levels a qrels or qrels_jg file may use: -127 to 127, as `trec_eval`'s `get_qrels`
+/// and `get_qrels_jg` document. The highest level of a topic sizes its table of grade counts, so the
+/// upper bound also limits that allocation.
 pub const REL_LEVELS: std::ops::RangeInclusive<i64> = -127..=127;
 
-/// Reads a grade as `trec_eval`'s `str_to_long` does (`get_qrels.c:18`): the leading integer, with
-/// a warning when characters follow it, so `1.5` reads as 1 and `0.9` as 0. A value with no leading
-/// integer, or one that does not fit in an `i64`, is an error.
+/// Reads a grade as `trec_eval`'s `str_to_long` does: the leading integer, with a warning when
+/// characters follow it, so `1.5` reads as 1 and `0.9` as 0. A value with no leading integer, or
+/// one that does not fit in an `i64`, is an error.
 fn parse_grade(value: &str, line_num: usize, warnings: &mut Vec<String>) -> Result<i64, IOError> {
     let (rel, partial) = read_leading_integer(value).map_err(|_| {
         IOError::FormatError(ParseError::InvalidInteger {
@@ -139,11 +139,11 @@ fn parse_grade(value: &str, line_num: usize, warnings: &mut Vec<String>) -> Resu
     Ok(rel)
 }
 
-/// Reads a score as `trec_eval`'s `strtod` does (`get_trec_results.c` with #125): the longest
-/// leading number, with a warning when characters follow it, so `1.5x` reads as 1.5. Infinities
-/// and hexadecimal values such as `0x1p3` are read as `strtod` reads them. A value outside the
-/// range of an `f64`, such as `1e400` or `1e-400`, is kept as ±inf or ±0 with a warning. NaN, and
-/// a value with no leading number, are errors.
+/// Reads a score with `strtod`, as `trec_eval` does: the longest leading number, with a warning
+/// when characters follow it, so `1.5x` reads as 1.5. Infinities and hexadecimal values such as
+/// `0x1p3` are read as `strtod` reads them. A value outside the range of an `f64`, such as `1e400`
+/// or `1e-400`, is kept as ±inf or ±0 with a warning. NaN, and a value with no leading number, are
+/// errors.
 fn parse_score(value: &str, line_num: usize, warnings: &mut Vec<String>) -> Result<f64, IOError> {
     let (sim, len) = strtod_prefix(value).ok_or_else(|| {
         IOError::FormatError(ParseError::InvalidFloat {
@@ -412,8 +412,8 @@ fn read_lines(mut reader: impl BufRead) -> impl Iterator<Item = Result<(usize, S
 }
 
 /// Removes the line ending (LF, CRLF, or a CR that ends the file) and refuses bytes that would make
-/// the line's fields wrong: a NUL, which trec_eval refuses too (#126), and any other CR, which
-/// would join the lines of a file with CR line endings. A data line must be UTF-8. A comment
+/// the line's fields wrong: a NUL, which trec_eval's file formats do not allow, and any other CR,
+/// which would join the lines of a file with CR line endings. A data line must be UTF-8. A comment
 /// is never compared, so its invalid bytes are replaced rather than refused.
 fn decode_line(mut bytes: Vec<u8>, line_num: usize, byte_offset: usize) -> Result<String, IOError> {
     if bytes.ends_with(b"\n") {

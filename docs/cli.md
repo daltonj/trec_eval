@@ -114,7 +114,7 @@ qid  iter  docno  rank  sim  run_id
 - `docno`: Unique document identifier (`str`).
 - `rank`: Rank position (recomputed during score sorting).
 - `sim`: Floating-point retrieval score / similarity (`float`).
-  `trec_eval` reads the score with `atof` (`trec_eval/get_trec_results.c:210`), which parses as `strtod` does. As in `trec_eval`, `inf`, `-inf` and hexadecimal values such as `0x1p3` are scores. A score outside the range of a double is read as `strtod` reads it, `1e400` as inf and `1e-400` as 0, with a warning on stderr. A score with characters after the number, such as `1.5x`, is read as its leading number, 1.5, with a warning on stderr. NaN, or a score with no leading number, is an error. `trec_eval` 10.x reads a score with no leading number as 0, and it ranks a NaN score in an undefined order.
+  `trec_eval` reads the score with `atof`, which parses as `strtod` does. As in `trec_eval`, `inf`, `-inf` and hexadecimal values such as `0x1p3` are scores. A score outside the range of a double is read as `strtod` reads it, `1e400` as inf and `1e-400` as 0, with a warning on stderr. A score with characters after the number, such as `1.5x`, is read as its leading number, 1.5, with a warning on stderr. NaN, or a score with no leading number, is an error. `trec_eval` 10.x reads a score with no leading number as 0, and it ranks a NaN score in an undefined order.
 - `run_id`: System run label (`str`).
 
 Example `run.txt`:
@@ -192,11 +192,11 @@ bpref                 	all	0.2589 [0.2215, 0.2974]
 - The names `mrr` and `rr` for `recip_rank`, and `precision` for `P`, and measure and group names in any case, such as `MAP`.
 - The measure `ndcg_p`. The `trec_eval` source includes `m_ndcg_p.c`, but `trec_eval` 10.x does not register or build it, so `-m ndcg_p` fails there. If `trec_eval` registers it, `ndcg_p` becomes a shared measure and leaves this list.
 
-`te-rust` also reads the value of a short option after `=`, as in `-l=2`, `-M=100`, `-N=10`, `-m=map` or `-R=qrels`, as if it were a separate argument. `trec_eval` reads the `=` as part of the value. It refuses `-m=map` and `-R=qrels`. `trec_eval` 10.0 reads `-l=2`, `-M=100` and `-N=10` as 0 without a message, and the C code in `trec_eval/` on this branch refuses them.
+`te-rust` also reads the value of a short option after `=`, as in `-l=2`, `-M=100`, `-N=10`, `-m=map` or `-R=qrels`, as if it were a separate argument. `trec_eval` reads the `=` as part of the value. It refuses `-m=map` and `-R=qrels`. `trec_eval` 10.0 reads `-l=2`, `-M=100` and `-N=10` as 0 without a message.
 
 The confidence-interval options, `--help-measures`, `--help-measure` and `--global-gains` are also `te-rust`'s own.
 
 ### Gain calculations that differ from bundled `trec_eval` 10
 
-- `te-rust` sorts gains by their full floating-point values. The bundled C comparator converts the gain difference to an integer, treating absolute differences below 1 as equal. With judgments `a=1, b=0` and gains `1=1,0=0.9`, `-m ndcg.1=1,0=0.9` gives `1.0000` in `te-rust` and `1.0241` in the bundled C. The C fix is "Compare gains by sign when sorting the gain table".
-- `Rndcg` returns 0 when no judged document has a positive gain. With the same judgments and run order `a,b`, `-m Rndcg.0=0,1=-1` gives `0.0000` in `te-rust` and `nan` in the bundled C. The C fix is "Give Rndcg 0 when no judged document has a gain above 0".
+- `te-rust` sorts gains by their full floating-point values. The bundled C comparator converts the gain difference to an integer, treating absolute differences below 1 as equal. With judgments `a=1, b=0` and gains `1=1,0=0.9`, `-m ndcg.1=1,0=0.9` gives `1.0000` in `te-rust` and `1.0241` in the bundled C.
+- `Rndcg` returns 0 when no judged document has a positive gain. With the same judgments and run order `a,b`, `-m Rndcg.0=0,1=-1` gives `0.0000` in `te-rust` and `nan` in the bundled C.
