@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::eval::{EvaluationError, ScoredDuplicate};
+use crate::eval::{DuplicateSource, EvaluationError};
 use crate::io::parsers::REL_LEVELS;
 use crate::io::{QrelsJGQuery, QrelsQuery, RunQuery, RunRecord};
 
@@ -123,11 +123,11 @@ fn rank_documents<'a>(
         let mut seen = HashSet::with_capacity(doc_infos.len());
         for doc in &doc_infos {
             if !seen.insert(&doc.docno) {
-                return Err(ScoredDuplicate::Run {
+                return Err(EvaluationError::DuplicateDocument {
+                    source: DuplicateSource::Run,
                     qid: qid.to_string(),
                     docno: doc.docno.clone(),
-                }
-                .into());
+                });
             }
         }
     }
@@ -148,11 +148,11 @@ fn align_ranked_query(
     let mut qrels_map = HashMap::with_capacity(qrels_query.records.len());
     for record in &qrels_query.records {
         if qrels_map.insert(&record.docno, record.rel).is_some() && reads_ranking {
-            return Err(ScoredDuplicate::Qrels {
+            return Err(EvaluationError::DuplicateDocument {
+                source: DuplicateSource::Qrels,
                 qid,
                 docno: record.docno.clone(),
-            }
-            .into());
+            });
         }
     }
 

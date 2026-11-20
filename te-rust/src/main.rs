@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::process;
 
 use te_rust::eval::bootstrap::BootstrapConfig;
-use te_rust::eval::{evaluate_run, evaluate_run_jg, EvaluationError, EvaluationOutput, ScoredDuplicate};
+use te_rust::eval::{evaluate_run, evaluate_run_jg, DuplicateSource, EvaluationError, EvaluationOutput};
 use te_rust::io::{parse_trec_qrels, parse_trec_qrels_jg, parse_trec_run, RunData};
 use te_rust::metrics::registry::MeasureSpec;
 use te_rust::metrics::{EvalConfig, Measure, MetricValue, ValueFormat};
@@ -118,18 +118,15 @@ fn refuse_evaluation_error(
     qrels_file: &str,
     run_file: &str,
 ) -> ! {
-    let duplicate = match error {
-        EvaluationError::Duplicate(duplicate) => duplicate,
-        other => {
-            eprintln!("te-rust: {}", other);
-            process::exit(EXIT_INPUT);
-        }
+    let EvaluationError::DuplicateDocument { source, .. } = error else {
+        eprintln!("te-rust: {}", error);
+        process::exit(EXIT_INPUT);
     };
-    let (kind, file) = match duplicate {
-        ScoredDuplicate::Qrels { .. } => (qrels_kind, qrels_file),
-        ScoredDuplicate::Run { .. } => ("run", run_file),
+    let (kind, file) = match source {
+        DuplicateSource::Qrels => (qrels_kind, qrels_file),
+        DuplicateSource::Run => ("run", run_file),
     };
-    eprintln!("Error in {} file '{}': {}", kind, file, duplicate);
+    eprintln!("Error in {} file '{}': {}", kind, file, error);
     process::exit(EXIT_TOPIC);
 }
 
@@ -336,8 +333,8 @@ fn main() {
                 &config,
                 ci_config.as_ref(),
             )
-            .unwrap_or_else(|duplicate| {
-                refuse_evaluation_error(duplicate, "qrels_jg", &qrels_filename, &run_filename);
+            .unwrap_or_else(|error| {
+                refuse_evaluation_error(error, "qrels_jg", &qrels_filename, &run_filename);
             })
         }
         "qrels" => {
@@ -359,8 +356,8 @@ fn main() {
                 &config,
                 ci_config.as_ref(),
             )
-            .unwrap_or_else(|duplicate| {
-                refuse_evaluation_error(duplicate, "qrels", &qrels_filename, &run_filename);
+            .unwrap_or_else(|error| {
+                refuse_evaluation_error(error, "qrels", &qrels_filename, &run_filename);
             })
         }
         other => {

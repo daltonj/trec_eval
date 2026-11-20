@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyList, PySequence, PySet, PyString};
 use te_rust::eval::alignment::align_query;
 use te_rust::eval::{
-    evaluate_run, EvaluationError, EvaluationOutput, QueryEvaluation, ScoredDuplicate,
+    evaluate_run, DuplicateSource, EvaluationError, EvaluationOutput, QueryEvaluation,
     SummaryEvaluation,
 };
 use te_rust::io::{QrelsData, QrelsQuery, RunData, RunQuery};
@@ -197,15 +197,14 @@ impl Evaluator {
 }
 
 fn evaluation_error(error: EvaluationError) -> PyErr {
-    let duplicate = match error {
-        EvaluationError::Duplicate(duplicate) => duplicate,
-        other => return PyValueError::new_err(other.to_string()),
+    let EvaluationError::DuplicateDocument { source, .. } = &error else {
+        return PyValueError::new_err(error.to_string());
     };
-    let kind = match duplicate {
-        ScoredDuplicate::Qrels { .. } => "qrels",
-        ScoredDuplicate::Run { .. } => "run",
+    let kind = match source {
+        DuplicateSource::Qrels => "qrels",
+        DuplicateSource::Run => "run",
     };
-    PyValueError::new_err(format!("{}: {}", kind, duplicate))
+    PyValueError::new_err(format!("{}: {}", kind, error))
 }
 
 /// As the CLI does, refuse a run that shares no topic with the qrels, unless
