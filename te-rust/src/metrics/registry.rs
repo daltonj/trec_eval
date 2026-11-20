@@ -9,7 +9,7 @@
 //! against this table.
 
 use crate::metrics::common::{
-    parse_float_cutoffs, parse_int_cutoffs, parse_key_values, parse_sorted_float_cutoffs,
+    parse_float_cutoffs, parse_int_cutoffs, parse_rbp_params, parse_sorted_float_cutoffs,
     MeasureParseError,
 };
 use crate::metrics::{self, Measure};
@@ -57,18 +57,6 @@ const DEFAULT_UNJ_CUTOFFS: &[usize] = &[5, 10, 20];
 const DEFAULT_RECALL_LEVELS: &[f64] = &[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 const DEFAULT_RPREC_MULT: &[f64] = &[0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0];
 const DEFAULT_UTILITY_COEFFS: &[f64] = &[1.0, -1.0, 0.0, 0.0];
-
-/// Extract the RBP-style `p=<float>` parameter, defaulting to 0.9. `p` must lie in [0, 1).
-fn parse_rbp_p(params: &str) -> Result<f64, MeasureParseError> {
-    let mut p = 0.9;
-    for (k, v) in parse_key_values(params)? {
-        if k == "p" {
-            p = metrics::common::parse_finite_float(&v)?;
-            metrics::common::rbp_persistence(p)?;
-        }
-    }
-    Ok(p)
-}
 
 /// The full measure registry table.
 pub fn registry() -> &'static [MeasureSpec] {
@@ -207,8 +195,11 @@ pub fn registry() -> &'static [MeasureSpec] {
         MeasureSpec { name: "ndcg_rel", status: Production, usage: "ndcg_rel[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::ndcg_rel::NdcgRelMeasure::new(p)?)) },
         MeasureSpec { name: "Rndcg", status: Production, usage: "Rndcg[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::rndcg::RndcgMeasure::new(p)?)) },
         MeasureSpec { name: "ndcg_p", status: Production, usage: "ndcg_p[.<rel>=<gain>,...]  optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::ndcg_p::NdcgPMeasure::new(p)?)) },
-        MeasureSpec { name: "rbp", status: Production, usage: "rbp[.p=<float>,<rel>=<gain>,...]  persistence parameter p (default: 0.9) and optional relevance-to-gain mapping (default: gain = relevance level)", factory: |p| Ok(Box::new(metrics::rbp::RbpMeasure::new(parse_rbp_p(p)?, p)?)) },
-        MeasureSpec { name: "rbp_resid", status: Production, usage: "rbp_resid[.p=<float>]  persistence parameter p (default: 0.9)", factory: |p| Ok(Box::new(metrics::rbp_resid::RbpResidMeasure::new(parse_rbp_p(p)?, p))) },
+        MeasureSpec { name: "rbp", status: Production, usage: "rbp[.p=<float>,<rel>=<gain>,...]  persistence parameter p (default: 0.9) and optional relevance-to-gain mapping (default: gain = relevance level)", factory: |params| Ok(Box::new(metrics::rbp::RbpMeasure::from_params(params)?)) },
+        MeasureSpec { name: "rbp_resid", status: Production, usage: "rbp_resid[.p=<float>]  persistence parameter p (default: 0.9)", factory: |params| {
+            let (p, _) = parse_rbp_params(params)?;
+            Ok(Box::new(metrics::rbp_resid::RbpResidMeasure::new(p, params)))
+        } },
         MeasureSpec { name: "map_avgjg", status: Production, usage: "", factory: |_| Ok(Box::new(metrics::map_avgjg::MapAvgjgMeasure::new())) },
         MeasureSpec {
             name: "P_avgjg",

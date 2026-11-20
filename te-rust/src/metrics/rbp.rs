@@ -11,23 +11,27 @@ pub struct RbpMeasure {
 impl RbpMeasure {
     pub fn new(p: f64, params_str: &str) -> Result<Self, MeasureParseError> {
         crate::metrics::common::rbp_persistence(p)?;
+        let (_, gains_config) = crate::metrics::common::parse_rbp_params(params_str)?;
+        Ok(Self::with_gains(p, params_str, gains_config))
+    }
+
+    pub(crate) fn from_params(params_str: &str) -> Result<Self, MeasureParseError> {
+        let (p, gains_config) = crate::metrics::common::parse_rbp_params(params_str)?;
+        Ok(Self::with_gains(p, params_str, gains_config))
+    }
+
+    fn with_gains(p: f64, params_str: &str, gains_config: GainsConfig) -> Self {
         let name = if params_str.is_empty() {
             "rbp".to_string()
         } else {
             format!("rbp_{}", params_str)
         };
-        // `p` shares the parameter list with the gain map, as in trec_eval; the registry
-        // reads it, and the rest is the gain map.
-        let gain_map: Vec<&str> = params_str
-            .split(',')
-            .filter(|pair| pair.split('=').next().map(str::trim) != Some("p"))
-            .collect();
-        Ok(Self {
+        Self {
             p,
-            gains_config: GainsConfig::parse(&gain_map.join(","))?,
+            gains_config,
             _params_str: params_str.to_string(),
             sub_metrics: vec![name],
-        })
+        }
     }
 }
 

@@ -60,7 +60,7 @@ fn persistence_outside_zero_to_one_is_refused() {
             );
         }
     }
-    assert_refused(&["-m", "rbp.p=0.5,1=2,p=2"], "is outside [0, 1)");
+    assert_refused(&["-m", "rbp.1=2,p=2"], "is outside [0, 1)");
 }
 
 #[test]

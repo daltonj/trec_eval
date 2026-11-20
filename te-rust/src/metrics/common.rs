@@ -163,8 +163,12 @@ impl GainsConfig {
     /// Parse a gain map such as `1=3,2=9`. Every name must be an integer relevance level,
     /// given once, and every gain a finite number. An empty string yields an empty map.
     pub fn parse(params_str: &str) -> Result<Self, MeasureParseError> {
+        Self::from_pairs(parse_key_values(params_str)?)
+    }
+
+    fn from_pairs(pairs: Vec<(String, String)>) -> Result<Self, MeasureParseError> {
         let mut custom_gains = HashMap::new();
-        for (name, value) in parse_key_values(params_str)? {
+        for (name, value) in pairs {
             let rel_level = name.parse::<i64>().map_err(|_| {
                 MeasureParseError::new(format!("invalid relevance level '{}'", name))
             })?;
@@ -187,6 +191,29 @@ impl GainsConfig {
         }
         Ok(Self { custom_gains })
     }
+}
+
+pub(crate) fn parse_rbp_params(params: &str) -> Result<(f64, GainsConfig), MeasureParseError> {
+    let mut persistence = None;
+    let mut gain_pairs = Vec::new();
+    for (name, value) in parse_key_values(params)? {
+        if name == "p" {
+            if persistence.is_some() {
+                return Err(MeasureParseError::new(
+                    "parameter 'p' is given more than once",
+                ));
+            }
+            let p = parse_finite_float(&value)?;
+            rbp_persistence(p)?;
+            persistence = Some(p);
+        } else {
+            gain_pairs.push((name, value));
+        }
+    }
+    Ok((
+        persistence.unwrap_or(0.9),
+        GainsConfig::from_pairs(gain_pairs)?,
+    ))
 }
 
 #[derive(Debug, Clone)]
