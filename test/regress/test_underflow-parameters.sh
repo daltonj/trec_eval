@@ -1,8 +1,10 @@
 # Finite underflow results, including zero, remain valid parameters.
 . test/regress/lib.sh
 D=test/regress/underflow-parameters
-Q=$D/qrels
-R=$D/run
+Q=$T/qrels
+R=$T/run
+printf '1 0 a 1\n' > "$Q"
+printf '1 Q0 a 1 1 r\n' > "$R"
 
 expect_output $D/out.set-F -m set_F.1e-310 $Q $R
 expect_output $D/out.zero -m set_F.1e-400 $Q $R

@@ -4,15 +4,17 @@
 # relstring.1e300 prints the whole ranking of d1, d2, d3: '102'.
 . test/regress/lib.sh
 D=test/regress/count-parameter-range
+Q=$T/qrels
 R=test/regress/results
+printf '1 0 d1 1\n1 0 d2 0\n1 0 d3 2\n' > "$Q"
 
 # same MEASURE HUGE LARGE [ARGS...]: MEASURE.HUGE exits 0 and prints the
 # values that MEASURE.LARGE prints.
 same() {
     m=$1 huge=$2 large=$3
     shift 3
-    save_output "$T/huge" -q "$@" -m $m.$huge $D/qrels $R
-    save_output "$T/large" -q "$@" -m $m.$large $D/qrels $R
+    save_output "$T/huge" -q "$@" -m $m.$huge "$Q" $R
+    save_output "$T/large" -q "$@" -m $m.$large "$Q" $R
     [ "$(cut -f2- "$T/huge")" = "$(cut -f2- "$T/large")" ] ||
         fail "trec_eval -m $m.$huge differs from $m.$large"
 }
@@ -25,15 +27,15 @@ done
 same relstring -1e300 -1000000
 same Rprec_mult_avgjg 1e300 1000000 -R qrels_jg
 
-expect_output $D/out.relstring -q -m relstring.1e300 $D/qrels $R
+expect_output $D/out.relstring -q -m relstring.1e300 "$Q" $R
 
 for m in Rprec_mult Rprec_mult_avgjg; do
     format=qrels
     [ "$m" = Rprec_mult_avgjg ] && format=qrels_jg
-    save_output "$T/out" -R "$format" -m "$m.1e300" $D/qrels $R
+    save_output "$T/out" -R "$format" -m "$m.1e300" "$Q" $R
     awk '{print "1", $1, "0", "1e-19"}' "$T/out" > "$T/zscores"
     save_output "$T/out" -q -R "$format" -m "$m.1e300" -Z "$T/zscores" \
-        $D/qrels $R
+        "$Q" $R
     awk '{print $2, $3}' "$T/out" > "$T/values"
     diff "$T/values" $D/out.huge-zscore || fail "$m: clamped denominator"
 done

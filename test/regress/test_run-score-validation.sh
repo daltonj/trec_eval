@@ -4,7 +4,7 @@
 . test/regress/lib.sh
 D=test/regress/run-score-validation
 
-m="-q -m relstring $D/qrels"
+m="-q -m relstring test/regress/qrels.abc"
 
 expect_message 2 "value \`nan' is not a number (line 2 of results file '$D/run.nan')." \
     $m $D/run.nan

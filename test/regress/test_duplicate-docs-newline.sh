@@ -4,8 +4,12 @@
 # qrels_prefs formats each detect the duplicate in their own code.
 . test/regress/lib.sh
 d=test/regress/duplicate-docs-newline
+Q=$T/qrels
+R=$T/results
+printf '1 0 d1 1\n1 0 d2 0\n' > "$Q"
+printf '1 Q0 d1 1 2 r\n1 Q0 d1 2 1 r\n' > "$R"
 
-expect_stderr 4 $d/err -m map $d/qrels $d/results
-expect_stderr 4 $d/err.jg -R qrels_jg -m map_avgjg $d/qrels $d/results
+expect_stderr 4 $d/err -m map "$Q" "$R"
+expect_stderr 4 $d/err.jg -R qrels_jg -m map_avgjg "$Q" "$R"
 expect_stderr 4 $d/err.prefs -R qrels_prefs -m prefs_num_prefs_poss \
-    $d/qrels $d/results
+    "$Q" "$R"

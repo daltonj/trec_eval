@@ -7,7 +7,7 @@
 . test/regress/lib.sh
 D=test/regress/run-score-range
 
-m="-q -m relstring $D/qrels"
+m="-q -m relstring test/regress/qrels.abc"
 w="out of range, read as"
 
 expect_result 0 $D/out.over $D/err.over $m $D/run.over
