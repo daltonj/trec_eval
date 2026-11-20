@@ -26,7 +26,7 @@ class Evaluator(
 - `complete_set_average` (`bool`, default `False`): When `True`, averages over all queries in `qrels` rather than only queries present in the run (`-c`).
 - `judged_docs_only` (`bool`, default `False`): When `True`, drops all unjudged documents from the ranking before evaluation (`-J`).
 - `max_docs_per_topic` (`int`, optional): Truncates the ranking to at most this many documents per topic (`-M`).
-- `num_docs_in_coll` (`int`, default `0`): Total collection size (`-N`).
+- `num_docs_in_coll` (`int`, default `0`): Total collection size (`-N`). `utility` uses $2^{63} - 1$ for a larger value.
 - `global_gains` (`str`, optional): Global gain mapping string (e.g. `'1=3.5,2=9.0'`).
 - `qid`, `docno`, `rel` (`str`, optional): Explicit column names when `qrels` is a DataFrame.
 

@@ -31,7 +31,7 @@ Models a user browsing a ranked list who examines the document at rank $k$ with 
 
 $$\text{RBP} = (1 - p) \sum_{k=1}^N \text{rel}(k) \cdot p^{k-1}$$
 
-where $\text{rel}(k)$ is the gain for the document's relevance level. A measure-specific gain map takes precedence over `--global-gains`; otherwise the gain is the relevance level. The normalisation range includes 0: $g_{\min} = \min(0, \min_g g)$ and $g_{\max} = \max(0, \max_g g)$ over the gain table. If $g_{\min} < 0$ or $g_{\max} > 1$, each table entry $g$ becomes $(g - g_{\min}) / (g_{\max} - g_{\min})$. Gains already in $[0, 1]$ are unchanged. A level absent from the table retains gain 0, including the unjudged sentinel by default.
+where $\text{rel}(k)$ is the gain for the document's relevance level. The gains come from the measure's own gain map when it has one, and otherwise from `--global-gains`. Without either, or for a level that the map in use omits, the gain is the relevance level. The normalisation range includes 0: $g_{\min} = \min(0, \min_g g)$ and $g_{\max} = \max(0, \max_g g)$ over the gain table. If $g_{\min} < 0$ or $g_{\max} > 1$, each table entry $g$ becomes $(g - g_{\min}) / (g_{\max} - g_{\min})$. Gains already in $[0, 1]$ are unchanged. A level absent from the table retains gain 0, including the unjudged sentinel by default.
 
 - Usage: `-m rbp`, `-m rbp.p=0.8`, or with a gain map, `-m rbp.p=0.8,1=1,2=3`.
 
@@ -43,7 +43,7 @@ $$\text{RBP}_{\text{resid}} = (1 - p) \sum_{k \in U} p^{k-1} + p^N \quad \text{f
 
 The first term is the RBP that the unjudged documents would add, and $p^N$ is the weight of the ranks after $N$. This is the formula of `trec_eval`'s `m_rbp_resid.c`. Moffat and Zobel include $p^N$ for every ranking, also one without an unjudged document.
 
-- Parameter: `p` (persistence parameter, default `0.9`).
+- Parameter: `p` (persistence parameter, default `0.9`). A gain map is checked as for `rbp` and not used.
 - Usage: `-m rbp_resid` or `-m rbp_resid.p=0.8`.
 - Reference: Moffat, A., & Zobel, J. (2008). "Rank-biased precision for measurement of retrieval effectiveness." *ACM Transactions on Information Systems (TOIS)*, 27(1): Article 2.
 

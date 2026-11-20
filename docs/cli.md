@@ -48,7 +48,7 @@ te-rust [OPTIONS] <QRELS_FILE> <RUN_FILE>
 | `-J` | | **Judged docs only**: Remove all unjudged documents from the retrieved ranking before evaluating. | Disabled |
 | `-M` | `<int>` | Maximum number of retrieved documents per topic to evaluate. Read as `-l` is. | No limit |
 | `-N` | `<int>` | Number of documents in the collection. Only `utility` reads it, when its fourth coefficient is not zero. Read as `-l` is. | `0` |
-| `-m` | `<measure>` | Calculate only the indicated measure or measure group (e.g. `-m map`, `-m P.5,10`, `-m official`). Repeatable. An integer cutoff is read as `-l` is, so `-m P.5x` gives `P_5` with a warning. | `official` |
+| `-m` | `<measure>` | Calculate only the indicated measure or measure group (e.g. `-m map`, `-m P.5,10`, `-m official`). Repeatable. When two requests give parameters for one measure, the first list is used, as in `trec_eval`, and `te-rust` warns that the other is ignored. An integer cutoff is read as `-l` is, so `-m P.5x` gives `P_5` with a warning. | `official` |
 | `-R` | `<format>` | Format of the relevance judgments file: `qrels` or `qrels_jg`. | `qrels` |
 | | `--global-gains <gains>` | Custom global relevance-to-gain mapping (e.g. `--global-gains 1=3.5,2=9.0`). | Default gains |
 

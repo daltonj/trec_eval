@@ -84,6 +84,7 @@ pub struct EvalConfig {
     pub average_complete_flag: bool,
     pub judged_docs_only_flag: bool,
     pub max_num_docs_per_topic: usize,
+    /// Number of documents in the collection (`-N`). `utility` uses `i64::MAX` for a larger value.
     pub num_docs_in_coll: usize,
     pub global_gains: Option<crate::metrics::common::GainsConfig>,
 }
