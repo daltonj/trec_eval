@@ -4,13 +4,12 @@
 # Input of any size is read whole: the reader's buffer starts at 4096
 # bytes, and inputs near that size give the same output as the file.
 . test/regress/lib.sh
-D=test/regress/stdin-results
 
 printf '1 Q0 d1 1 3 r\n1 Q0 d2\000x 2 2 r\n1 Q0 d3 3 1 r\n' > "$T/run.nul-field"
 printf '1 Q0 d1 1 3 r\n\000\n1 Q0 d3 3 1 r\n' > "$T/run.nul-line"
 for v in nul-field nul-line; do
     expect_message 2 "NUL character in line 2 of results file '-'" \
-        -m num_ret $D/qrels - < "$T/run.$v"
+        -m num_ret test/regress/qrels - < "$T/run.$v"
 done
 
 expect_output test/out.test test/qrels.test - < test/results.test
