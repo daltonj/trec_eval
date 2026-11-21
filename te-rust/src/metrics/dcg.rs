@@ -13,6 +13,15 @@ enum Sum {
     Ideal,
 }
 
+impl Sum {
+    fn name(self) -> &'static str {
+        match self {
+            Sum::Ranking => "dcg",
+            Sum::Ideal => "ideal_dcg",
+        }
+    }
+}
+
 /// The ideal ranking's DCG depends on the judgments alone, so an empty ranking does
 /// not make it 0.
 const IDEAL_DCG_INVARIANTS: &[Invariant] = &[
@@ -40,14 +49,10 @@ impl DcgMeasure {
     }
 
     fn build(sum: Sum, params_str: &str) -> Result<Self, MeasureParseError> {
-        let measure = match sum {
-            Sum::Ranking => "dcg",
-            Sum::Ideal => "ideal_dcg",
-        };
         let name = if params_str.is_empty() {
-            measure.to_string()
+            sum.name().to_string()
         } else {
-            format!("{}_{}", measure, params_str)
+            format!("{}_{}", sum.name(), params_str)
         };
         Ok(Self {
             sum,
@@ -59,10 +64,7 @@ impl DcgMeasure {
 
 impl Measure for DcgMeasure {
     fn name(&self) -> &'static str {
-        match self.sum {
-            Sum::Ranking => "dcg",
-            Sum::Ideal => "ideal_dcg",
-        }
+        self.sum.name()
     }
 
     fn short_description(&self) -> &'static str {
