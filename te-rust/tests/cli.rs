@@ -5,8 +5,8 @@ mod common;
 /// Exit statuses and validation precedence. te-rust validates measure parameters
 /// before reading files; trec_eval validates them afterward.
 mod exit_status {
-    use super::common::{eval, fixture, stderr, te_rust, write};
-    use std::path::{Path, PathBuf};
+    use super::common::{assert_refused, eval, fixture, te_rust, write};
+    use std::path::PathBuf;
 
     /// The input `name`: `good`, `malformed` (too few fields), `empty`, `repeat` (document a
     /// twice in topic 1) or `absent` (no such file), with the extension `.qrels` or `.run`.
@@ -27,22 +27,6 @@ mod exit_status {
 
     fn status(options: &[&str], qrels: &str, run: &str) -> Option<i32> {
         eval(options, &input(qrels), &input(run)).status.code()
-    }
-
-    /// Checks that te-rust exits with `status` and names `file` on stderr.
-    fn assert_reported(options: &[&str], qrels: &Path, run: &Path, status: i32, file: &str) {
-        let out = eval(options, qrels, run);
-        assert_eq!(
-            out.status.code(),
-            Some(status),
-            "{options:?}: {}",
-            stderr(&out)
-        );
-        assert!(
-            stderr(&out).contains(file),
-            "{file} is not in {}",
-            stderr(&out)
-        );
     }
 
     #[test]
@@ -136,46 +120,22 @@ mod exit_status {
     #[test]
     fn the_qrels_are_checked_before_the_run() {
         let map = &["-m", "map"];
-        assert_reported(
-            map,
-            &input("absent.qrels"),
-            &input("absent.run"),
-            2,
-            "absent.qrels",
-        );
+        assert_refused(&eval(map, &input("absent.qrels"), &input("absent.run")), 2, "absent.qrels");
         let qrels = input("malformed.qrels");
-        assert_reported(
-            map,
-            &qrels,
-            &input("repeat.run"),
-            2,
-            &qrels.to_string_lossy(),
-        );
+        assert_refused(&eval(map, &qrels, &input("repeat.run")), 2, &qrels.to_string_lossy());
     }
 
     #[test]
     fn the_judgment_format_is_checked_before_the_run() {
         let options = &["-R", "nosuch"];
-        assert_reported(
-            options,
-            &input("good.qrels"),
-            &input("repeat.run"),
-            2,
-            "nosuch",
-        );
+        assert_refused(&eval(options, &input("good.qrels"), &input("repeat.run")), 2, "nosuch");
     }
 
     #[test]
     fn a_repeated_judgment_is_found_after_the_run_is_read() {
         let (qrels, run) = (input("repeat.qrels"), input("malformed.run"));
-        assert_reported(&["-m", "map"], &qrels, &run, 2, &run.to_string_lossy());
-        assert_reported(
-            &["-m", "map"],
-            &qrels,
-            &input("good.run"),
-            4,
-            &qrels.to_string_lossy(),
-        );
+        assert_refused(&eval(&["-m", "map"], &qrels, &run), 2, &run.to_string_lossy());
+        assert_refused(&eval(&["-m", "map"], &qrels, &input("good.run")), 4, &qrels.to_string_lossy());
     }
 
     #[test]
@@ -627,9 +587,9 @@ mod measure_requests {
     fn global_gains_follow_the_rules_of_a_gain_map() {
         let (qrels, run) = (fixture("topics.qrels"), fixture("topics.run"));
         let out = eval(&["--global-gains", "1=x", "-m", "ndcg"], &qrels, &run);
-        assert_refused(&out, "invalid gain 'x' for relevance level 1");
+        assert_refused(&out, 1, "invalid gain 'x' for relevance level 1");
         let out = eval(&["--global-gains", "1=2,1=5", "-m", "ndcg"], &qrels, &run);
-        assert_refused(&out, "relevance level 1 is given more than once");
+        assert_refused(&out, 1, "relevance level 1 is given more than once");
     }
 }
 
@@ -718,20 +678,21 @@ mod integer_options {
     #[test]
     fn values_without_a_leading_integer_are_refused() {
         // trec_eval: "could not be parsed", and "out of range" for a value beyond a long.
-        for (options, message) in [
-            (&["-m", "P.x"][..], "invalid integer cutoff 'x'"),
-            (&["-m", "P..5"], "invalid integer cutoff '.5'"),
-            (&["-l", ".5", "-m", "map"], "value '.5' could not be parsed"),
-            (&["-l", "x", "-m", "map"], "value 'x' could not be parsed"),
+        for (options, status, message) in [
+            (&["-m", "P.x"][..], 2, "invalid integer cutoff 'x'"),
+            (&["-m", "P..5"], 2, "invalid integer cutoff '.5'"),
+            (&["-l", ".5", "-m", "map"], 1, "value '.5' could not be parsed"),
+            (&["-l", "x", "-m", "map"], 1, "value 'x' could not be parsed"),
             (
                 &["-l", "9223372036854775808", "-m", "map"],
+                1,
                 "value '9223372036854775808' out of range",
             ),
-            (&["-M", "x", "-m", "map"], "value 'x' could not be parsed"),
-            (&["-M-1", "-m", "map"], "value '-1' is negative"),
-            (&["-N", "x", "-m", "map"], "value 'x' could not be parsed"),
+            (&["-M", "x", "-m", "map"], 1, "value 'x' could not be parsed"),
+            (&["-M-1", "-m", "map"], 1, "value '-1' is negative"),
+            (&["-N", "x", "-m", "map"], 1, "value 'x' could not be parsed"),
         ] {
-            assert_refused(&graded(options), message);
+            assert_refused(&graded(options), status, message);
         }
     }
 
@@ -811,8 +772,7 @@ mod relevance_level {
     fn a_negative_level_is_refused() {
         for level in [&["-l", "-1"][..], &["-l-1"], &["-l=-1"]] {
             let out = te_rust_within_limit(&[level, &["-m", "map"]].concat());
-            assert_refused(&out, "te-rust: Unusable relevance level '-1'");
-            assert_eq!(out.status.code(), Some(1));
+            assert_refused(&out, 1, "te-rust: Unusable relevance level '-1'");
         }
     }
 
@@ -822,8 +782,7 @@ mod relevance_level {
             .args(["-l-1", "missing.qrels", "missing.run"])
             .output()
             .unwrap();
-        assert_refused(&out, "te-rust: Unusable relevance level '-1'");
-        assert_eq!(out.status.code(), Some(1));
+        assert_refused(&out, 1, "te-rust: Unusable relevance level '-1'");
     }
 
     #[test]
@@ -864,8 +823,7 @@ mod complete_set {
     fn no_shared_topic_exits_4_without_complete() {
         let (qrels, run) = (fixture("topics.qrels"), topic_3_run());
         let out = eval(&["-m", "map"], &qrels, &run);
-        assert_eq!(out.status.code(), Some(4));
-        assert_refused(&out, "no topic has both results and judgments");
+        assert_refused(&out, 4, "no topic has both results and judgments");
         assert!(!eval(&["-R", "qrels_jg", "-m", "map_avgjg"], &qrels, &run)
             .status
             .success());

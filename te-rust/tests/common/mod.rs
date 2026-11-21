@@ -94,9 +94,9 @@ pub fn stderr(output: &Output) -> String {
 }
 
 /// Checks that te-rust failed, printed no rows, and wrote `message` to stderr.
-pub fn assert_refused(output: &Output, message: &str) {
+pub fn assert_refused(output: &Output, status: i32, message: &str) {
     let stderr = stderr(output);
-    assert!(!output.status.success(), "te-rust succeeded: {stderr}");
+    assert_eq!(output.status.code(), Some(status), "{stderr}");
     assert!(output.stdout.is_empty(), "te-rust printed rows: {stderr}");
     assert!(stderr.contains(message), "{message:?} is not in {stderr:?}");
 }

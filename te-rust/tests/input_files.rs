@@ -84,6 +84,7 @@ fn nan_and_scores_without_a_number_are_refused() {
         let out = eval(&["-m", "relstring"], &qrels, &run);
         assert_refused(
             &out,
+            2,
             &format!("Line 2: invalid float for field 'sim': '{score}'"),
         );
     }
@@ -159,9 +160,8 @@ fn with_floats_file_scores_like_qrels_test() {
 /// A repeated document is refused only where trec_eval refuses it: in a topic that is scored,
 /// within `-M`, when a requested measure reads the ranking. The expected values are trec_eval's.
 mod scored_duplicates {
-    use super::common::{eval, fixture, stderr, summary, write};
+    use super::common::{assert_refused, eval, fixture, summary, write};
     use std::path::PathBuf;
-    use std::process::Output;
 
     /// `topics.run` with d2 at rank 3 of topic 1 again, in place of d3.
     const REPEAT_AT_RANK_3: &str =
@@ -173,12 +173,6 @@ mod scored_duplicates {
             name,
             std::fs::read_to_string(fixture(name)).unwrap() + lines,
         )
-    }
-
-    /// Checks for exit status 4, trec_eval's status for a repeat, and returns stderr.
-    fn refusal(output: &Output) -> String {
-        assert_eq!(output.status.code(), Some(4), "{output:?}");
-        stderr(output)
     }
 
     #[test]
@@ -219,9 +213,9 @@ mod scored_duplicates {
             "Error in run file '{}': duplicate document 'd2' for query '1'",
             run.display()
         );
-        assert!(refusal(&eval(&["-m", "map"], &qrels, &run)).contains(&message));
+        assert_refused(&eval(&["-m", "map"], &qrels, &run), 4, &message);
         let out = eval(&["-R", "qrels_jg", "-m", "map_avgjg"], &qrels, &run);
-        assert!(refusal(&out).contains(&message));
+        assert_refused(&out, 4, &message);
     }
 
     #[test]
@@ -246,7 +240,7 @@ mod scored_duplicates {
             "Error in qrels file '{}': duplicate document 'd1' for query '1'",
             qrels.display()
         );
-        assert!(refusal(&eval(&["-m", "map"], &qrels, &fixture("topics.run"))).contains(&message));
+        assert_refused(&eval(&["-m", "map"], &qrels, &fixture("topics.run")), 4, &message);
         // Topic 3 has no results. Without -c it is not scored, and map is that of topics 1 and 2.
         // trec_eval 10.x exits 4 here because topic 3 has no results, as docs/cli.md says.
         let qrels = with_lines("topics.qrels", "3 0 x 1\n3 0 x 0\n");
@@ -254,6 +248,6 @@ mod scored_duplicates {
         assert_eq!(summary(&out, "map"), "0.9167");
         // With -c topic 3 is scored, and trec_eval refuses the repeat too.
         let out = eval(&["-c", "-m", "map"], &qrels, &fixture("topics.run"));
-        assert!(refusal(&out).contains("duplicate document 'x' for query '3'"));
+        assert_refused(&out, 4, "duplicate document 'x' for query '3'");
     }
 }
