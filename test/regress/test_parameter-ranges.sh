@@ -20,7 +20,7 @@ expect_message 2 "multiple -1 of measure 'Rprec_mult' is not positive" \
     -m Rprec_mult.-1 $Q $R
 expect_message 2 "multiple 0 of measure 'Rprec_mult_avgjg' is not positive" \
     -m Rprec_mult_avgjg.0 $Q $R
-expect_message 2 "weight -1 of measure 'set_F' is not 0 or more" \
+expect_message 2 "weight -1 of measure 'set_F' is negative" \
     -m set_F.-1 $Q $R
 expect_message 2 "persistence p=1 of measure 'rbp' is not in [0, 1)" \
     -m rbp.p=1 $Q $R
