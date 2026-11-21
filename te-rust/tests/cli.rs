@@ -907,3 +907,21 @@ mod complete_set {
         assert_eq!(rows(&out), Vec::<String>::new());
     }
 }
+
+#[test]
+#[cfg(target_pointer_width = "64")]
+fn relstring_limit_larger_than_the_ranking_does_not_overflow() {
+    use common::{eval, fixture, rows};
+
+    let qrels = fixture("topics.qrels");
+    let run = fixture("topics.run");
+    let small = eval(&["-q", "-m", "relstring.3"], &qrels, &run);
+    let large = eval(&["-q", "-m", "relstring.18446744073709551615"], &qrels, &run);
+    let expected = rows(&small);
+    let actual: Vec<_> = rows(&large)
+        .into_iter()
+        .map(|row| row.replacen("relstring_18446744073709551615", "relstring_3", 1))
+        .collect();
+    assert_eq!(actual, expected);
+    assert_eq!(actual, ["relstring_3 1 '102'", "relstring_3 2 '10'"]);
+}

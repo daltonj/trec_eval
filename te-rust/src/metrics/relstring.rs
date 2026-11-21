@@ -60,7 +60,7 @@ impl Measure for RelstringMeasure {
         };
 
         let limit = std::cmp::min(self.len, q_state.results_rel_list.len());
-        let mut s = String::with_capacity(self.len);
+        let mut s = String::with_capacity(limit);
 
         for i in 0..limit {
             let rel = q_state.results_rel_list[i];
