@@ -127,7 +127,8 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
             return (UNDEF);
         }
         line_ptr->mean = str_to_double_ctx(mean_ptr, &end_ptr, &error,
-                                           "line %ld of zscores file '%s'",
+                                           "mean in line %ld of zscores "
+                                           "file '%s'",
                                            line_num, zscores_file);
         if (error)
             return (UNDEF);
@@ -138,7 +139,8 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
             return (UNDEF);
         }
         line_ptr->stddev = str_to_double_ctx(stddev_ptr, &end_ptr, &error,
-                                             "line %ld of zscores file '%s'",
+                                             "stddev in line %ld of zscores "
+                                             "file '%s'",
                                              line_num, zscores_file);
         if (error)
             return (UNDEF);

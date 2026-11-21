@@ -18,9 +18,9 @@ for field in mean stddev; do
         loc="line 2 of zscores file '$T/zscores'"
         unusable="trec_eval.get_zscores: Unusable $field '$value' in $loc"
         case $value in
-        abc) want="Error: value \`abc' could not be parsed ($loc)." ;;
-        nan) want="Error: value \`nan' is not a number ($loc)." ;;
-        1e999) want="Warning, value \`1e999' out of range, read as \`inf' ($loc).
+        abc) want="Error: value \`abc' could not be parsed ($field in $loc)." ;;
+        nan) want="Error: value \`nan' is not a number ($field in $loc)." ;;
+        1e999) want="Warning, value \`1e999' out of range, read as \`inf' ($field in $loc).
 $unusable" ;;
         *) want=$unusable ;;
         esac
