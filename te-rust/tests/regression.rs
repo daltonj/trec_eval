@@ -41,7 +41,9 @@ fn parse_output(output_str: &str) -> Vec<Row> {
             let [measure, qid, val_str] = parts[..] else {
                 panic!("output line without three fields: {line:?}");
             };
-            let val = if let Ok(i) = val_str.parse::<i64>() {
+            let val = if measure == "runid" || measure == "relstring" || measure.starts_with("relstring_") {
+                Val::Str(val_str.to_string())
+            } else if let Ok(i) = val_str.parse::<i64>() {
                 Val::Int(i)
             } else if let Ok(f) = val_str.parse::<f64>() {
                 Val::Float(f)
@@ -170,6 +172,33 @@ fn compare_outputs(rust_args: &[&str], c_args: &[&str], qrels_name: &str, result
         c_args,
         differences.join("\n")
     );
+}
+
+#[test]
+fn numeric_runids_are_compared_as_strings() {
+    for (left, right) in [
+        ("01", "1"),
+        ("9223372036854775808", "9223372036854775809"),
+        ("1.0", "1.00"),
+    ] {
+        let c = parse_output(&format!("runid all {left}\n"));
+        let rust = parse_output(&format!("runid all {right}\n"));
+        assert!(output_differences(&c, &c).is_empty());
+        assert!(
+            !output_differences(&c, &rust).is_empty(),
+            "runids {left:?} and {right:?} compared equal"
+        );
+    }
+}
+
+#[test]
+fn numeric_relstrings_are_compared_as_strings() {
+    for measure in ["relstring", "relstring_3"] {
+        let c = parse_output(&format!("{measure} q 01\n"));
+        let rust = parse_output(&format!("{measure} q 1\n"));
+        assert!(output_differences(&c, &c).is_empty());
+        assert!(!output_differences(&c, &rust).is_empty(), "{measure}");
+    }
 }
 
 #[test]
