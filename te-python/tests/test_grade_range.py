@@ -22,7 +22,7 @@ def test_in_memory_qrels_accept_grade_boundaries(grade, representation, qrels_as
     )
 
 
-def test_fractional_grade_reads_as_its_leading_integer_with_a_warning(tmp_path):
+def test_qrels_grades_read_their_leading_integer_with_a_warning(tmp_path):
     qrels = tmp_path / "grades.qrels"
     qrels.write_text("t 0 a 1.5\nt 0 b 0.9\nt 0 c 0\n")
     with pytest.warns(UserWarning) as caught:

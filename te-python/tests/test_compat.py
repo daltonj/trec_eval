@@ -191,7 +191,7 @@ def test_supported_dcg_measures_can_be_evaluated(measure):
 
 
 @pytest.mark.parametrize("run_kind", ["dict", "file", "iterable", "frame"])
-def test_compat_no_overlap_after_ingestion(run_kind, run_as):
+def test_compat_scores_only_topics_shared_with_qrels(run_kind, run_as):
     qrels = {"q1": {"d": 1}}
     run = run_as(run_kind, [("q2", "d", 1.0)])
     evaluator = pytrec_eval.RelevanceEvaluator(qrels, {"map"})

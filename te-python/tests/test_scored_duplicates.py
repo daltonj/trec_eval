@@ -51,7 +51,7 @@ def test_custom_measures_refuse_scored_duplicates(measures):
 
 @pytest.mark.parametrize("representation", ["file", "iterable", "frame"])
 @pytest.mark.parametrize("first_grade", [0, 1])
-def test_python_qrels_keep_repeats_for_the_scored_topic_check(
+def test_repeated_judgments_are_refused_only_in_topics_scored_by_a_ranking_measure(
     representation, first_grade, qrels_as
 ):
     rows = [("1", "a", 1), ("3", "x", first_grade), ("3", "x", 1)]
