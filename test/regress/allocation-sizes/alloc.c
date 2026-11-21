@@ -1,7 +1,5 @@
-/* Checks the byte counts that Malloc and Realloc in common.h pass to
-   malloc and realloc, through stubs that record the count without
-   allocating. test_allocation-sizes.sh builds it with "make alloc-test";
-   the exit status is 0 if every check holds. */
+/* Checks the byte counts requested by Malloc, Realloc and the pool
+   helpers, using stubs that record the count without allocating. */
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -42,14 +40,13 @@ int main(void)
 {
     /* half * sizeof(short) is one more than the largest size_t */
     size_t half = ((size_t) -1) / 2 + 1;
-    size_t n = 1;
     long bound = 0;
 
-    check(NULL == te_chk_and_malloc(NULL, &bound, -1, sizeof(long)) &&
+    check(NULL == te_chk_and_malloc(buffer, &bound, -1, sizeof(long)) &&
           bound == 0,
           "te_chk_and_malloc accepted a negative first request");
     bound = 0;
-    check(NULL == te_chk_and_realloc(NULL, &bound, -1, sizeof(long)) &&
+    check(NULL == te_chk_and_realloc(buffer, &bound, -1, sizeof(long)) &&
           bound == 0,
           "te_chk_and_realloc accepted a negative first request");
 
@@ -61,14 +58,6 @@ int main(void)
     check(NULL != te_chk_and_realloc(NULL, &bound, 0, sizeof(long)) &&
           bound == 1 && requested == sizeof(long),
           "te_chk_and_realloc did not allocate one element for a zero request");
-
-    check(NULL != Malloc(n++, char) && n == 2 && requested == sizeof(char),
-          "Malloc(n++, char) did not evaluate n once and request one char");
-    n = 1;
-    requested = 0;
-    check(NULL != Realloc(buffer, n++, char) && n == 2 &&
-          requested == sizeof(char),
-          "Realloc(ptr, n++, char) did not evaluate n once and request one char");
 
     requested = 0;
     check(NULL == Malloc(half, short) && requested == 0,

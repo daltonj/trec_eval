@@ -1,8 +1,8 @@
-# Malloc and Realloc (common.h) request n * sizeof(type) bytes as a
-# size_t, and return NULL without allocating when that does not fit.
-# Judgments files of 2 GiB or more are impractical here, so a small
-# program checks the byte counts the macros pass to malloc and realloc.
+# Malloc, Realloc and the pool helpers request n * sizeof(type) bytes.
+# The macros return NULL when that does not fit in size_t. The pool
+# helpers refuse negative requests and allocate at least one element.
+# A stub allocator checks sizes without allocating large buffers.
 . test/regress/lib.sh
 
-TEST_ALLOC="$T/alloc" make -s alloc-test || fail "cannot build the allocation test"
-"$T/alloc" || fail "Malloc or Realloc requested a wrong size"
+./test_allocation-sizes ||
+    fail "Malloc, Realloc or a pool helper requested a wrong size"

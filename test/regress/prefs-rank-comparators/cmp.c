@@ -1,3 +1,6 @@
+/* Checks preference rank comparisons without constructing rankings
+   with more than INT_MAX documents. Judgment group and relevance
+   stay equal so that only rank determines the order. */
 #include <limits.h>
 #include "form_prefs_counts.c"
 

@@ -54,17 +54,17 @@ SRCOTHER = README Makefile test bpref_bug CHANGELOG
 trec_eval: $(SRCS) Makefile $(SRCH)
 	$(CC) $(CFLAGS)  -o trec_eval $(SRCS) -lm
 
-.PHONY: alloc-test
-alloc-test:
-	$(CC) $(CFLAGS) -o "$$TEST_ALLOC" test/regress/allocation-sizes/alloc.c
+test_allocation-sizes: test/regress/allocation-sizes/alloc.c utility_pool.c $(SRCH)
+	$(CC) $(CFLAGS) -o test_allocation-sizes test/regress/allocation-sizes/alloc.c
 
-.PHONY: prefs-rank-test
-prefs-rank-test:
-	$(CC) $(CFLAGS) -o "$$TEST_PREFS_RANK" test/regress/prefs-rank-comparators/cmp.c utility_pool.c
+test_prefs-rank-comparators: test/regress/prefs-rank-comparators/cmp.c \
+		form_prefs_counts.c utility_pool.c $(SRCH)
+	$(CC) $(CFLAGS) -o test_prefs-rank-comparators \
+		test/regress/prefs-rank-comparators/cmp.c utility_pool.c
 
 install: $(BIN)/trec_eval
 
-quicktest: trec_eval
+quicktest: trec_eval test_allocation-sizes test_prefs-rank-comparators
 	./trec_eval test/qrels.test test/results.test | diff - test/out.test
 	./trec_eval test/qrels.test.with-comments test/results.test | diff - test/out.test
 	./trec_eval test/qrels.comment.test test/results.comment.test | diff - test/out.comment.test
@@ -116,6 +116,7 @@ $(BIN)/trec_eval: trec_eval
 #########################################################################
 clean semiclean:
 	/bin/rm -f *.o *.BAK *~ trec_eval trec_eval.*.tar out.trec_eval Makefile.bak
+	/bin/rm -f test_allocation-sizes test_prefs-rank-comparators
 
 tar:
 	-/bin/rm -rf ./trec_eval.$(VERSIONID)
