@@ -1,7 +1,7 @@
 # Blank lines, lines of white space and comment lines, whose first
 # non-blank character is '#', are skipped wherever they are in qrels,
-# qrels_jg and prefs files. A file with no other lines is refused with
-# exit 2. The comments have the fields of a data line, so -c would print
+# qrels_jg and prefs files, with a warning for each blank line. A file
+# with no other lines is refused with exit 2. The comments have the fields of a data line, so -c would print
 # a topic read from one.
 . test/regress/lib.sh
 R=test/regress/results
@@ -26,8 +26,15 @@ check() {
     fmt=$1 name=$2
     shift 2
     save_output "$T/plain" -c -q -R $fmt "$@" test/regress/$name $R
-    for v in end start blank space indent; do
-        expect_output "$T/plain" -c -q -R $fmt "$@" "$T/$name.$v" $R
+    for v in end start indent; do
+        expect_result 0 "$T/plain" /dev/null \
+            -c -q -R $fmt "$@" "$T/$name.$v" $R
+    done
+    for v in blank space; do
+        printf "Warning, blank line skipped (line 3 of %s file '%s').\n" \
+            $name "$T/$name.$v" > "$T/warning"
+        expect_result 0 "$T/plain" "$T/warning" \
+            -c -q -R $fmt "$@" "$T/$name.$v" $R
     done
     expect_message 2 "No data lines in $name file '$T/$name.only'" \
         -R $fmt "$@" "$T/$name.only" $R

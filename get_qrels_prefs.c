@@ -163,10 +163,14 @@ te_get_qrels_prefs(EPI * epi, char *text_prefs_file,
     line_ptr = lines;
     ptr = trec_prefs_buf;
     while (*ptr) {
-        /* Skip blank lines and comment lines */
+        /* Skip comment lines, and blank lines with a warning */
         while (*ptr != '\n' && isspace(*ptr))
             ptr++;
 		if (*ptr == '\n' || *ptr == '#') {
+			if (*ptr == '\n')
+				fprintf(stderr, "Warning, blank line skipped "
+						"(line %ld of qrels file '%s').\n",
+						line_num + 1, text_prefs_file);
 			ptr = index(ptr, '\n') + 1;
 			line_num++;
 			continue;

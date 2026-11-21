@@ -137,10 +137,14 @@ te_get_qrels_jg(EPI * epi, char *text_qrels_file, ALL_REL_INFO * all_rel_info)
     line_ptr = lines;
     ptr = trec_qrels_buf;
     while (*ptr) {
-        /* Skip blank lines and comment lines */
+        /* Skip comment lines, and blank lines with a warning */
         while (*ptr != '\n' && isspace(*ptr))
             ptr++;
 		if (*ptr == '\n' || *ptr == '#') {
+			if (*ptr == '\n')
+				fprintf(stderr, "Warning, blank line skipped "
+						"(line %ld of qrels file '%s').\n",
+						line_num + 1, text_qrels_file);
 			ptr = index(ptr, '\n') + 1;
 			line_num++;
 			continue;
