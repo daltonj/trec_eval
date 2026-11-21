@@ -372,9 +372,11 @@ Here is the exact mathematical implementation design for some of the most critic
         $$\text{score} = \ln(\max(\text{AP}, 10^{-5}))$$
 *   **Accumulate**: Standard sum of query log scores.
 *   **Average**:
-    Sum up the log scores. If `average_complete_flag` is true, add $(N_{\text{qrels}} - N_{\text{evaluated}}) \times \ln(10^{-5})$ to the sum to account for missing queries.
+    Sum the query log scores. With `average_complete_flag`, missing queries are evaluated as empty rankings, so their $\ln(10^{-5})$ scores are already included in the sum.
     *   Divide the final sum by the denominator ($N_{\text{evaluated}}$ or $N_{\text{qrels}}$) and exponentiate:
         $$\text{summary\_score} = \exp\left(\frac{\text{sum}}{\text{denominator}}\right)$$
+
+For `gm_bpref`, replace AP with bpref and use the same accumulation and averaging.
 
 ### 5.3 Precision at Cutoffs (`P`)
 *   **Sub-metrics**: Default cutoffs are `[5, 10, 15, 20, 30, 100, 200, 500, 1000]`. If parameters are passed, parse as comma-separated integers.
