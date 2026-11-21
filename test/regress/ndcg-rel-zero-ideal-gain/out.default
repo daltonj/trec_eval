@@ -1,3 +1,4 @@
 ndcg_rel              	1	0.6309
 ndcg_rel              	2	1.0000
-ndcg_rel              	all	0.8155
+ndcg_rel              	3	1.0000
+ndcg_rel              	all	0.8770
