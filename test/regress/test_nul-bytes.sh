@@ -28,6 +28,8 @@ for n in 1 2; do
         -R prefs -m prefs_num_prefs_poss "$T/prefs.$n" $R
     expect_message 2 "get_results: NUL character in line $n of results file '$T/run.$n'" \
         -m num_ret $Q "$T/run.$n"
+    expect_message 2 "get_results: NUL character in line $n of results file '-'" \
+        -m num_ret $Q - < "$T/run.$n"
     expect_message 2 "get_zscores: NUL character in line $n of zscores file '$T/zscores.$n'" \
         -Z "$T/zscores.$n" -m map $Q $R
 done

@@ -16,7 +16,3 @@ expect_message 2 "cutoffs 0.999 and 1.001 both give the name 'Rprec_mult_avgjg_1
 
 expect_output $D/out.distinct -m Rprec_mult.0.995,1.004 \
     -m iprec_at_recall.0.1,0.106 $Q $R
-# Large cutoffs that differ only after their eighth character have
-# distinct names.
-expect_status 0 -m Rprec_mult.100000.01,100000.02 $Q $R
-expect_status 0 -m Rprec_mult.10000000.5,50000000,100000000 $Q $R

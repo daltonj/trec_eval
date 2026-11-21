@@ -57,15 +57,6 @@ expect_output() {
     te_same output "$te_file"
 }
 
-# expect_stderr STATUS FILE ARGS...: exit STATUS, and standard error
-# equal to FILE.
-expect_stderr() {
-    te_want=$1 te_file=$2
-    shift 2
-    te_run "$te_want" "$@"
-    te_same error "$te_file"
-}
-
 # expect_result STATUS OUTPUT ERROR ARGS...: exit STATUS, standard output
 # equal to the file OUTPUT, and standard error equal to the file ERROR.
 expect_result() {
