@@ -196,10 +196,7 @@ mod scored_duplicates {
     #[test]
     fn a_repeat_beyond_max_docs_is_not_checked() {
         // With -M 2, topic 1 ranks d1, d2: AP = (1/1) / 2 = 0.5, and map = (0.5 + 1) / 2.
-        let (qrels, run) = (
-            fixture("topics.qrels"),
-            repeated_run(),
-        );
+        let (qrels, run) = (fixture("topics.qrels"), repeated_run());
         assert_eq!(
             summary(&eval(&["-M", "2", "-m", "map"], &qrels, &run), "map"),
             "0.7500"
@@ -214,10 +211,7 @@ mod scored_duplicates {
 
     #[test]
     fn a_repeat_within_max_docs_is_refused() {
-        let (qrels, run) = (
-            fixture("topics.qrels"),
-            repeated_run(),
-        );
+        let (qrels, run) = (fixture("topics.qrels"), repeated_run());
         let message = format!(
             "Error in run file '{}': duplicate document 'd2' for query '1'",
             run.display()
@@ -230,10 +224,7 @@ mod scored_duplicates {
     #[test]
     fn measures_that_read_no_ranking_skip_the_check() {
         // num_q and runid form no ranking in trec_eval, which prints num_q 2 for both files.
-        let (qrels, run) = (
-            fixture("topics.qrels"),
-            repeated_run(),
-        );
+        let (qrels, run) = (fixture("topics.qrels"), repeated_run());
         assert_eq!(summary(&eval(&["-m", "num_q"], &qrels, &run), "num_q"), "2");
         let out = eval(&["-m", "runid", "-m", "num_q"], &qrels, &run);
         assert_eq!(summary(&out, "runid"), "r");
@@ -249,7 +240,11 @@ mod scored_duplicates {
             "Error in qrels file '{}': duplicate document 'd1' for query '1'",
             qrels.display()
         );
-        assert_refused(&eval(&["-m", "map"], &qrels, &fixture("topics.run")), 4, &message);
+        assert_refused(
+            &eval(&["-m", "map"], &qrels, &fixture("topics.run")),
+            4,
+            &message,
+        );
         // Topic 3 has no results. Without -c it is not scored, and map is that of topics 1 and 2.
         // trec_eval 10.x exits 4 here because topic 3 has no results, as docs/cli.md says.
         let qrels = with_lines("topics.qrels", "3 0 x 1\n3 0 x 0\n");

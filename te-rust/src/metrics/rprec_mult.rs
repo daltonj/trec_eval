@@ -153,5 +153,4 @@ mod tests {
             [MetricValue::Float(1e-19), MetricValue::Float(1e-100)]
         );
     }
-
 }

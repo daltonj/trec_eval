@@ -1067,6 +1067,7 @@ mod tests {
             assert_eq!(error(qrels_jg(text)), message);
         }
     }
+
     #[test]
     fn hex_exponent_cancels_a_long_significand_offset() {
         // Four bits per hex digit make both explicit exponents exceed 2^20; each value is still 1.
@@ -1167,7 +1168,19 @@ mod tests {
 
     #[test]
     fn strtod_prefix_reads_no_nan_and_nothing_without_a_number() {
-        for s in ["nan", "-NaN", "nan(12ab)", "", ".", "+", "-", "e5", "in", "abc", "x1"] {
+        for s in [
+            "nan",
+            "-NaN",
+            "nan(12ab)",
+            "",
+            ".",
+            "+",
+            "-",
+            "e5",
+            "in",
+            "abc",
+            "x1",
+        ] {
             assert_eq!(strtod_prefix(s), None, "{s}");
         }
     }

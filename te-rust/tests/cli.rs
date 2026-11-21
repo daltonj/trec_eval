@@ -118,22 +118,42 @@ mod exit_status {
     #[test]
     fn the_qrels_are_checked_before_the_run() {
         let map = &["-m", "map"];
-        assert_refused(&eval(map, &input("absent.qrels"), &input("absent.run")), 2, "absent.qrels");
+        assert_refused(
+            &eval(map, &input("absent.qrels"), &input("absent.run")),
+            2,
+            "absent.qrels",
+        );
         let qrels = input("malformed.qrels");
-        assert_refused(&eval(map, &qrels, &input("repeat.run")), 2, &qrels.to_string_lossy());
+        assert_refused(
+            &eval(map, &qrels, &input("repeat.run")),
+            2,
+            &qrels.to_string_lossy(),
+        );
     }
 
     #[test]
     fn the_judgment_format_is_checked_before_the_run() {
         let options = &["-R", "nosuch"];
-        assert_refused(&eval(options, &input("good.qrels"), &input("repeat.run")), 2, "nosuch");
+        assert_refused(
+            &eval(options, &input("good.qrels"), &input("repeat.run")),
+            2,
+            "nosuch",
+        );
     }
 
     #[test]
     fn a_repeated_judgment_is_found_after_the_run_is_read() {
         let (qrels, run) = (input("repeat.qrels"), input("malformed.run"));
-        assert_refused(&eval(&["-m", "map"], &qrels, &run), 2, &run.to_string_lossy());
-        assert_refused(&eval(&["-m", "map"], &qrels, &input("good.run")), 4, &qrels.to_string_lossy());
+        assert_refused(
+            &eval(&["-m", "map"], &qrels, &run),
+            2,
+            &run.to_string_lossy(),
+        );
+        assert_refused(
+            &eval(&["-m", "map"], &qrels, &input("good.run")),
+            4,
+            &qrels.to_string_lossy(),
+        );
     }
 }
 
@@ -320,24 +340,51 @@ mod documented_differences {
             (&["-D", "1"], 1, "unexpected argument '-D'"),
             (&["-Z", "zscores"], 1, "unexpected argument '-Z'"),
             (&["-o"], 1, "unexpected argument '-o'"),
-            (&["--Max_retrieved_per_topic=5"], 1, "unexpected argument '--Max_retrieved_per_topic'"),
-            (&["--complete_rel_info_wanted"], 1, "unexpected argument '--complete_rel_info_wanted'"),
+            (
+                &["--Max_retrieved_per_topic=5"],
+                1,
+                "unexpected argument '--Max_retrieved_per_topic'",
+            ),
+            (
+                &["--complete_rel_info_wanted"],
+                1,
+                "unexpected argument '--complete_rel_info_wanted'",
+            ),
             (&["-m", "prefs_simp"], 1, "unknown measure 'prefs_simp'"),
-            (&["-R", "prefs"], 2, "Unsupported relevance judgments format 'prefs'"),
-            (&["-R", "qrels_prefs"], 2, "Unsupported relevance judgments format 'qrels_prefs'"),
+            (
+                &["-R", "prefs"],
+                2,
+                "Unsupported relevance judgments format 'prefs'",
+            ),
+            (
+                &["-R", "qrels_prefs"],
+                2,
+                "Unsupported relevance judgments format 'qrels_prefs'",
+            ),
         ] {
             assert_refused(&eval_test_data(options, run), status, message);
         }
         // trec_eval reads the run from standard input when its name is "-".
-        assert_refused(&eval_test_data(&["-m", "map"], "-"), 2, "Error parsing run file '-'");
-        assert_refused(&te_rust().arg("-v").output().unwrap(), 1, "unexpected argument '-v'");
+        assert_refused(
+            &eval_test_data(&["-m", "map"], "-"),
+            2,
+            "Error parsing run file '-'",
+        );
+        assert_refused(
+            &te_rust().arg("-v").output().unwrap(),
+            1,
+            "unexpected argument '-v'",
+        );
     }
 
     #[test]
     fn uppercase_v_prints_the_version() {
         let out = te_rust().arg("-V").output().unwrap();
         assert_eq!(out.status.code(), Some(0));
-        assert_eq!(String::from_utf8(out.stdout).unwrap().trim(), "te-rust 0.1.0");
+        assert_eq!(
+            String::from_utf8(out.stdout).unwrap().trim(),
+            "te-rust 0.1.0"
+        );
         assert!(out.stderr.is_empty());
     }
 
@@ -347,11 +394,8 @@ mod documented_differences {
             ("ndcg.1=1,0=0.9", "ndcg_1=1,0=0.9 all 1.0000"),
             ("Rndcg.0=0,1=-1", "Rndcg_0=0,1=-1 all 0.0000"),
         ] {
-            let out = super::common::eval(
-                &["-m", measure],
-                &fixture("ab.qrels"),
-                &fixture("ab.run"),
-            );
+            let out =
+                super::common::eval(&["-m", measure], &fixture("ab.qrels"), &fixture("ab.run"));
             assert_eq!(rows(&out), [expected]);
         }
     }
@@ -419,7 +463,8 @@ mod documented_differences {
             (&["-m=recip_rank"], &["-m", "recip_rank"]),
             (&["-R=qrels", "-m", "map"], &["-R", "qrels", "-m", "map"]),
         ] {
-            let (joined_out, separate_out) = (eval_test_data(joined, run), eval_test_data(separate, run));
+            let (joined_out, separate_out) =
+                (eval_test_data(joined, run), eval_test_data(separate, run));
             assert!(separate_out.status.success(), "{separate:?}");
             assert!(!separate_out.stdout.is_empty(), "{separate:?}");
             assert_eq!(
@@ -565,8 +610,6 @@ mod measure_requests {
             );
         }
     }
-
-
 }
 
 /// Gain maps supplied with --global-gains.
@@ -592,7 +635,10 @@ mod integer_options {
     /// b (grade 2) is at rank 2 and a (grade 1) at rank 3.
     fn two_grades(options: &[&str]) -> Output {
         let qrels = write("two-grades.qrels", "1 0 a 1\n1 0 b 2\n1 0 c 0\n");
-        let run = write("two-grades.run", "1 Q0 c 1 3 r\n1 Q0 b 2 2 r\n1 Q0 a 3 1 r\n");
+        let run = write(
+            "two-grades.run",
+            "1 Q0 c 1 3 r\n1 Q0 b 2 2 r\n1 Q0 a 3 1 r\n",
+        );
         eval(options, &qrels, &run)
     }
 
@@ -671,16 +717,32 @@ mod integer_options {
         for (options, status, message) in [
             (&["-m", "P.x"][..], 2, "invalid integer cutoff 'x'"),
             (&["-m", "P..5"], 2, "invalid integer cutoff '.5'"),
-            (&["-l", ".5", "-m", "map"], 1, "value '.5' could not be parsed"),
-            (&["-l", "x", "-m", "map"], 1, "value 'x' could not be parsed"),
+            (
+                &["-l", ".5", "-m", "map"],
+                1,
+                "value '.5' could not be parsed",
+            ),
+            (
+                &["-l", "x", "-m", "map"],
+                1,
+                "value 'x' could not be parsed",
+            ),
             (
                 &["-l", "9223372036854775808", "-m", "map"],
                 1,
                 "value '9223372036854775808' out of range",
             ),
-            (&["-M", "x", "-m", "map"], 1, "value 'x' could not be parsed"),
+            (
+                &["-M", "x", "-m", "map"],
+                1,
+                "value 'x' could not be parsed",
+            ),
             (&["-M-1", "-m", "map"], 1, "value '-1' is negative"),
-            (&["-N", "x", "-m", "map"], 1, "value 'x' could not be parsed"),
+            (
+                &["-N", "x", "-m", "map"],
+                1,
+                "value 'x' could not be parsed",
+            ),
         ] {
             assert_refused(&two_grades(options), status, message);
         }
@@ -702,7 +764,10 @@ mod integer_options {
                 .collect::<Vec<_>>()
         };
         // Six measures for each of three topics and the summary.
-        assert_eq!(cutoff_rows(rows(&out)), cutoff_rows(reference_rows("out.test.meas_params")));
+        assert_eq!(
+            cutoff_rows(rows(&out)),
+            cutoff_rows(reference_rows("out.test.meas_params"))
+        );
     }
 }
 

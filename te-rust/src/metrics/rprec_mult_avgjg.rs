@@ -154,13 +154,11 @@ mod tests {
     #[test]
     fn large_multiples_keep_their_precision() {
         let measure = RprecMultAvgjgMeasure::new(vec![1e19, 1e100]).unwrap();
-        let state = EvalState::JudgmentGroups(vec![
-            crate::metrics::common::make_mock_state(vec![1, 1], 2),
-        ]);
+        let state =
+            EvalState::JudgmentGroups(vec![crate::metrics::common::make_mock_state(vec![1, 1], 2)]);
         assert_eq!(
             measure.calc(&EvalConfig::default(), &state),
             [MetricValue::Float(1e-19), MetricValue::Float(1e-100)]
         );
     }
-
 }

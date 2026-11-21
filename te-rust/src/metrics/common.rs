@@ -397,16 +397,25 @@ mod parser_tests {
 
     #[test]
     fn int_cutoffs_empty_uses_default() {
-        assert_eq!(parse_int_cutoffs("", &[5, 10, 20], &mut Vec::new()).unwrap(), vec![5, 10, 20]);
+        assert_eq!(
+            parse_int_cutoffs("", &[5, 10, 20], &mut Vec::new()).unwrap(),
+            vec![5, 10, 20]
+        );
     }
 
     #[test]
     fn int_cutoffs_skip_only_leading_c_locale_whitespace() {
         let mut warnings = Vec::new();
-        assert_eq!(parse_int_cutoffs("5, 10 ,\t20", &[], &mut warnings).unwrap(), vec![5, 10, 20]);
+        assert_eq!(
+            parse_int_cutoffs("5, 10 ,\t20", &[], &mut warnings).unwrap(),
+            vec![5, 10, 20]
+        );
         assert_eq!(warnings, ["value ' 10 ' partially read as '10'"]);
         let mut warnings = Vec::new();
-        assert_eq!(parse_int_cutoffs("2\u{a0}", &[], &mut warnings).unwrap(), vec![2]);
+        assert_eq!(
+            parse_int_cutoffs("2\u{a0}", &[], &mut warnings).unwrap(),
+            vec![2]
+        );
         assert_eq!(warnings, ["value '2\u{a0}' partially read as '2'"]);
         let err = parse_int_cutoffs("\u{a0}2", &[], &mut Vec::new()).unwrap_err();
         assert_eq!(err.message, "invalid integer cutoff '\u{a0}2'");
@@ -427,22 +436,39 @@ mod parser_tests {
     fn int_cutoffs_must_fit_in_i64() {
         let max = parse_int_cutoffs("9223372036854775807", &[], &mut Vec::new()).unwrap();
         assert_eq!(max, vec![i64::MAX as usize]);
-        for bad in ["9223372036854775808", "18446744073709551615", "-9223372036854775809"] {
+        for bad in [
+            "9223372036854775808",
+            "18446744073709551615",
+            "-9223372036854775809",
+        ] {
             let err = parse_int_cutoffs(bad, &[], &mut Vec::new()).unwrap_err();
-            assert!(err.message.contains("out of range"), "{bad}: {}", err.message);
+            assert!(
+                err.message.contains("out of range"),
+                "{bad}: {}",
+                err.message
+            );
         }
     }
 
     #[test]
     fn int_cutoffs_read_the_leading_integer_with_a_warning() {
         let mut warnings = Vec::new();
-        assert_eq!(parse_int_cutoffs("1.5,5x,20", &[], &mut warnings).unwrap(), vec![1, 5, 20]);
+        assert_eq!(
+            parse_int_cutoffs("1.5,5x,20", &[], &mut warnings).unwrap(),
+            vec![1, 5, 20]
+        );
         assert_eq!(
             warnings,
-            ["value '1.5' partially read as '1'", "value '5x' partially read as '5'"]
+            [
+                "value '1.5' partially read as '1'",
+                "value '5x' partially read as '5'"
+            ]
         );
         let mut warnings = Vec::new();
-        assert_eq!(parse_int_cutoffs("5,20", &[], &mut warnings).unwrap(), vec![5, 20]);
+        assert_eq!(
+            parse_int_cutoffs("5,20", &[], &mut warnings).unwrap(),
+            vec![5, 20]
+        );
         assert!(warnings.is_empty());
     }
 
@@ -460,7 +486,11 @@ mod parser_tests {
     fn checked_float_cutoffs_refuse_names_that_collide() {
         for bad in [[0.999, 1.001], [0.101, 0.104], [0.005, 0.01], [1.0, 0.996]] {
             let err = checked_float_cutoffs(bad.to_vec()).unwrap_err();
-            assert!(err.message.contains("both print as"), "{bad:?}: {}", err.message);
+            assert!(
+                err.message.contains("both print as"),
+                "{bad:?}: {}",
+                err.message
+            );
         }
         // 0.105 is stored just below 0.105 and prints as 0.10, 0.106 as 0.11.
         let distinct = checked_float_cutoffs(vec![0.106, 0.105]).unwrap();
@@ -479,7 +509,10 @@ mod parser_tests {
         }
         let err = parse_float_cutoffs("0.5, 1e400", &[]).unwrap_err();
         assert_eq!(err.message, "float value '1e400' is not a finite number");
-        assert_eq!(parse_float_cutoffs("1e300,-0.5", &[]).unwrap(), vec![1e300, -0.5]);
+        assert_eq!(
+            parse_float_cutoffs("1e300,-0.5", &[]).unwrap(),
+            vec![1e300, -0.5]
+        );
     }
 
     #[test]
@@ -502,7 +535,9 @@ mod parser_tests {
 
     #[test]
     fn gains_parse_levels_and_gains() {
-        let gains = GainsConfig::parse("1=3, 2 = 9.5,-1=0").unwrap().custom_gains;
+        let gains = GainsConfig::parse("1=3, 2 = 9.5,-1=0")
+            .unwrap()
+            .custom_gains;
         assert_eq!(gains, HashMap::from([(1, 3.0), (2, 9.5), (-1, 0.0)]));
         assert!(GainsConfig::parse("").unwrap().custom_gains.is_empty());
     }

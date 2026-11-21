@@ -162,7 +162,11 @@ mod parameters {
     fn relstring_limit_larger_than_the_ranking_does_not_overflow() {
         let qrels = fixture("topics.qrels");
         let run = fixture("topics.run");
-        let large = eval(&["-q", "-m", "relstring.18446744073709551615"], &qrels, &run);
+        let large = eval(
+            &["-q", "-m", "relstring.18446744073709551615"],
+            &qrels,
+            &run,
+        );
         assert_eq!(
             rows(&large),
             [
@@ -177,7 +181,10 @@ mod parameters {
         // Six relevant documents in the top six.
         let (qrels, run) = (fixture("six-relevant.qrels"), fixture("six-relevant.run"));
         for (request, expected) in [
-            ("iprec_at_recall.0.0", &["iprec_at_recall_0.00 all 1.0000"][..]),
+            (
+                "iprec_at_recall.0.0",
+                &["iprec_at_recall_0.00 all 1.0000"][..],
+            ),
             ("iprec_at_recall.1.", &["iprec_at_recall_1.00 all 1.0000"]),
             (
                 "Rprec_mult.1.,2.",
@@ -635,7 +642,10 @@ mod geometric_means {
         let reference = reference_rows("out.test.aqc");
         for measure in ["gm_map", "gm_bpref"] {
             let prefix = format!("{measure} all ");
-            let expected = reference.iter().find_map(|row| row.strip_prefix(&prefix)).unwrap();
+            let expected = reference
+                .iter()
+                .find_map(|row| row.strip_prefix(&prefix))
+                .unwrap();
             assert_eq!(summary(&out, measure), expected, "{measure}");
         }
     }

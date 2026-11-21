@@ -128,7 +128,10 @@ mod tests {
         // retrieved [1, 0, 0], num_rel = 2, 10 documents in the collection:
         // a = 1, b = 2, c = 1 and d = 10 - 3 - 1 = 6.
         let measure = UtilityMeasure::new(vec![1000.0, 100.0, 10.0, 1.0], "1000,100,10,1").unwrap();
-        let config = EvalConfig { num_docs_in_coll: 10, ..EvalConfig::default() };
+        let config = EvalConfig {
+            num_docs_in_coll: 10,
+            ..EvalConfig::default()
+        };
         let state = make_mock_state(vec![1, 0, 0], 2);
         let actual = measure.calc(&config, &EvalState::Standard(state));
         assert_eq!(actual, vec![MetricValue::Float(1216.0)]);

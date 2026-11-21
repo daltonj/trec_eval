@@ -405,7 +405,8 @@ mod tests {
     #[test]
     fn every_registry_factory_builds_with_defaults() {
         for spec in registry() {
-            let m = (spec.factory)("", &mut Vec::new()).unwrap_or_else(|e| panic!("{} failed: {}", spec.name, e));
+            let m = (spec.factory)("", &mut Vec::new())
+                .unwrap_or_else(|e| panic!("{} failed: {}", spec.name, e));
             assert_eq!(m.name(), spec.name, "spec name must match measure name");
         }
     }
@@ -457,7 +458,9 @@ mod tests {
             "P@5,10".to_string(),
             "mrr".to_string(),
             "recip_rank".to_string(),
-        ]).unwrap().measures;
+        ])
+        .unwrap()
+        .measures;
         // mrr and recip_rank print the same row, so recip_rank is evaluated once.
         assert_eq!(measures.len(), 4);
         assert_eq!(measures[0].name(), "ndcg_cut");
@@ -472,7 +475,9 @@ mod tests {
 
     #[test]
     fn official_group_expands() {
-        let ms = resolve_measures(&["official".to_string()]).unwrap().measures;
+        let ms = resolve_measures(&["official".to_string()])
+            .unwrap()
+            .measures;
         let names: Vec<_> = ms.iter().map(|m| m.name()).collect();
         assert_eq!(
             names,
@@ -494,7 +499,10 @@ mod tests {
     fn parameter_warnings_are_returned() {
         let resolved = resolve_measures(&["P.5x".to_string()]).unwrap();
         assert_eq!(resolved.measures[0].sub_metrics(), vec!["P_5"]);
-        assert_eq!(resolved.warnings, ["measure 'P.5x': value '5x' partially read as '5'"]);
+        assert_eq!(
+            resolved.warnings,
+            ["measure 'P.5x': value '5x' partially read as '5'"]
+        );
     }
 
     #[test]
@@ -504,17 +512,29 @@ mod tests {
 
     #[test]
     fn error_names_the_request_that_gave_the_parameters() {
-        let error = resolve_measures(&["P".to_string(), "P.0".to_string()]).err().unwrap();
-        assert_eq!(error.message, "measure 'P.0': rank cutoff must be at least 1");
+        let error = resolve_measures(&["P".to_string(), "P.0".to_string()])
+            .err()
+            .unwrap();
+        assert_eq!(
+            error.message,
+            "measure 'P.0': rank cutoff must be at least 1"
+        );
     }
 
     #[test]
     fn later_parameter_lists_are_ignored_with_a_warning() {
         let requests = ["P", "P.2", "P_2", "P.5", "recall@3"].map(String::from);
         let resolved = resolve_measures(&requests).unwrap();
-        let rows: Vec<_> = resolved.measures.iter().flat_map(|m| m.sub_metrics()).collect();
+        let rows: Vec<_> = resolved
+            .measures
+            .iter()
+            .flat_map(|m| m.sub_metrics())
+            .collect();
         assert_eq!(rows, ["P_2", "recall_3"]);
-        assert_eq!(resolved.warnings, ["measure 'P.5': parameters ignored; P uses those of 'P.2'"]);
+        assert_eq!(
+            resolved.warnings,
+            ["measure 'P.5': parameters ignored; P uses those of 'P.2'"]
+        );
     }
 
     #[test]

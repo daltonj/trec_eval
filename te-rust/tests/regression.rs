@@ -28,7 +28,10 @@ fn parse_output(output_str: &str) -> Vec<Row> {
             let [measure, qid, val_str] = parts[..] else {
                 panic!("output line without three fields: {line:?}");
             };
-            let val = if measure == "runid" || measure == "relstring" || measure.starts_with("relstring_") {
+            let val = if measure == "runid"
+                || measure == "relstring"
+                || measure.starts_with("relstring_")
+            {
                 Val::Str(val_str.to_string())
             } else if let Ok(i) = val_str.parse::<i64>() {
                 Val::Int(i)
@@ -297,8 +300,38 @@ fn test_regression_help_flags() {
 #[test]
 fn test_regression_specialized_standard_metrics() {
     compare_outputs(
-        &["-m", "recall.5,10", "-m", "success.1,5", "-m", "11pt_avg", "-m", "utility", "-m", "dcg", "-m", "ideal_dcg", "-m", "ndcg"],
-        &["-m", "recall.5,10", "-m", "success.1,5", "-m", "11pt_avg", "-m", "utility", "-m", "dcg", "-m", "ideal_dcg", "-m", "ndcg"],
+        &[
+            "-m",
+            "recall.5,10",
+            "-m",
+            "success.1,5",
+            "-m",
+            "11pt_avg",
+            "-m",
+            "utility",
+            "-m",
+            "dcg",
+            "-m",
+            "ideal_dcg",
+            "-m",
+            "ndcg",
+        ],
+        &[
+            "-m",
+            "recall.5,10",
+            "-m",
+            "success.1,5",
+            "-m",
+            "11pt_avg",
+            "-m",
+            "utility",
+            "-m",
+            "dcg",
+            "-m",
+            "ideal_dcg",
+            "-m",
+            "ndcg",
+        ],
         "qrels.test",
         "results.test",
     );

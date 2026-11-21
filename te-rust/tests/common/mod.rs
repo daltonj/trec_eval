@@ -22,8 +22,7 @@ pub fn te_rust() -> Command {
 }
 
 pub fn trec_eval_bin() -> PathBuf {
-    let dir = std::env::var_os("TREC_EVAL_DIR")
-        .unwrap_or_else(|| "trec_eval".into());
+    let dir = std::env::var_os("TREC_EVAL_DIR").unwrap_or_else(|| "trec_eval".into());
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join(dir)
