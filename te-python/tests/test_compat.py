@@ -188,3 +188,29 @@ def test_supported_dcg_measures_can_be_evaluated(measure):
     assert measure in pytrec_eval.supported_measures
     evaluator = pytrec_eval.RelevanceEvaluator({"q": {"d": 1}}, {measure})
     assert evaluator.evaluate({"q": {"d": 1.0}}) == {"q": {measure: 1.0}}
+
+
+@pytest.mark.parametrize("run_kind", ["dict", "file", "iterable", "frame"])
+def test_compat_no_overlap_after_ingestion(run_kind, run_as):
+    qrels = {"q1": {"d": 1}}
+    run = run_as(run_kind, [("q2", "d", 1.0)])
+    evaluator = pytrec_eval.RelevanceEvaluator(qrels, {"map"})
+    assert evaluator.evaluate(run) == {}
+    assert evaluator.evaluate({}) == {}
+    assert evaluator.evaluate({"q1": {"d": 1.0}, "q2": {"d": 1.0}}) == {
+        "q1": {"map": 1.0}
+    }
+
+
+def test_compat_keeps_nan_score_errors():
+    evaluator = pytrec_eval.RelevanceEvaluator({"q1": {"d1": 1}}, {"map"})
+    with pytest.raises(ValueError, match="NaN"):
+        evaluator.evaluate({"q1": {"d1": float("nan")}})
+
+
+def test_compat_keeps_other_evaluation_errors(tmp_path):
+    qrels = tmp_path / "duplicate.qrels"
+    qrels.write_text("q1 0 d 0\nq1 0 d 1\n")
+    evaluator = pytrec_eval.RelevanceEvaluator(qrels, {"map"})
+    with pytest.raises(ValueError, match="qrels: duplicate document"):
+        evaluator.evaluate({"q1": {"d": 1.0}})

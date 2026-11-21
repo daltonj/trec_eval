@@ -5,6 +5,8 @@ from pathlib import Path
 import trec_eval
 from trec_eval import Evaluator, EvalResult, ScoredDoc, Qrel, evaluate
 
+from conftest import One
+
 TEST_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "te-rust" / "tests" / "test-data"
 QRELS_FILE = str(TEST_DATA_DIR / "qrels.test")
 RESULTS_FILE = str(TEST_DATA_DIR / "results.test")
@@ -192,3 +194,68 @@ def test_numerical_parity_against_known_run():
 def test_negative_relevance_level_is_refused(level):
     with pytest.raises(ValueError, match=f"Unusable relevance level '{level}'"):
         Evaluator({"q": {"a": 1}}, relevance_level=level)
+
+
+def test_run_without_a_qrels_topic_raises():
+    qrels = {"q1": {"d1": 1, "d2": 0}, "q2": {"d1": 0, "d2": 1}}
+    evaluator = Evaluator(qrels, measures=["map", "num_q"])
+    with pytest.raises(ValueError, match="no topic has both results and judgments"):
+        evaluator.evaluate({"q3": {"d1": 1.0}})
+    with pytest.raises(ValueError, match="no topic has both results and judgments"):
+        evaluator.evaluate({})
+    with pytest.raises(ValueError, match="no topic has both results and judgments"):
+        evaluator.evaluate_arrays(["q3"], ["d1"], [1.0])
+
+
+def test_complete_set_averages_builtin_and_custom_measures_without_overlap():
+    qrels = {"q1": {"d1": 1, "d2": 0}, "q2": {"d1": 0, "d2": 1}}
+    run = {"q3": {"d1": 1.0}}
+    evaluator = Evaluator(
+        qrels, measures=["map", "num_q", One()], complete_set_average=True
+    )
+    result = evaluator.evaluate(run)
+    assert result.per_query() == {
+        "q1": {"map": 0.0, "one": 1.0},
+        "q2": {"map": 0.0, "one": 1.0},
+    }
+    summary = result.aggregate()
+    assert summary["num_q"] == 2
+    assert summary["map"] == 0.0
+    # Both qrels topics score 1, and -c divides by the two qrels topics.
+    assert summary["one"] == 1.0
+
+
+def test_partial_overlap_scores_only_shared_topics():
+    # q1 ranks d1, its only relevant document, first: map 1.
+    qrels = {"q1": {"d1": 1, "d2": 0}, "q2": {"d1": 0, "d2": 1}}
+    result = Evaluator(qrels, measures=["map", "num_q"]).evaluate(
+        {"q1": {"d1": 1.0}, "q3": {"d1": 1.0}}
+    )
+    assert result.aggregate() == {"map": 1.0, "num_q": 1}
+
+
+def test_cutoff_reads_its_leading_integer_with_a_warning():
+    qrels = {"1": {"a": 1, "b": 0}}
+    with pytest.warns(UserWarning, match=r"measure 'P\.5x': value '5x' partially read as '5'"):
+        evaluator = Evaluator(qrels, measures=["P.5x"])
+    # One relevant document in the top 5.
+    assert evaluator.evaluate({"1": {"a": 2.0, "b": 1.0}}).aggregate()["P_5"] == 0.2
+
+
+def test_cutoff_without_a_leading_integer_is_refused():
+    with pytest.raises(ValueError):
+        Evaluator({"1": {"a": 1}}, measures=["P.x"])
+
+
+def test_first_explicit_parameter_list_wins():
+    with pytest.warns(UserWarning, match="measure 'P.5,10': parameters ignored"):
+        evaluator = Evaluator({"1": {"a": 1}}, measures=["P.2,5", "P.5,10"])
+    assert evaluator.evaluate({"1": {"a": 1.0}}).aggregate() == {"P_2": 0.5, "P_5": 0.2}
+
+
+@pytest.mark.parametrize(
+    "measure", ["set_F.nan", "rbp.p=inf", "Rprec_mult.nan,0.5", "11pt_avg.1e400"]
+)
+def test_non_finite_parameter_is_refused(measure):
+    with pytest.raises(ValueError, match="not a finite number"):
+        Evaluator({"1": {"a": 1, "b": 0}}, measures=[measure])
