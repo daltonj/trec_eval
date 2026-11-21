@@ -198,7 +198,7 @@ impl Evaluator {
     }
 }
 
-fn evaluation_error(error: EvaluationError) -> PyErr {
+pub(crate) fn evaluation_error(error: EvaluationError) -> PyErr {
     let EvaluationError::DuplicateDocument { source, .. } = &error else {
         return PyValueError::new_err(error.to_string());
     };
