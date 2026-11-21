@@ -11,9 +11,9 @@ for field in mean stddev; do
     [ "$field" = mean ] || values="$values -1"
     for value in $values; do
         if [ "$field" = mean ]; then
-            printf '1 map 0 1\n1 map %s 1\n' "$value" > "$T/zscores"
+            printf '2 map 0 1\n1 map %s 1\n' "$value" > "$T/zscores"
         else
-            printf '1 map 0 1\n1 map 0 %s\n' "$value" > "$T/zscores"
+            printf '2 map 0 1\n1 map 0 %s\n' "$value" > "$T/zscores"
         fi
         loc="line 2 of zscores file '$T/zscores'"
         unusable="trec_eval.get_zscores: Unusable $field '$value' in $loc"
@@ -34,6 +34,7 @@ printf '1 map 1 1e-310\n' > "$T/zscores"
 expect_status 0 -Z "$T/zscores" -m map "$Q" "$R"
 printf '1 map -1 2\n' > "$T/zscores"
 expect_output $D/out.one -q -Z "$T/zscores" -m map "$Q" "$R"
+# A zero stddev gives 0 at the mean, and -1000000 away from the mean.
 printf '1 map 1 0\n' > "$T/zscores"
 expect_output $D/out.zero -q -Z "$T/zscores" -m map "$Q" "$R"
 printf '1 map 0 0\n' > "$T/zscores"

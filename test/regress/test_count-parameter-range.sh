@@ -11,7 +11,7 @@ printf '1 0 d1 1\n1 0 d2 0\n1 0 d3 2\n' > "$Q"
 expect_output $D/out.relstring -q -m relstring.1e300 "$Q" $R
 
 # A stddev of 1e-19 multiplies the score by 1e19. A denominator
-# clamped to LONG_MAX would then print about 2.17 instead of 0.
+# clamped to a 64-bit LONG_MAX would then print about 2.17 instead of 0.
 for measure in Rprec_mult Rprec_mult_avgjg; do
     format=qrels
     [ "$measure" = Rprec_mult_avgjg ] && format=qrels_jg

@@ -6,6 +6,8 @@ D=test/regress/rbp-gain-range
 # One relevant document at rank 1, default gains 0 and 1: 0.1 * 1.
 expect_output $D/out.one -m rbp $D/qrels.one $D/results.one
 
+# These two gain maps pin the zero-based range: starting at the first
+# gain instead gives NaN for equal gains and 0.1000 for gains 1 and 3.
 # Gains 2 and 2 rescale to 1 and 1: 0.1 * (1 + 0.9 * 1) = 0.19.
 expect_output $D/out.two.gains22 -m rbp.0=2,1=2 $D/qrels.two $D/results.two
 
@@ -15,7 +17,9 @@ expect_output $D/out.two.gains13 -m rbp.0=1,1=3 $D/qrels.two $D/results.two
 
 # Topic 1 has grades 0-3 and topic 2 grades 0-2, so each topic's top
 # document rescales to gain 1 and scores 0.1; the mean is 0.1. The range
-# of topic 1 must not carry over to topic 2, with or without -q.
+# of topic 1 must not carry over to topic 2, with or without -q. The
+# check without -q catches an uninitialized range when the stack retains
+# topic 1's range; its failure depends on the compiler and stack layout.
 expect_output $D/out.one -m rbp $D/qrels.topics $D/results.topics
 expect_output $D/out.topics.q -q -m rbp $D/qrels.topics $D/results.topics
 

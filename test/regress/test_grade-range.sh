@@ -15,5 +15,7 @@ for q in 128 -128 max; do
     expect_message 2 "$message" -m map $D/qrels.$q $D/results
     expect_message 2 "$message" -R qrels_jg -m map_avgjg $D/qrels.$q $D/results
 done
+# With 32-bit long, this value fails to parse; with 64-bit long, it is
+# outside the grade range. Both paths must refuse it.
 expect_status 2 -m map $D/qrels.long64 $D/results
 expect_status 2 -R qrels_jg -m map_avgjg $D/qrels.long64 $D/results

@@ -11,7 +11,7 @@ expect_output test/regress/complete-empty-ranking/out.first -q -m map $D/qrels.f
 expect_output $D/out.second -q -m map $D/qrels.second $D/results.second
 
 # The ideal ranking of the all-negative topic has no document, so ndcg_cut
-# finishes at once even with a cutoff of 2147483647; the CPU limit fails a run
-# that counts up to the cutoff.
+# finishes at once even with a cutoff of 2147483647. This check is
+# timing-based: the CPU limit catches a loop that counts up to the cutoff.
 (ulimit -t 2
  expect_output $D/out.ndcg-cut -q -m ndcg_cut.2147483647 $D/qrels.first $D/results.first) || exit 1
