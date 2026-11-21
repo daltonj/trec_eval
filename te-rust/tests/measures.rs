@@ -629,11 +629,15 @@ mod geometric_means {
 /// the measures directly.
 mod negative_levels {
     use super::common::{eval, fixture, summary, test_data, write};
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
     use te_rust::eval::align_query;
     use te_rust::io::{parse_trec_qrels, parse_trec_run};
     use te_rust::metrics::registry::resolve_measures;
     use te_rust::metrics::{EvalConfig, EvalState, Measure, MetricValue};
+
+    fn axy_run() -> PathBuf {
+        write("axy.run", "1 Q0 a 1 3 r\n1 Q0 x 2 2 r\n1 Q0 y 3 1 r\n")
+    }
 
     fn mean_scores(qrels: &Path, run: &Path, request: &str, config: &EvalConfig) -> Vec<f64> {
         let qrels = parse_trec_qrels(qrels).unwrap();
@@ -720,7 +724,7 @@ mod negative_levels {
         use te_rust::metrics::rprec_mult_avgjg::RprecMultAvgjgMeasure;
 
         let qrels = write("one.qrels", "1 g a 1\n");
-        let run = write("axy.run", "1 Q0 a 1 3 r\n1 Q0 x 2 2 r\n1 Q0 y 3 1 r\n");
+        let run = axy_run();
         let qrels = parse_trec_qrels_jg(qrels).unwrap();
         let run = parse_trec_run(run).unwrap();
         let measure = RprecMultAvgjgMeasure::new(vec![0.5, 1.0, 2.0, 4.0]).unwrap();
@@ -758,7 +762,7 @@ mod negative_levels {
         // nonrelevant 2, missed relevant 1 (b), so 1 - 2 + 1 = 0, and with 10 documents
         // d = 10 + 1 - 3 - 2 = 6, as trec_eval 10.0 prints with -l-1. At level 0, a and b are
         // relevant: 1 - 2 + 1 = 0. At level 1, only a is: 1 - 2 + 0 = -1.
-        let run = write("axy.run", "1 Q0 a 1 3 r\n1 Q0 x 2 2 r\n1 Q0 y 3 1 r\n");
+        let run = axy_run();
         for (level, num_docs, request, value) in [
             (-1, 0, "utility.1,-1,1,0", 0.0),
             (-1, 10, "utility.0,0,0,1", 6.0),
@@ -798,7 +802,7 @@ mod negative_levels {
     #[test]
     #[cfg(target_pointer_width = "64")]
     fn utility_does_not_overflow_at_the_largest_collection_size() {
-        let run = write("axy.run", "1 Q0 a 1 3 r\n1 Q0 x 2 2 r\n1 Q0 y 3 1 r\n");
+        let run = axy_run();
         let options = ["-N", "9223372036854775807", "-m", "utility.0,0,0,1"];
         let out = eval(&options, &fixture("ab.qrels"), &run);
         assert_eq!(summary(&out, "utility_0,0,0,1"), "9223372036854775808.0000");

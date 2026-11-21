@@ -232,13 +232,11 @@ mod output {
     fn failed_message_write_still_exits_8() {
         // With stderr on the same full disk, the message is lost but the status is not.
         let (qrels, run) = (test_data("qrels.test"), test_data("results.test"));
-        let output = Command::new("sh")
-            .arg("-c")
-            .arg("trap '' XFSZ; ulimit -f 0; exec \"$0\" \"$@\" 2>&1")
-            .arg(env!("CARGO_BIN_EXE_te-rust"))
-            .arg(qrels)
-            .arg(run)
-            .stdout(file("both.out"))
+        let both = file("both.out");
+        let args = [qrels.to_str().unwrap(), run.to_str().unwrap()];
+        let output = te_rust_with_no_room(&args)
+            .stdout(both.try_clone().unwrap())
+            .stderr(both)
             .output()
             .unwrap();
         assert_eq!(
@@ -304,20 +302,13 @@ mod documented_differences {
     use std::fs::File;
     use std::process::Output;
 
-    /// Runs te-rust with results.test on standard input.
-    fn te_rust_with_stdin(args: &[&str]) -> Output {
-        let stdin = File::open(test_data("results.test")).unwrap();
-        te_rust().args(args).stdin(stdin).output().unwrap()
-    }
-
     fn eval(options: &[&str], run: &str) -> Output {
-        let qrels = test_data("qrels.test");
-        let args: Vec<&str> = options
-            .iter()
-            .copied()
-            .chain([qrels.to_str().unwrap(), run])
-            .collect();
-        te_rust_with_stdin(&args)
+        let mut command = te_rust();
+        command.args(options).arg(test_data("qrels.test")).arg(run);
+        if run == "-" {
+            command.stdin(File::open(test_data("results.test")).unwrap());
+        }
+        command.output().unwrap()
     }
 
     #[test]
@@ -339,7 +330,7 @@ mod documented_differences {
         }
         // trec_eval reads the run from standard input when its name is "-".
         assert_refused(&eval(&["-m", "map"], "-"), 2, "Error parsing run file '-'");
-        assert_refused(&te_rust_with_stdin(&["-v"]), 1, "unexpected argument '-v'");
+        assert_refused(&te_rust().arg("-v").output().unwrap(), 1, "unexpected argument '-v'");
     }
 
     #[test]
@@ -403,7 +394,7 @@ mod documented_differences {
 
     #[test]
     fn rel_format_help_lists_only_supported_formats() {
-        let output = te_rust_with_stdin(&["--help"]);
+        let output = te_rust().arg("--help").output().unwrap();
         let stdout = String::from_utf8_lossy(&output.stdout);
         let line = stdout
             .lines()
@@ -592,15 +583,15 @@ mod integer_options {
     use std::process::Output;
 
     /// b (grade 2) is at rank 2 and a (grade 1) at rank 3.
-    fn graded(options: &[&str]) -> Output {
-        let qrels = write("graded.qrels", "1 0 a 1\n1 0 b 2\n1 0 c 0\n");
-        let run = write("graded.run", "1 Q0 c 1 3 r\n1 Q0 b 2 2 r\n1 Q0 a 3 1 r\n");
+    fn two_grades(options: &[&str]) -> Output {
+        let qrels = write("two-grades.qrels", "1 0 a 1\n1 0 b 2\n1 0 c 0\n");
+        let run = write("two-grades.run", "1 Q0 c 1 3 r\n1 Q0 b 2 2 r\n1 Q0 a 3 1 r\n");
         eval(options, &qrels, &run)
     }
 
     /// `options` scores like `integer`, and warns that `value` was read as `read`.
     fn assert_reads_as(options: &[&str], integer: &[&str], value: &str, read: &str) {
-        let (partial, whole) = (graded(options), graded(integer));
+        let (partial, whole) = (two_grades(options), two_grades(integer));
         assert_eq!(rows(&partial), rows(&whole), "{options:?}");
         let warning = format!("value '{value}' partially read as '{read}'");
         assert!(
@@ -613,8 +604,8 @@ mod integer_options {
 
     #[test]
     fn cutoff_warnings_name_each_measure_request() {
-        let out = graded(&["-m", "P.5x", "-m", "recall.5x"]);
-        let whole = graded(&["-m", "P.5", "-m", "recall.5"]);
+        let out = two_grades(&["-m", "P.5x", "-m", "recall.5x"]);
+        let whole = two_grades(&["-m", "P.5", "-m", "recall.5"]);
         assert_eq!(rows(&out), rows(&whole));
         assert_eq!(
             stderr(&out),
@@ -659,7 +650,7 @@ mod integer_options {
             ("-M", "\t2", "map", "map all 0.2500"),
             ("-N", " 10", "utility.0,0,0,1", "utility_0,0,0,1 all 7.0000"),
         ] {
-            let out = graded(&[option, value, "-m", measure]);
+            let out = two_grades(&[option, value, "-m", measure]);
             assert_eq!(rows(&out), [row], "{option}");
             assert!(out.stderr.is_empty(), "{option}: {}", stderr(&out));
         }
@@ -682,7 +673,7 @@ mod integer_options {
             (&["-M-1", "-m", "map"], 1, "value '-1' is negative"),
             (&["-N", "x", "-m", "map"], 1, "value 'x' could not be parsed"),
         ] {
-            assert_refused(&graded(options), status, message);
+            assert_refused(&two_grades(options), status, message);
         }
     }
 

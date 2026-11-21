@@ -142,6 +142,6 @@ mod tests {
         let ndcg = value(NdcgMeasure::new("").unwrap().calc(&config, &state));
         assert!((dcg - 1.5).abs() < 1e-12);
         assert!((ideal - (1.0 + 1.0 / 3f64.log2())).abs() < 1e-12);
-        assert_eq!(ndcg, dcg / ideal);
+        assert!((ndcg - dcg / ideal).abs() < 1e-12);
     }
 }

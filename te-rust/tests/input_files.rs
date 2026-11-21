@@ -4,13 +4,18 @@
 mod common;
 
 use common::{assert_refused, eval, rows, stderr, summary, test_data, write};
+use std::path::PathBuf;
+
+fn abc_qrels() -> PathBuf {
+    write("abc.qrels", "1 0 a 1\n1 0 b 2\n1 0 c 3\n")
+}
 
 /// Scores that trec_eval reads with `strtod`. The qrels grade a, b and c 1, 2 and 3, so the
 /// relstring of a ranking spells it: '213' ranks b first. trec_eval prints the same relstrings
 /// and warnings.
 #[test]
 fn scores_are_read_as_strtod_reads_them() {
-    let qrels = write("abc.qrels", "1 0 a 1\n1 0 b 2\n1 0 c 3\n");
+    let qrels = abc_qrels();
     let cases: &[([&str; 3], &str, &[&str])] = &[
         (["5", "inf", "3"], "'213'", &[]),
         (["5", "infinity", "3"], "'213'", &[]),
@@ -78,7 +83,7 @@ fn scores_are_read_as_strtod_reads_them() {
 
 #[test]
 fn nan_and_scores_without_a_number_are_refused() {
-    let qrels = write("abc.qrels", "1 0 a 1\n1 0 b 2\n1 0 c 3\n");
+    let qrels = abc_qrels();
     for score in ["nan", "abc"] {
         let run = write("scores.run", scores_run(["5", score, "3"]));
         let out = eval(&["-m", "relstring"], &qrels, &run);
@@ -167,6 +172,10 @@ mod scored_duplicates {
     const REPEAT_AT_RANK_3: &str =
         "1 Q0 d1 1 3 r\n1 Q0 d2 2 2 r\n1 Q0 d2 3 1 r\n2 Q0 d2 1 2 r\n2 Q0 d1 2 1 r\n";
 
+    fn repeated_run() -> PathBuf {
+        write("repeat.run", REPEAT_AT_RANK_3)
+    }
+
     /// The fixture `name` with `lines` added.
     fn with_lines(name: &str, lines: &str) -> PathBuf {
         write(
@@ -189,7 +198,7 @@ mod scored_duplicates {
         // With -M 2, topic 1 ranks d1, d2: AP = (1/1) / 2 = 0.5, and map = (0.5 + 1) / 2.
         let (qrels, run) = (
             fixture("topics.qrels"),
-            write("repeat.run", REPEAT_AT_RANK_3),
+            repeated_run(),
         );
         assert_eq!(
             summary(&eval(&["-M", "2", "-m", "map"], &qrels, &run), "map"),
@@ -207,7 +216,7 @@ mod scored_duplicates {
     fn a_repeat_within_max_docs_is_refused() {
         let (qrels, run) = (
             fixture("topics.qrels"),
-            write("repeat.run", REPEAT_AT_RANK_3),
+            repeated_run(),
         );
         let message = format!(
             "Error in run file '{}': duplicate document 'd2' for query '1'",
@@ -223,7 +232,7 @@ mod scored_duplicates {
         // num_q and runid form no ranking in trec_eval, which prints num_q 2 for both files.
         let (qrels, run) = (
             fixture("topics.qrels"),
-            write("repeat.run", REPEAT_AT_RANK_3),
+            repeated_run(),
         );
         assert_eq!(summary(&eval(&["-m", "num_q"], &qrels, &run), "num_q"), "2");
         let out = eval(&["-m", "runid", "-m", "num_q"], &qrels, &run);
