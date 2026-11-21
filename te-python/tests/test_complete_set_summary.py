@@ -1,12 +1,6 @@
-from trec_eval import Evaluator, Measure, QueryState
+from trec_eval import Evaluator
 
-
-class One(Measure):
-    def __init__(self):
-        super().__init__(name="one")
-
-    def calc_query(self, query: QueryState) -> float:
-        return 1.0
+from conftest import One
 
 
 def test_complete_set_averages_builtin_and_custom_measures_without_overlap():

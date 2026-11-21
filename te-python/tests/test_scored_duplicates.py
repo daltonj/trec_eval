@@ -1,6 +1,8 @@
 import pytest
 from trec_eval import Evaluator
 
+from conftest import One
+
 QRELS = "1 0 d1 1\n1 0 d2 0\n1 0 d3 2\n2 0 d1 0\n2 0 d2 1\n"
 
 
@@ -35,21 +37,14 @@ def test_a_repeated_run_document_is_refused_within_max_docs(tmp_path):
     assert counted.evaluate_arrays(query_ids, doc_ids, scores).aggregate()["num_q"] == 2
 
 
-class CustomMeasure:
-    name = "custom"
-
-    def calc_query(self, state):
-        return 1.0
-
-
-@pytest.mark.parametrize("measures", [[CustomMeasure()], ["num_q", CustomMeasure()]])
+@pytest.mark.parametrize("measures", [[One()], ["num_q", One()]])
 def test_custom_measures_refuse_scored_duplicates(measures):
     evaluator = Evaluator({"1": {"a": 1}}, measures=measures)
     with pytest.raises(ValueError, match="run: duplicate document 'a' for query '1'"):
         evaluator.evaluate_arrays(["1", "1"], ["a", "a"], [2.0, 1.0])
     cut = Evaluator({"1": {"a": 1}}, measures=measures, max_docs_per_topic=1)
     assert (
-        cut.evaluate_arrays(["1", "1"], ["a", "a"], [2.0, 1.0]).aggregate()["custom"]
+        cut.evaluate_arrays(["1", "1"], ["a", "a"], [2.0, 1.0]).aggregate()["one"]
         == 1.0
     )
 
@@ -57,33 +52,17 @@ def test_custom_measures_refuse_scored_duplicates(measures):
 @pytest.mark.parametrize("representation", ["file", "iterable", "frame"])
 @pytest.mark.parametrize("first_grade", [0, 1])
 def test_python_qrels_keep_repeats_for_the_scored_topic_check(
-    tmp_path, representation, first_grade, dataframe
+    representation, first_grade, qrels_as
 ):
     rows = [("1", "a", 1), ("3", "x", first_grade), ("3", "x", 1)]
-    qrels_file = tmp_path / "repeat.qrels"
-    qrels_file.write_text(
-        "".join(f"{qid} 0 {docno} {rel}\n" for qid, docno, rel in rows)
-    )
-
-    def qrels_input():
-        if representation == "file":
-            return qrels_file
-        if representation == "iterable":
-            return iter(rows)
-        return dataframe(
-            {
-                "qid": [qid for qid, _, _ in rows],
-                "docno": [docno for _, docno, _ in rows],
-                "rel": [rel for _, _, rel in rows],
-            }
-        )
-
-    evaluator = Evaluator(qrels_input(), measures=["map"])
+    evaluator = Evaluator(qrels_as(representation, rows), measures=["map"])
     assert evaluator.evaluate({"1": {"a": 1.0}}).aggregate()["map"] == 1.0
     with pytest.raises(ValueError, match="qrels: duplicate document 'x' for query '3'"):
         evaluator.evaluate({"3": {"x": 1.0}})
-    complete = Evaluator(qrels_input(), measures=["map"], complete_set_average=True)
+    complete = Evaluator(
+        qrels_as(representation, rows), measures=["map"], complete_set_average=True
+    )
     with pytest.raises(ValueError, match="qrels: duplicate document 'x' for query '3'"):
         complete.evaluate({"1": {"a": 1.0}})
-    counted = Evaluator(qrels_input(), measures=["num_q"])
+    counted = Evaluator(qrels_as(representation, rows), measures=["num_q"])
     assert counted.evaluate({"3": {"x": 1.0}}).aggregate()["num_q"] == 1

@@ -43,15 +43,11 @@ def test_nan_scores_are_refused_from_a_file(tmp_path):
 
 
 @pytest.mark.parametrize("representation", ["dict", "tuples", "frame", "arrays"])
-def test_nan_scores_are_refused_from_memory(representation, dataframe):
-    qids, docnos, scores = ["t", "t"], ["a", "b"], [5.0, math.nan]
+def test_nan_scores_are_refused_from_memory(representation, run_as):
+    run = run_as(representation, [("t", "a", 5.0), ("t", "b", math.nan)])
     evaluator = Evaluator(QRELS, measures=["map"])
     with pytest.raises(ValueError, match="score of document 'b' for query 't' is NaN"):
-        if representation == "dict":
-            evaluator.evaluate({"t": dict(zip(docnos, scores))})
-        elif representation == "tuples":
-            evaluator.evaluate(iter(zip(qids, docnos, scores)))
-        elif representation == "frame":
-            evaluator.evaluate(dataframe({"qid": qids, "docno": docnos, "score": scores}))
+        if representation == "arrays":
+            evaluator.evaluate_arrays(*run)
         else:
-            evaluator.evaluate_arrays(qids, docnos, scores)
+            evaluator.evaluate(run)
