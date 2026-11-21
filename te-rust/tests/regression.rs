@@ -1,13 +1,8 @@
 mod common;
 
-use common::{te_rust, trec_eval_bin};
+use common::{te_rust, test_data, trec_eval_bin};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
 use std::process::Command;
-
-fn get_test_file_path(filename: &str) -> PathBuf {
-    trec_eval_bin().with_file_name("test").join(filename)
-}
 
 #[derive(Debug, Clone, PartialEq)]
 enum Val {
@@ -113,8 +108,8 @@ fn output_differences(c_rows: &[Row], rust_rows: &[Row]) -> Vec<String> {
 }
 
 fn compare_outputs(rust_args: &[&str], c_args: &[&str], qrels_name: &str, results_name: &str) {
-    let qrels_path = get_test_file_path(qrels_name);
-    let results_path = get_test_file_path(results_name);
+    let qrels_path = test_data(qrels_name);
+    let results_path = test_data(results_name);
 
     // 1. Run te-rust
     let mut rust_cmd = te_rust();

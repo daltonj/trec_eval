@@ -45,11 +45,9 @@ pub fn fixture(name: &str) -> PathBuf {
         .join(name)
 }
 
-/// A file of `tests/test-data`, the copy of trec_eval's `test` directory.
+/// A file of trec_eval's `test` directory, beside the reference binary.
 pub fn test_data(name: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/test-data")
-        .join(name)
+    trec_eval_bin().with_file_name("test").join(name)
 }
 
 /// Writes `contents` to a new file whose name ends with `name`.
