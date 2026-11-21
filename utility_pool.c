@@ -33,7 +33,7 @@ void *te_realloc_array(void *ptr, size_t n, size_t size)
    The procedures return the current pointer if the needed number is less
    than the current bound, otherwise they expand the space (either malloc
    or realloc depending on the procedure), resetting the current bound.
-   It's an error if current_bound is negative, NULL is returned.
+   It's an error if current_bound or needed is negative, NULL is returned.
    Procedures assume that if current bound is 0, the space has not been
    allocated at all yet.
 */
@@ -41,7 +41,7 @@ void *te_realloc_array(void *ptr, size_t n, size_t size)
 void *te_chk_and_malloc(void *ptr, long *current_bound,
                         const long needed, const size_t size)
 {
-    if (*current_bound < 0)
+    if (*current_bound < 0 || needed < 0)
         return (NULL);
     if (needed <= *current_bound && *current_bound > 0)
         return (ptr);
@@ -56,7 +56,7 @@ void *te_chk_and_malloc(void *ptr, long *current_bound,
 void *te_chk_and_realloc(void *ptr, long *current_bound,
                          const long needed, const int size)
 {
-    if (*current_bound < 0)
+    if (*current_bound < 0 || needed < 0)
         return (NULL);
     if (needed <= *current_bound && *current_bound > 0)
         return (ptr);

@@ -43,6 +43,24 @@ int main(void)
     /* half * sizeof(short) is one more than the largest size_t */
     size_t half = ((size_t) -1) / 2 + 1;
     size_t n = 1;
+    long bound = 0;
+
+    check(NULL == te_chk_and_malloc(NULL, &bound, -1, sizeof(long)) &&
+          bound == 0,
+          "te_chk_and_malloc accepted a negative first request");
+    bound = 0;
+    check(NULL == te_chk_and_realloc(NULL, &bound, -1, sizeof(long)) &&
+          bound == 0,
+          "te_chk_and_realloc accepted a negative first request");
+
+    bound = 0;
+    check(NULL != te_chk_and_malloc(NULL, &bound, 0, sizeof(long)) &&
+          bound == 1 && requested == sizeof(long),
+          "te_chk_and_malloc did not allocate one element for a zero request");
+    bound = 0;
+    check(NULL != te_chk_and_realloc(NULL, &bound, 0, sizeof(long)) &&
+          bound == 1 && requested == sizeof(long),
+          "te_chk_and_realloc did not allocate one element for a zero request");
 
     check(NULL != Malloc(n++, char) && n == 2 && requested == sizeof(char),
           "Malloc(n++, char) did not evaluate n once and request one char");
