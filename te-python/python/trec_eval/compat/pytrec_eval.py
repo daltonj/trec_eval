@@ -28,12 +28,13 @@ supported_measures: Set[str] = {
 
 # Measures that print one row per parameter value. pytrec_eval merges the
 # parameter lists of repeated requests for one of these, such as P_5 and P.10.
+# It reads the leading numeric list and ignores any trailing characters.
 _ROW_PER_VALUE = (
     "P", "recall", "success", "unj", "ndcg_cut", "map_cut", "relative_P",
     "iprec_at_recall", "Rprec_mult",
 )
 _VALUE_REQUEST = re.compile(
-    rf"({'|'.join(_ROW_PER_VALUE)})[_.]([0-9]+(?:\.[0-9]*)?(?:,[0-9]+(?:\.[0-9]*)?)*)"
+    rf"({'|'.join(_ROW_PER_VALUE)})[_.]([0-9]+(?:\.[0-9]+)?(?:,[0-9]+(?:\.[0-9]+)?)*)"
 )
 
 
@@ -101,7 +102,7 @@ class RelevanceEvaluator:
         positions: Dict[str, int] = {}
         values: Dict[str, Dict[Decimal, str]] = collections.defaultdict(dict)
         for measure in measure_names:
-            match = _VALUE_REQUEST.fullmatch(measure)
+            match = _VALUE_REQUEST.match(measure)
             if match is None:
                 native_measures.append(measure)
                 continue

@@ -105,6 +105,38 @@ def test_pytrec_eval_retains_requested_cutoffs(measures, expected):
 @pytest.mark.parametrize(
     "measures, expected",
     [
+        (["P.5x", "P.10"], {"P_5": 0.2, "P_10": 0.1}),
+        (
+            ["Rprec_mult.1e-1", "Rprec_mult.2"],
+            {"Rprec_mult_1.00": 0.5, "Rprec_mult_2.00": 0.25},
+        ),
+        (["P_5x"], {"P_5": 0.2}),
+        (
+            ["iprec_at_recall.0.5x", "iprec_at_recall.1"],
+            {"iprec_at_recall_0.50": 0.5, "iprec_at_recall_1.00": 0.0},
+        ),
+        (["P.5,"], {"P_5": 0.2}),
+        (["P.5x,10", "P.20"], {"P_5": 0.2, "P_20": 0.05}),
+        (["P.5,10x", "P_20"], {"P_5": 0.2, "P_10": 0.1, "P_20": 0.05}),
+        (["recall_1x", "recall.2"], {"recall_1": 0.0, "recall_2": 0.5}),
+        (
+            ["ndcg_cut.1x", "ndcg_cut.2"],
+            {"ndcg_cut_1": 0.0, "ndcg_cut_2": pytest.approx(0.38685280723454163)},
+        ),
+        (["Rprec_mult.1.,2"], {"Rprec_mult_1.00": 0.5}),
+        (["P.5.,10"], {"P_5": 0.2}),
+        (["iprec_at_recall.0.,1"], {"iprec_at_recall_0.00": 0.5}),
+        (["recall.2.,3"], {"recall_2": 0.5}),
+    ],
+)
+def test_pytrec_eval_reads_leading_parameter_values(measures, expected):
+    evaluator = pytrec_eval.RelevanceEvaluator({"q": {"a": 1, "b": 1}}, measures)
+    assert evaluator.evaluate({"q": {"x": 2.0, "a": 1.0}}) == {"q": expected}
+
+
+@pytest.mark.parametrize(
+    "measures, expected",
+    [
         (["map@1"], {"map_cut_1": 1.0}),
         (["ndcg@1"], {"ndcg_cut_1": 1.0}),
         (["utility.1,0,0,0"], {"utility_1,0,0,0": 1.0}),
