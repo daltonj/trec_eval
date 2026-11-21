@@ -215,9 +215,9 @@ int te_get_qrels(EPI *epi, char *text_qrels_file, ALL_REL_INFO *all_rel_info)
     line_ptr = lines;
     ptr = trec_qrels_buf;
     while (*ptr) {
-        /* Skip blank lines and comment lines */
-        while (*ptr != '\n' && isspace(*ptr))
-            ptr++;
+		/* Skip blank lines and comment lines */
+		while (*ptr != '\n' && isspace(*ptr))
+			ptr++;
 		if (*ptr == '\n' || *ptr == '#') {
 			ptr = index(ptr, '\n') + 1;
 			line_num++;
@@ -229,22 +229,22 @@ int te_get_qrels(EPI *epi, char *text_qrels_file, ALL_REL_INFO *all_rel_info)
 					 line_num + 1);
 			return (UNDEF);
 		}
-        line_ptr->rel = str_to_long_ctx(rel_ptr, &error,
-                                        "document '%s' of topic '%s' in "
-                                        "line %ld of qrels file '%s'",
-                                        line_ptr->docno, line_ptr->qid,
-                                        line_num + 1, text_qrels_file);
-        if (error)
-            return (UNDEF);
-        if (line_ptr->rel < MIN_REL_LEVEL || line_ptr->rel > MAX_REL_LEVEL) {
-            fprintf(stderr, "trec_eval.get_qrels: Relevance level '%s' "
-                    "for document '%s' of topic '%s' in "
-                    "line %ld of qrels file '%s' is outside %d to %d\n",
-                    rel_ptr, line_ptr->docno, line_ptr->qid,
-                    line_num + 1, text_qrels_file,
-                    MIN_REL_LEVEL, MAX_REL_LEVEL);
-            return (UNDEF);
-        }
+		line_ptr->rel = str_to_long_ctx(rel_ptr, &error,
+										"document '%s' of topic '%s' in "
+										"line %ld of qrels file '%s'",
+										line_ptr->docno, line_ptr->qid,
+										line_num + 1, text_qrels_file);
+		if (error)
+			return (UNDEF);
+		if (line_ptr->rel < MIN_REL_LEVEL || line_ptr->rel > MAX_REL_LEVEL) {
+			fprintf(stderr, "trec_eval.get_qrels: Relevance level '%s' "
+					"for document '%s' of topic '%s' in "
+					"line %ld of qrels file '%s' is outside %d to %d\n",
+					rel_ptr, line_ptr->docno, line_ptr->qid,
+					line_num + 1, text_qrels_file,
+					MIN_REL_LEVEL, MAX_REL_LEVEL);
+			return (UNDEF);
+		}
 		line_ptr++;
 		line_num++;
     }
