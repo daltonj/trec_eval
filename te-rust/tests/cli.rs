@@ -300,7 +300,7 @@ mod output {
 /// The differences from trec_eval that docs/cli.md lists. A failure here means that list needs
 /// updating.
 mod documented_differences {
-    use super::common::{te_rust, test_data};
+    use super::common::{assert_refused, fixture, rows, te_rust, test_data};
     use std::fs::File;
     use std::process::Output;
 
@@ -324,23 +324,45 @@ mod documented_differences {
     fn listed_trec_eval_features_are_refused() {
         let run = test_data("results.test");
         let run = run.to_str().unwrap();
-        for options in [
-            &["-T", "trec_results"][..],
-            &["-D", "1"],
-            &["-Z", "zscores"],
-            &["-o"],
-            &["--Max_retrieved_per_topic=5"],
-            &["--complete_rel_info_wanted"],
-            &["-m", "prefs_simp"],
-            &["-R", "prefs"],
-            &["-R", "qrels_prefs"],
+        for (options, status, message) in [
+            (&["-T", "trec_results"][..], 1, "unexpected argument '-T'"),
+            (&["-D", "1"], 1, "unexpected argument '-D'"),
+            (&["-Z", "zscores"], 1, "unexpected argument '-Z'"),
+            (&["-o"], 1, "unexpected argument '-o'"),
+            (&["--Max_retrieved_per_topic=5"], 1, "unexpected argument '--Max_retrieved_per_topic'"),
+            (&["--complete_rel_info_wanted"], 1, "unexpected argument '--complete_rel_info_wanted'"),
+            (&["-m", "prefs_simp"], 1, "unknown measure 'prefs_simp'"),
+            (&["-R", "prefs"], 2, "Unsupported relevance judgments format 'prefs'"),
+            (&["-R", "qrels_prefs"], 2, "Unsupported relevance judgments format 'qrels_prefs'"),
         ] {
-            assert!(!eval(options, run).status.success(), "{options:?}");
+            assert_refused(&eval(options, run), status, message);
         }
         // trec_eval reads the run from standard input when its name is "-".
-        assert!(!eval(&["-m", "map"], "-").status.success());
-        assert!(!te_rust_with_stdin(&["-v"]).status.success());
-        assert!(te_rust_with_stdin(&["-V"]).status.success());
+        assert_refused(&eval(&["-m", "map"], "-"), 2, "Error parsing run file '-'");
+        assert_refused(&te_rust_with_stdin(&["-v"]), 1, "unexpected argument '-v'");
+    }
+
+    #[test]
+    fn uppercase_v_prints_the_version() {
+        let out = te_rust().arg("-V").output().unwrap();
+        assert_eq!(out.status.code(), Some(0));
+        assert_eq!(String::from_utf8(out.stdout).unwrap().trim(), "te-rust 0.1.0");
+        assert!(out.stderr.is_empty());
+    }
+
+    #[test]
+    fn gain_calculations_follow_the_documented_differences() {
+        for (measure, expected) in [
+            ("ndcg.1=1,0=0.9", "ndcg_1=1,0=0.9 all 1.0000"),
+            ("Rndcg.0=0,1=-1", "Rndcg_0=0,1=-1 all 0.0000"),
+        ] {
+            let out = super::common::eval(
+                &["-m", measure],
+                &fixture("ab.qrels"),
+                &fixture("ab.run"),
+            );
+            assert_eq!(rows(&out), [expected]);
+        }
     }
 
     #[test]
