@@ -124,16 +124,17 @@ mod tests {
     }
 
     #[test]
-    fn utility_counts_each_cell_once() {
-        // retrieved [1, 0, 0], num_rel = 2, 10 documents in the collection:
-        // a = 1, b = 2, c = 1 and d = 10 - 3 - 1 = 6.
-        let measure = UtilityMeasure::new(vec![1000.0, 100.0, 10.0, 1.0], "1000,100,10,1").unwrap();
+    fn utility_counts_only_judged_documents_as_relevant_retrieved() {
+        // a = 1, b = 2, c = 1, d = 0 - 3 - (2 - 1) = -4.
+        let measure = UtilityMeasure::new(vec![1000.0, 100.0, 10.0, 1.0], "").unwrap();
         let config = EvalConfig {
-            num_docs_in_coll: 10,
-            ..EvalConfig::default()
+            relevance_level: -1,
+            ..Default::default()
         };
-        let state = make_mock_state(vec![1, 0, 0], 2);
-        let actual = measure.calc(&config, &EvalState::Standard(state));
-        assert_eq!(actual, vec![MetricValue::Float(1216.0)]);
+        let mut query = make_mock_state(vec![1, -1, -1], 2);
+        query.rel_levels = vec![1, 1];
+        query.num_nonpool = 2;
+        let state = EvalState::Standard(query);
+        assert_eq!(measure.calc(&config, &state), [MetricValue::Float(1206.0)]);
     }
 }

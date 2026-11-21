@@ -138,4 +138,23 @@ mod tests {
             panic!("Expected float value");
         }
     }
+    #[test]
+    fn eleven_pt_avg_uses_the_judged_relevant_count() {
+        let config = EvalConfig {
+            relevance_level: -1,
+            ..Default::default()
+        };
+        let mut query = make_mock_state(vec![1, -2, -1], 2);
+        query.rel_levels = vec![1, 1];
+        query.num_nonpool = 1;
+        query.num_unjudged_in_pool = 1;
+        let state = EvalState::Standard(query);
+        // trec_eval's reverse scan assigns precision 1/3 to the eight attainable
+        // recall levels 0 through 0.7, and 0 to the remaining three: 8/33.
+        let [MetricValue::Float(value)] = Avg11PtMeasure::default().calc(&config, &state)[..]
+        else {
+            panic!("expected one float")
+        };
+        assert!((value - 8.0 / 33.0).abs() < 1e-12);
+    }
 }

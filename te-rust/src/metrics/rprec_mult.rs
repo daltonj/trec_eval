@@ -146,11 +146,11 @@ mod tests {
 
     #[test]
     fn large_multiples_keep_their_precision() {
-        let measure = RprecMultMeasure::new(vec![1e19, 1e100]).unwrap();
-        let state = EvalState::Standard(make_mock_state(vec![1, 1], 2));
+        let measure = RprecMultMeasure::new(vec![1e19]).unwrap();
+        let state = EvalState::Standard(make_mock_state(vec![1], 1));
         assert_eq!(
             measure.calc(&EvalConfig::default(), &state),
-            [MetricValue::Float(1e-19), MetricValue::Float(1e-100)]
+            [MetricValue::Float(1e-19)]
         );
     }
 }

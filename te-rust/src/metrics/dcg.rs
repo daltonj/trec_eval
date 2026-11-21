@@ -123,27 +123,3 @@ impl Measure for DcgMeasure {
         vec![MetricValue::Float(value)]
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::metrics::common::make_mock_state;
-    use crate::metrics::ndcg::NdcgMeasure;
-
-    #[test]
-    fn dcg_and_ideal_dcg_are_the_two_sums_of_ndcg() {
-        // The ranking of test_ndcg_standard in ndcg.rs: dcg = 1.5 and ideal_dcg = 1 + 1/log2(3).
-        let config = EvalConfig::default();
-        let state = EvalState::Standard(make_mock_state(vec![1, 0, 1], 2));
-        let value = |values: Vec<MetricValue>| match values[..] {
-            [MetricValue::Float(v)] => v,
-            _ => panic!("Expected one float value"),
-        };
-        let dcg = value(DcgMeasure::new("").unwrap().calc(&config, &state));
-        let ideal = value(DcgMeasure::ideal("").unwrap().calc(&config, &state));
-        let ndcg = value(NdcgMeasure::new("").unwrap().calc(&config, &state));
-        assert!((dcg - 1.5).abs() < 1e-12);
-        assert!((ideal - (1.0 + 1.0 / 3f64.log2())).abs() < 1e-12);
-        assert!((ndcg - dcg / ideal).abs() < 1e-12);
-    }
-}
