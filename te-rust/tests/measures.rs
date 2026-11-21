@@ -551,7 +551,7 @@ mod ndcg {
 
 /// gm_map and gm_bpref, which floor a topic's value at 1e-5 before taking its log.
 mod geometric_means {
-    use super::common::{eval, summary, test_data, write};
+    use super::common::{eval, reference_rows, summary, test_data, write};
     use std::path::PathBuf;
 
     /// AP and bpref are 1 on topic 1 and 0.5 on topic 2, and topic 3 has nothing relevant
@@ -615,14 +615,10 @@ mod geometric_means {
             &test_data("qrels.test"),
             &test_data("results.trunc"),
         );
-        let reference = std::fs::read_to_string(test_data("out.test.aqc")).unwrap();
+        let reference = reference_rows("out.test.aqc");
         for measure in ["gm_map", "gm_bpref"] {
-            let expected = reference
-                .lines()
-                .map(|line| line.split_whitespace().collect::<Vec<_>>())
-                .find(|fields| fields[0] == measure && fields[1] == "all")
-                .unwrap()[2]
-                .to_string();
+            let prefix = format!("{measure} all ");
+            let expected = reference.iter().find_map(|row| row.strip_prefix(&prefix)).unwrap();
             assert_eq!(summary(&out, measure), expected, "{measure}");
         }
     }

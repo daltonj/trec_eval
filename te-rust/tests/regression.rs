@@ -1,25 +1,12 @@
 mod common;
 
-use common::trec_eval_bin;
+use common::{te_rust, trec_eval_bin};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::process::Command;
 
-fn get_te_rust_bin() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_te-rust"))
-}
-
 fn get_test_file_path(filename: &str) -> PathBuf {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.pop(); // Go to workspace root
-    path.push(get_trec_eval_dir_name());
-    path.push("test");
-    path.push(filename);
-    path
-}
-
-fn get_trec_eval_dir_name() -> String {
-    std::env::var("TREC_EVAL_DIR").unwrap_or_else(|_| "trec_eval".to_string())
+    trec_eval_bin().with_file_name("test").join(filename)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -127,8 +114,7 @@ fn compare_outputs(rust_args: &[&str], c_args: &[&str], qrels_name: &str, result
     let results_path = get_test_file_path(results_name);
 
     // 1. Run te-rust
-    let rust_bin = get_te_rust_bin();
-    let mut rust_cmd = Command::new(&rust_bin);
+    let mut rust_cmd = te_rust();
     for arg in rust_args {
         rust_cmd.arg(arg);
     }
@@ -287,10 +273,8 @@ fn test_regression_stock_set() {
 
 #[test]
 fn test_regression_help_flags() {
-    let rust_bin = get_te_rust_bin();
-    
     // Test --help-measures
-    let output_measures = Command::new(&rust_bin)
+    let output_measures = te_rust()
         .arg("--help-measures")
         .output()
         .expect("Failed to run --help-measures");
@@ -300,7 +284,7 @@ fn test_regression_help_flags() {
     assert!(stdout_m.contains("Mean Average Precision"));
 
     // Test --help-measure map
-    let output_map = Command::new(&rust_bin)
+    let output_map = te_rust()
         .arg("--help-measure")
         .arg("map")
         .output()

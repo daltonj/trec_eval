@@ -74,8 +74,16 @@ pub fn rows(output: &Output) -> Vec<String> {
         "te-rust failed: {}",
         stderr(output)
     );
-    String::from_utf8_lossy(&output.stdout)
-        .lines()
+    normalized_rows(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// The stored rows from trec_eval's `test` directory.
+pub fn reference_rows(name: &str) -> Vec<String> {
+    normalized_rows(&std::fs::read_to_string(test_data(name)).unwrap())
+}
+
+fn normalized_rows(text: &str) -> Vec<String> {
+    text.lines()
         .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
         .collect()
 }

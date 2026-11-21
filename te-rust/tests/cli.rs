@@ -588,7 +588,7 @@ mod measure_requests {
 /// The integer options -l, -M and -N and integer cutoffs, which trec_eval reads with
 /// `str_to_long`: C-locale whitespace, a sign and digits, with a warning for what follows them.
 mod integer_options {
-    use super::common::{assert_refused, eval, rows, stderr, test_data, write};
+    use super::common::{assert_refused, eval, reference_rows, rows, stderr, test_data, write};
     use std::process::Output;
 
     /// b (grade 2) is at rank 2 and a (grade 1) at rank 3.
@@ -696,21 +696,13 @@ mod integer_options {
             &test_data("qrels.test"),
             &test_data("results.test"),
         );
-        let expected = std::fs::read_to_string(test_data("out.test.meas_params")).unwrap();
         let cutoff_rows = |rows: Vec<String>| {
-            let mut rows: Vec<_> = rows
-                .into_iter()
+            rows.into_iter()
                 .filter(|row| row.starts_with("ndcg_cut_") || row.starts_with("success_"))
-                .collect();
-            rows.sort();
-            rows
+                .collect::<Vec<_>>()
         };
-        let expected = expected
-            .lines()
-            .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "));
-        let actual = cutoff_rows(rows(&out));
-        assert_eq!(actual.len(), 24);
-        assert_eq!(actual, cutoff_rows(expected.collect()));
+        // Six measures for each of three topics and the summary.
+        assert_eq!(cutoff_rows(rows(&out)), cutoff_rows(reference_rows("out.test.meas_params")));
     }
 }
 
