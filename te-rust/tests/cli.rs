@@ -660,6 +660,18 @@ mod integer_options {
     }
 
     #[test]
+    fn cutoff_warnings_name_each_measure_request() {
+        let out = graded(&["-m", "P.5x", "-m", "recall.5x"]);
+        let whole = graded(&["-m", "P.5", "-m", "recall.5"]);
+        assert_eq!(rows(&out), rows(&whole));
+        assert_eq!(
+            stderr(&out),
+            "te-rust: Warning, measure 'P.5x': value '5x' partially read as '5'\n\
+             te-rust: Warning, measure 'recall.5x': value '5x' partially read as '5'\n"
+        );
+    }
+
+    #[test]
     fn cutoffs_read_their_leading_integer_with_a_warning() {
         // trec_eval: "Warning, value `5x' partially read as `5'." and P_5.
         assert_reads_as(&["-m", "P.5x"], &["-m", "P.5"], "5x", "5");

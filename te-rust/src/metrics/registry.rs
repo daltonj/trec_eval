@@ -357,8 +357,12 @@ pub fn resolve_measures(requested: &[String]) -> Result<ResolvedMeasures, Measur
 
     let mut measures: Vec<Box<dyn Measure>> = Vec::with_capacity(selected.len());
     for (spec, params, source) in selected {
+        let warning_count = warnings.len();
         let measure = (spec.factory)(params, &mut warnings)
             .map_err(|e| MeasureParseError::new(format!("measure '{}': {}", source, e)))?;
+        for warning in &mut warnings[warning_count..] {
+            *warning = format!("measure '{}': {}", source, warning);
+        }
         measures.push(measure);
     }
     Ok(ResolvedMeasures { measures, warnings })
@@ -490,7 +494,7 @@ mod tests {
     fn parameter_warnings_are_returned() {
         let resolved = resolve_measures(&["P.5x".to_string()]).unwrap();
         assert_eq!(resolved.measures[0].sub_metrics(), vec!["P_5"]);
-        assert_eq!(resolved.warnings, ["value '5x' partially read as '5'"]);
+        assert_eq!(resolved.warnings, ["measure 'P.5x': value '5x' partially read as '5'"]);
     }
 
     #[test]
