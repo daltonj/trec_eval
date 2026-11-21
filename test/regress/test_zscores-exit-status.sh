@@ -12,4 +12,4 @@ for z in malformed missing; do
     expect_result 2 /dev/null $d/err.$z -q -Z $d/zscores.$z -m map "$Q" "$R"
 done
 
-expect_output $d/out.valid -q -Z $d/zscores -m map "$Q" "$R"
+expect_output $d/out.valid -q -Z test/regress/zscores -m map "$Q" "$R"
