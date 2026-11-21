@@ -48,7 +48,6 @@ def test_pytrec_eval_keeps_unjudged_documents_by_default(flags, expected):
     assert evaluator.evaluate({"1": {"u": 3.0, "d1": 2.0, "d2": 1.0}}) == {"1": expected}
 
 
-
 def test_pytrec_eval_gives_every_measure_per_topic_as_a_float():
     evaluator = pytrec_eval.RelevanceEvaluator(
         {"1": {"d1": 1, "d2": 0}},
@@ -106,6 +105,8 @@ def test_pytrec_eval_retains_requested_cutoffs(measures, expected):
     "measures, expected",
     [
         (["P.5x", "P.10"], {"P_5": 0.2, "P_10": 0.1}),
+        # pytrec_eval reads decimal parameter values, so "1e-1" stops at "1".
+        # R = 2 gives cutoffs 2 and 4, each containing one relevant document.
         (
             ["Rprec_mult.1e-1", "Rprec_mult.2"],
             {"Rprec_mult_1.00": 0.5, "Rprec_mult_2.00": 0.25},
@@ -124,6 +125,8 @@ def test_pytrec_eval_retains_requested_cutoffs(measures, expected):
             {"ndcg_cut_1": 0.0, "ndcg_cut_2": pytest.approx(0.38685280723454163)},
         ),
         (["Rprec_mult.1.,2"], {"Rprec_mult_1.00": 0.5}),
+        # pytrec_eval requires digits after a decimal point, so this request
+        # stops at "5" and never reads ",10".
         (["P.5.,10"], {"P_5": 0.2}),
         (["iprec_at_recall.0.,1"], {"iprec_at_recall_0.00": 0.5}),
         (["recall.2.,3"], {"recall_2": 0.5}),
@@ -180,7 +183,6 @@ def test_pytrec_eval_supported_measures():
     assert "ndcg" in pytrec_eval.supported_measures
     assert "recip_rank" in pytrec_eval.supported_measures
     assert "official" in pytrec_eval.supported_measures
-
 
 
 @pytest.mark.parametrize("measure", ["dcg", "ideal_dcg"])
