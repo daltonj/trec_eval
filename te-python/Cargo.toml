@@ -17,4 +17,5 @@ default = []
 extension-module = ["pyo3/extension-module"]
 
 [lints.rust]
+# Allow the gil-refs cfg emitted by pyo3::create_exception! for NoSharedTopicError.
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("gil-refs"))'] }
