@@ -1069,6 +1069,7 @@ mod tests {
     }
     #[test]
     fn hex_exponent_cancels_a_long_significand_offset() {
+        // Four bits per hex digit make both explicit exponents exceed 2^20; each value is still 1.
         let digits = 262_145;
         let zeros = "0".repeat(digits);
         for s in [

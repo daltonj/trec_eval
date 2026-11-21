@@ -629,7 +629,6 @@ mod integer_options {
 
     #[test]
     fn relevance_level_and_document_counts_read_their_leading_integer_with_a_warning() {
-        // At level 2, map = 1/2; at level 1, map = (1/2 + 2/3) / 2.
         assert_reads_as(
             &["-l", "2.5", "-m", "map"],
             &["-l", "2", "-m", "map"],
@@ -653,8 +652,11 @@ mod integer_options {
     #[test]
     fn integer_options_skip_leading_c_locale_whitespace() {
         for (option, value, measure, row) in [
+            // Only b is relevant at level 2, at rank 2: AP = 1/2.
             ("-l", " 2", "map", "map all 0.5000"),
+            // Truncation keeps c and b; b contributes 1/2, divided by two relevant documents.
             ("-M", "\t2", "map", "map all 0.2500"),
+            // Nonretrieved nonrelevant = 10 - 3 retrieved - 2 relevant + 2 retrieved relevant.
             ("-N", " 10", "utility.0,0,0,1", "utility_0,0,0,1 all 7.0000"),
         ] {
             let out = two_grades(&[option, value, "-m", measure]);

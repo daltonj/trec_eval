@@ -285,9 +285,13 @@ mod rbp {
         );
         let both = (fixture("ab.qrels"), fixture("ab.run"));
         for (gains, in_one, in_both) in [
+            // Normalised gains (a, b) = (1, 1): 0.1 * 1; 0.1 * (1 + 0.9 * 1).
             ("0=2,1=2", "0.1000", "0.1900"),
+            // Range [-4, 0] gives (a, b) = (0.5, 0): 0.1 * 0.5 for both runs.
             ("0=-4,1=-2", "0.0500", "0.0500"),
+            // Range [0, 2] gives (a, b) = (1, 0.5): 0.1 * 1; 0.1 * (1 + 0.9 * 0.5).
             ("0=1,1=2", "0.1000", "0.1450"),
+            // Range [-2, 0] gives (a, b) = (0.5, 0): 0.1 * 0.5 for both runs.
             ("0=-2,1=-1", "0.0500", "0.0500"),
         ] {
             let (measure, row) = (format!("rbp.{gains}"), format!("rbp_{gains}"));
@@ -756,6 +760,7 @@ mod negative_levels {
             )
             .unwrap();
             let state = EvalState::JudgmentGroups(states);
+            // R = 1; cutoff 4 exceeds three retrieved documents, so precision = 1/4.
             assert_eq!(
                 measure.calc(&config, &state),
                 [
@@ -801,11 +806,13 @@ mod negative_levels {
             relevance_level: -1,
             ..Default::default()
         };
+        // trec_eval -l-1 -m utility test/qrels.test test/results.test
         assert_eq!(mean_scores(&qrels, &run, "utility", &config), [-8.0]);
         let config = EvalConfig {
             num_docs_in_coll: 100000,
             ..config
         };
+        // trec_eval -l-1 -N100000 -m utility.2,-1,1,0.5 test/qrels.test test/results.test
         assert_eq!(
             mean_scores(&qrels, &run, "utility.2,-1,1,0.5", &config),
             [50478.5]
