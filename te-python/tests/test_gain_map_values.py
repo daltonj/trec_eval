@@ -5,15 +5,30 @@ QRELS = {"t": {"a": 2, "b": 0, "c": 1, "d": 3}}
 RUN = {"t": {"d": 5.0, "x": 4.0, "a": 3.0, "b": 2.0, "c": 1.0}}
 
 
-@pytest.mark.parametrize("measure", ["ndcg.1=x", "ndcg.x=1", "ndcg.5,5", "ndcg.1=2,1=5"])
-def test_unusable_gain_map_is_refused(measure):
-    with pytest.raises(ValueError):
+@pytest.mark.parametrize(
+    "measure, message",
+    [
+        ("ndcg.1=x", "invalid gain 'x' for relevance level 1"),
+        ("ndcg.x=1", "invalid relevance level 'x'"),
+        ("ndcg.5,5", "expected key=value, got '5'"),
+        ("ndcg.1=2,1=5", "relevance level 1 is given more than once"),
+    ],
+)
+def test_unusable_gain_map_is_refused(measure, message):
+    with pytest.raises(ValueError, match=message):
         Evaluator(QRELS, measures=[measure])
 
 
-@pytest.mark.parametrize("gains", ["1=x", "x=1", "1=2,1=5"])
-def test_unusable_global_gains_are_refused(gains):
-    with pytest.raises(ValueError, match="Invalid global_gains"):
+@pytest.mark.parametrize(
+    "gains, message",
+    [
+        ("1=x", "invalid gain 'x' for relevance level 1"),
+        ("x=1", "invalid relevance level 'x'"),
+        ("1=2,1=5", "relevance level 1 is given more than once"),
+    ],
+)
+def test_unusable_global_gains_are_refused(gains, message):
+    with pytest.raises(ValueError, match=f"Invalid global_gains: {message}"):
         Evaluator(QRELS, measures=["ndcg"], global_gains=gains)
 
 

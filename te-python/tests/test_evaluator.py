@@ -243,7 +243,7 @@ def test_cutoff_reads_its_leading_integer_with_a_warning():
 
 
 def test_cutoff_without_a_leading_integer_is_refused():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="invalid integer cutoff 'x'"):
         Evaluator({"1": {"a": 1}}, measures=["P.x"])
 
 
