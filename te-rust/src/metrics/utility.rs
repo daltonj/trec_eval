@@ -1,5 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{finite_float, MeasureParseError};
+use crate::metrics::common::{check_finite, MeasureParseError};
 
 pub struct UtilityMeasure {
     params: Vec<f64>,
@@ -15,7 +15,7 @@ impl UtilityMeasure {
             ));
         }
         for &value in &params {
-            finite_float(value)?;
+            check_finite(value)?;
         }
         let name = if params_str.is_empty() {
             "utility".to_string()

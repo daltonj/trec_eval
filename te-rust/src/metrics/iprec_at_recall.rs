@@ -1,5 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{checked_float_cutoffs, recall_levels, MeasureParseError};
+use crate::metrics::common::{check_recall_levels, checked_float_cutoffs, MeasureParseError};
 
 pub struct IprecAtRecallMeasure {
     cutoff_percents: Vec<f64>,
@@ -11,7 +11,7 @@ impl IprecAtRecallMeasure {
     /// levels that repeat or print the same row name.
     pub fn new(cutoff_percents: Vec<f64>) -> Result<Self, MeasureParseError> {
         let cutoff_percents = checked_float_cutoffs(cutoff_percents)?;
-        recall_levels(&cutoff_percents)?;
+        check_recall_levels(&cutoff_percents)?;
         let sub_metrics = cutoff_percents.iter().map(|p| format!("iprec_at_recall_{:.2}", p)).collect();
         Ok(Self { cutoff_percents, sub_metrics })
     }

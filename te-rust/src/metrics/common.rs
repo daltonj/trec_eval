@@ -88,7 +88,8 @@ pub(crate) fn parse_finite_float(tok: &str) -> Result<f64, MeasureParseError> {
     Ok(value)
 }
 
-pub(crate) fn finite_float(value: f64) -> Result<(), MeasureParseError> {
+/// Refuse a value that is not a finite number, as `parse_finite_float` does for text.
+pub(crate) fn check_finite(value: f64) -> Result<(), MeasureParseError> {
     if value.is_finite() {
         Ok(())
     } else {
@@ -194,7 +195,7 @@ pub(crate) fn parse_rbp_params(params: &str) -> Result<(f64, GainsConfig), Measu
                 ));
             }
             let p = parse_finite_float(&value)?;
-            rbp_persistence(p)?;
+            check_rbp_persistence(p)?;
             persistence = Some(p);
         } else {
             gain_pairs.push((name, value));
@@ -304,7 +305,7 @@ pub(crate) fn checked_rank_cutoffs(mut cutoffs: Vec<usize>) -> Result<Vec<usize>
 pub(crate) fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, MeasureParseError> {
     require_cutoffs(&list)?;
     for &value in &list {
-        finite_float(value)?;
+        check_finite(value)?;
     }
     list.sort_by(f64::total_cmp);
     if let Some(pair) = list.windows(2).find(|pair| pair[0] == pair[1]) {
@@ -331,7 +332,7 @@ pub(crate) fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, Meas
 }
 
 /// Refuse recall levels outside [0, 1], for `iprec_at_recall` and `11pt_avg`.
-pub(crate) fn recall_levels(levels: &[f64]) -> Result<(), MeasureParseError> {
+pub(crate) fn check_recall_levels(levels: &[f64]) -> Result<(), MeasureParseError> {
     require_cutoffs(levels)?;
     for &level in levels {
         if !(0.0..=1.0).contains(&level) {
@@ -346,7 +347,7 @@ pub(crate) fn recall_levels(levels: &[f64]) -> Result<(), MeasureParseError> {
 
 /// Refuse multiples of R that are not positive. `checked_float_cutoffs` has already
 /// refused values that are not finite.
-pub(crate) fn r_multiples(multiples: &[f64]) -> Result<(), MeasureParseError> {
+pub(crate) fn check_r_multiples(multiples: &[f64]) -> Result<(), MeasureParseError> {
     for &multiple in multiples {
         if multiple <= 0.0 {
             return Err(MeasureParseError::new(format!(
@@ -358,7 +359,7 @@ pub(crate) fn r_multiples(multiples: &[f64]) -> Result<(), MeasureParseError> {
     Ok(())
 }
 
-fn rbp_persistence(p: f64) -> Result<(), MeasureParseError> {
+fn check_rbp_persistence(p: f64) -> Result<(), MeasureParseError> {
     if !(0.0..1.0).contains(&p) {
         return Err(MeasureParseError::new(format!(
             "persistence p {} is outside [0, 1)",

@@ -1,5 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{finite_float, MeasureParseError};
+use crate::metrics::common::{check_finite, MeasureParseError};
 
 pub struct SetFMeasure {
     beta: f64,
@@ -9,7 +9,7 @@ pub struct SetFMeasure {
 impl SetFMeasure {
     /// Refuses a weight that is negative or not finite.
     pub fn new(beta: f64, params_str: &str) -> Result<Self, MeasureParseError> {
-        finite_float(beta)?;
+        check_finite(beta)?;
         if beta < 0.0 {
             return Err(MeasureParseError::new(format!(
                 "set_F weight {} is negative",

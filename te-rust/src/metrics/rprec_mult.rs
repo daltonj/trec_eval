@@ -1,5 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{checked_float_cutoffs, r_multiples, MeasureParseError};
+use crate::metrics::common::{check_r_multiples, checked_float_cutoffs, MeasureParseError};
 
 pub struct RprecMultMeasure {
     cutoff_percents: Vec<f64>,
@@ -11,7 +11,7 @@ impl RprecMultMeasure {
     /// and finite, and multiples that repeat or print the same row name.
     pub fn new(cutoff_percents: Vec<f64>) -> Result<Self, MeasureParseError> {
         let cutoff_percents = checked_float_cutoffs(cutoff_percents)?;
-        r_multiples(&cutoff_percents)?;
+        check_r_multiples(&cutoff_percents)?;
         let sub_metrics = cutoff_percents.iter().map(|p| format!("Rprec_mult_{:.2}", p)).collect();
         Ok(Self { cutoff_percents, sub_metrics })
     }

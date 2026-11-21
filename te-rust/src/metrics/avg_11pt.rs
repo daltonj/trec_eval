@@ -1,5 +1,5 @@
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{recall_levels, MeasureParseError};
+use crate::metrics::common::{check_recall_levels, MeasureParseError};
 
 pub struct Avg11PtMeasure {
     cutoffs: Vec<f64>,
@@ -12,7 +12,7 @@ impl Avg11PtMeasure {
     /// list and a level outside [0, 1].
     pub fn new(mut cutoffs: Vec<f64>, params_str: &str) -> Result<Self, MeasureParseError> {
         cutoffs.sort_by(f64::total_cmp);
-        recall_levels(&cutoffs)?;
+        check_recall_levels(&cutoffs)?;
         let name = if params_str.is_empty() {
             "11pt_avg".to_string()
         } else {
