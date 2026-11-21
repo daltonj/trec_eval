@@ -1,10 +1,5 @@
-# A results file with no data lines, or empty standard input, is refused
-# with exit 2 and a message naming the file.
+# No-data results, including empty stdin, fail before topic evaluation.
 . test/regress/lib.sh
-D=test/regress/empty-results
-Q=test/regress/qrels
-
-for results in $D/results.blank $D/results.comment; do
-    expect_message 2 "No data lines in results file '$results'" $Q $results
-done
-expect_message 2 "No data lines in results file '-'" $Q - < /dev/null
+printf '# comment\n \t \n' > "$T/results"
+expect_message 2 "No data lines in results file '$T/results'" test/regress/qrels "$T/results"
+expect_message 2 "No data lines in results file '-'" test/regress/qrels - < /dev/null

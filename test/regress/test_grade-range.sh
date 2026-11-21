@@ -1,21 +1,18 @@
-# get_qrels.c documents relevance levels from -127 to 127. Levels at the
-# bounds are accepted. A level outside them is refused with exit 2 by the
-# qrels and qrels_jg readers, before it can size the per-grade table.
+# Both integer-grade readers accept -127..127 and refuse the adjacent values.
 . test/regress/lib.sh
 D=test/regress/grade-range
-
 expect_output $D/out.edge -q -m map -m ndcg $D/qrels.edge $D/results
 expect_output $D/out.edge.jg -R qrels_jg -m map_avgjg $D/qrels.edge $D/results
-for q in 128 -128 max; do
-    case $q in
-    max) level=2147483647 ;;
-    *) level=$q ;;
-    esac
-    message="Relevance level '$level' for document 'd1' of topic '2' in line 2 of qrels file '$D/qrels.$q' is outside -127 to 127"
-    expect_message 2 "$message" -m map $D/qrels.$q $D/results
-    expect_message 2 "$message" -R qrels_jg -m map_avgjg $D/qrels.$q $D/results
+for level in -128 128; do
+    printf '1 0 d1 %s\n' "$level" > "$T/qrels"
+    for format in qrels qrels_jg; do
+        expect_message 2 "Relevance level '$level' for document 'd1' of topic '1' in line 1 of qrels file '$T/qrels' is outside -127 to 127" \
+            -R $format "$T/qrels" $D/results
+    done
 done
-# With 32-bit long, this value fails to parse; with 64-bit long, it is
-# outside the grade range. Both paths must refuse it.
-expect_status 2 -m map $D/qrels.long64 $D/results
-expect_status 2 -R qrels_jg -m map_avgjg $D/qrels.long64 $D/results
+# Validate before narrowing: this becomes -1 if stored in a 32-bit int.
+# A 32-bit long must reject it during conversion instead.
+printf '1 0 d1 9223372036854775807\n' > "$T/wide"
+for format in qrels qrels_jg; do
+    expect_status 2 -R $format "$T/wide" $D/results
+done

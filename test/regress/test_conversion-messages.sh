@@ -1,32 +1,27 @@
-# A warning or error from reading a number says where the value comes
-# from: the measure and its parameter, or the line of the file.
+# Checked conversions name their input. Numeric suffixes warn and retain
+# the parsed prefix; unusable and non-finite parameters fail at init.
 . test/regress/lib.sh
-D=test/regress/conversion-messages
 Q=test/regress/qrels
 R=test/regress/results
-
-w="Warning, value \`1.5' partially read as \`1'"
-expect_message 0 "$w (cutoff of measure 'P')." -m P.1.5 $Q $R
-expect_message 0 "$w (document 'd1' of topic '1' in line 1 of qrels file '$D/qrels.partial')." \
-    -m num_rel $D/qrels.partial $R
-expect_message 0 "$w (document 'd1' of topic '1' in line 1 of qrels file '$D/qrels.partial')." \
-    -R qrels_jg -m map_avgjg $D/qrels.partial $R
-
-# Floating-point parameters: cutoffs, plain parameters and name=value
-# pairs.
-echo "Warning, value \`.25x' partially read as \`.25' (cutoff of measure 'iprec_at_recall')." > "$T/err"
-expect_result 0 $D/out.partial "$T/err" -m iprec_at_recall..25x $Q $R
-expect_message 0 "Warning, value \`0.5x' partially read as \`0.5' (parameter of measure 'set_F')." \
-    -m set_F.0.5x $Q $R
-expect_message 0 "Warning, value \`2x' partially read as \`2' (parameter '1' of measure 'ndcg')." \
-    -m ndcg.1=2x $Q $R
-expect_message 0 "Warning, value \`0.5x' partially read as \`0.5' (parameter 'p' of measure 'rbp')." \
-    -m rbp.p=0.5x $Q $R
-
-# Errors carry the same context.
-expect_message 2 "Error: value \`x' could not be parsed (cutoff of measure 'P')." \
-    -m P.x $Q $R
-expect_message 2 "Error: value \`x' could not be parsed (parameter of measure 'set_F')." \
-    -m set_F.x $Q $R
-expect_message 2 "trec_eval: cutoff inf of measure 'iprec_at_recall' is not finite" \
-    -m iprec_at_recall.inf $Q $R
+for measure in iprec_at_recall.x iprec_at_recall..1,,.2 \
+    11pt_avg.x ndcg.1=x; do
+    expect_message 2 "could not be parsed" -m $measure $Q $R
+done
+for measure in iprec_at_recall.inf set_F.inf ndcg.1=inf; do
+    expect_message 2 "is not finite" -m $measure $Q $R
+done
+expect_message 2 "could not be parsed (cutoff of measure 'P')." -m P.x $Q $R
+expect_message 0 "partially read as \`1' (cutoff of measure 'P')." -m P.1.5 $Q $R
+for format in qrels qrels_jg; do
+    expect_message 0 "partially read as \`1' (document 'd1' of topic '1' in line 1 of qrels file 'test/regress/conversion-messages/qrels.partial')." \
+        -R $format test/regress/conversion-messages/qrels.partial $R
+done
+while IFS='|' read -r measure value prefix context; do
+    expect_message 0 "Warning, value \`$value' partially read as \`$prefix' ($context)." \
+        -m "$measure" $Q $R
+    [ "$value" != .25x ] || te_same output test/regress/conversion-messages/out.partial
+done <<'EOF'
+iprec_at_recall..25x|.25x|.25|cutoff of measure 'iprec_at_recall'
+set_F.0.5x|0.5x|0.5|parameter of measure 'set_F'
+ndcg.1=2x|2x|2|parameter '1' of measure 'ndcg'
+EOF

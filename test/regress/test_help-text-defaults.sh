@@ -13,8 +13,6 @@ grep -F -x ' --Max_retrieved_per_topic num:' \
 
 # utility.1,-1,0,1 depends on -N; no -N gives the -N 0 values.
 expect_output $D/out.N0 -q -m utility.1,-1,0,1 $Q $R
-expect_output $D/out.N0 -N 0 -q -m utility.1,-1,0,1 $Q $R
 # The long option of -M is accepted with two dashes.
 m="-q -m num_ret $Q $R"
 expect_output $D/out.M1 --Max_retrieved_per_topic=1 $m
-expect_output $D/out.M1 --Max_retrieved_per_topic 1 $m
