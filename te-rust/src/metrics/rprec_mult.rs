@@ -59,19 +59,19 @@ impl Measure for RprecMultMeasure {
             return results.into_iter().map(MetricValue::Float).collect();
         }
 
-        // 1. Convert percentages to integer rank cutoffs using C's + 0.9 cast rounding
-        let cutoffs: Vec<i64> = self.cutoff_percents
+        // 1. Round rank cutoffs using C's + 0.9 rule
+        let cutoffs: Vec<f64> = self.cutoff_percents
             .iter()
-            .map(|&p| (p * q_state.num_rel as f64 + 0.9) as i64)
+            .map(|&p| (p * q_state.num_rel as f64 + 0.9).floor())
             .collect();
 
         let mut current_cut = (num_params as i64) - 1;
 
         // 2. Pre-fill any cutoffs that exceed the retrieved length
-        while current_cut >= 0 && cutoffs[current_cut as usize] > (q_state.num_ret as i64) {
+        while current_cut >= 0 && cutoffs[current_cut as usize] > (q_state.num_ret as f64) {
             let cutoff = cutoffs[current_cut as usize];
-            results[current_cut as usize] = if cutoff > 0 {
-                (q_state.num_rel_ret as f64) / (cutoff as f64)
+            results[current_cut as usize] = if cutoff > 0.0 {
+                (q_state.num_rel_ret as f64) / cutoff
             } else {
                 0.0
             };
@@ -85,7 +85,7 @@ impl Measure for RprecMultMeasure {
                 break;
             }
             let precis = (rel_so_far as f64) / (i as f64);
-            while current_cut >= 0 && (i as i64) == cutoffs[current_cut as usize] {
+            while current_cut >= 0 && i == cutoffs[current_cut as usize] as usize {
                 results[current_cut as usize] = precis;
                 current_cut -= 1;
             }
@@ -143,4 +143,15 @@ mod tests {
             panic!("Expected float value");
         }
     }
+
+    #[test]
+    fn large_multiples_keep_their_precision() {
+        let measure = RprecMultMeasure::new(vec![1e19, 1e100]).unwrap();
+        let state = EvalState::Standard(make_mock_state(vec![1, 1], 2));
+        assert_eq!(
+            measure.calc(&EvalConfig::default(), &state),
+            [MetricValue::Float(1e-19), MetricValue::Float(1e-100)]
+        );
+    }
+
 }
