@@ -23,7 +23,7 @@ class Evaluator(
 
 - `qrels` (`str`, `PathLike`, `dict`, `DataFrame`, or `Iterable`): Relevance judgments.
 - `measures` (`str`, `list[str]`, or `list[Measure]`, default `'official'`): Measure names, cutoff aliases, groups (`'official'`, `'all_trec'`, `'set'`), or custom `Measure` instances.
-- `relevance_level` (`int`, default `1`): Minimum grade at which a document is considered relevant (`-l`).
+- `relevance_level` (`int`, default `1`): Minimum grade at which a document is considered relevant (`-l`). Must be 0 or more; a negative value raises `ValueError`.
 - `complete_set_average` (`bool`, default `False`): When `True`, averages over all queries in `qrels` rather than only queries present in the run (`-c`).
 - `judged_docs_only` (`bool`, default `False`): When `True`, drops all unjudged documents from the ranking before evaluation (`-J`).
 - `max_docs_per_topic` (`int`, optional): Truncates the ranking to at most this many documents per topic (`-M`).

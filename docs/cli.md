@@ -47,7 +47,7 @@ te-rust [OPTIONS] <QRELS_FILE> <RUN_FILE>
 | :--- | :--- | :--- | :--- |
 | `-q` | | Print evaluations for each individual query/topic in addition to the summary averages. | Disabled |
 | `-n` | | Suppress printing of the summary averages/totals at the end. | Disabled |
-| `-l` | `<int>` | Minimum relevance level at which a document is considered relevant. Documents with judgments $< l$ are considered non-relevant. As in `trec_eval`, a value such as `1.5` is read as its leading integer, 1, with a warning. | `1` |
+| `-l` | `<int>` | Minimum relevance level at which a document is considered relevant. Must be 0 or more. Documents with judgments $< l$ are considered non-relevant. As in `trec_eval`, a value such as `1.5` is read as its leading integer, 1, with a warning. | `1` |
 | `-c` | | **Complete set average**: Average over the complete set of queries present in the qrels file rather than the intersection of queries evaluated in the run. It evaluates each qrels topic missing from the run as an empty ranking. | Disabled |
 | `-J` | | **Judged docs only**: Remove all unjudged documents from the retrieved ranking before evaluating. | Disabled |
 | `-M` | `<int>` | Maximum number of retrieved documents per topic to evaluate. Read as `-l` is. | No limit |
@@ -186,6 +186,7 @@ bpref                 	all	0.2589 [0.2215, 0.2974]
 - The options `-T` (results format), `-D` (debug level), `-Z` (z-score file), `-o` (old output format) and `-v` (version). `te-rust` refuses them as unexpected arguments; `-V` prints its version.
 - The long options of `trec_eval`, such as `--Max_retrieved_per_topic=5` and `--complete_rel_info_wanted`, other than `--help` and `--version`. `te-rust` refuses them.
 - The preference measures (`prefs_simp` and the other `prefs_*` measures, and the `prefs` and `all_prefs` groups), and the `prefs` and `qrels_prefs` formats for `-R`. `te-rust` reports an unknown measure or an unsupported format.
+- A negative relevance level. `te-rust` refuses it with exit status 1, whether written as `-l -1`, `-l-1` or `-l=-1`. `trec_eval` 10.0 accepts negative levels and counts documents outside the qrels as relevant while `num_rel` does not, so `map` can exceed 1.
 
 ### `te-rust` extensions
 
