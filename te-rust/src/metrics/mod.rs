@@ -46,7 +46,7 @@ pub mod registry;
 pub mod invariants;
 
 
-use crate::eval::QueryEvalState;
+use crate::eval::{EvaluationError, QueryEvalState};
 use crate::metrics::invariants::Invariant;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -90,6 +90,18 @@ pub struct EvalConfig {
     /// Number of documents in the collection (`-N`). `utility` uses `i64::MAX` for a larger value.
     pub num_docs_in_coll: usize,
     pub global_gains: Option<crate::metrics::common::GainsConfig>,
+}
+
+impl EvalConfig {
+    /// Refuses a negative relevance level.
+    pub fn validate(&self) -> Result<(), EvaluationError> {
+        if self.relevance_level < 0 {
+            return Err(EvaluationError::NegativeRelevanceLevel {
+                value: self.relevance_level,
+            });
+        }
+        Ok(())
+    }
 }
 
 impl Default for EvalConfig {

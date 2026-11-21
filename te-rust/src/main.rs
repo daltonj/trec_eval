@@ -36,7 +36,7 @@ struct Args {
     no_summary_flag: bool,
 
     /// Minimum relevance level at which a document is considered relevant
-    #[arg(short = 'l', default_value = "1", value_parser = leading_integer)]
+    #[arg(short = 'l', default_value = "1", value_parser = leading_integer, allow_hyphen_values = true)]
     relevance_level: i64,
 
     /// Average over the complete set of queries in qrels instead of the intersection
@@ -301,6 +301,10 @@ fn main() {
         num_docs_in_coll: args.num_docs_in_coll,
         global_gains,
     };
+    if let Err(e) = config.validate() {
+        eprintln!("te-rust: {}", e);
+        process::exit(EXIT_USAGE);
+    }
 
     let enable_ci = args.ci || args.ci_pretty;
     let ci_config = if enable_ci {

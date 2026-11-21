@@ -186,3 +186,9 @@ def test_numerical_parity_against_known_run():
     for measure_name in ["map", "Rprec", "recip_rank", "bpref", "P_5", "P_10"]:
         score = agg[measure_name]
         assert 0.0 <= score <= 1.0, f"{measure_name} score {score} outside [0, 1]"
+
+
+@pytest.mark.parametrize("level", [-1, -(2**63)])
+def test_negative_relevance_level_is_refused(level):
+    with pytest.raises(ValueError, match=f"Unusable relevance level '{level}'"):
+        Evaluator({"q": {"a": 1}}, relevance_level=level)

@@ -753,7 +753,7 @@ mod integer_options {
 
 /// Relevance levels that select no judged document, given with -l.
 mod relevance_level {
-    use super::common::{fixture, summary, te_rust};
+    use super::common::{assert_refused, fixture, summary, te_rust};
     use std::process::{Output, Stdio};
     use std::time::{Duration, Instant};
 
@@ -796,9 +796,22 @@ mod relevance_level {
     }
 
     #[test]
-    fn negative_level_finishes() {
-        let out = te_rust_within_limit(&["-l-1", "-m", "bpref", "-m", "gm_bpref", "-m", "num_q"]);
-        assert_eq!(summary(&out, "num_q"), "2");
+    fn a_negative_level_is_refused() {
+        for level in [&["-l", "-1"][..], &["-l-1"], &["-l=-1"]] {
+            let out = te_rust_within_limit(&[level, &["-m", "map"]].concat());
+            assert_refused(&out, "te-rust: Unusable relevance level '-1'");
+            assert_eq!(out.status.code(), Some(1));
+        }
+    }
+
+    #[test]
+    fn a_negative_level_is_refused_before_the_files_are_read() {
+        let out = te_rust()
+            .args(["-l-1", "missing.qrels", "missing.run"])
+            .output()
+            .unwrap();
+        assert_refused(&out, "te-rust: Unusable relevance level '-1'");
+        assert_eq!(out.status.code(), Some(1));
     }
 
     #[test]

@@ -36,10 +36,10 @@ pub struct EvaluationOutput {
 ///
 /// # Errors
 ///
-/// Returns the first error that [`align_query`](crate::eval::align_query) gives for a scored
-/// topic: a qrels topic that the run has, or any qrels topic when
-/// `config.average_complete_flag` is set. Repeated documents are refused only when a measure
-/// reads the ranking ([`Measure::reads_ranking`]).
+/// Refuses a negative relevance level. Otherwise returns the first error that
+/// [`align_query`](crate::eval::align_query) gives for a scored topic: a qrels topic that the
+/// run has, or any qrels topic when `config.average_complete_flag` is set. Repeated documents
+/// are refused only when a measure reads the ranking ([`Measure::reads_ranking`]).
 pub fn evaluate_run(
     qrels: &QrelsData,
     run: &RunData,
@@ -47,6 +47,7 @@ pub fn evaluate_run(
     config: &EvalConfig,
     ci_config: Option<&BootstrapConfig>,
 ) -> Result<EvaluationOutput, EvaluationError> {
+    config.validate()?;
     let mut qrels_by_qid: HashMap<String, &QrelsQuery> = HashMap::with_capacity(qrels.queries.len());
     for qrels_q in &qrels.queries {
         qrels_by_qid.insert(qrels_q.qid.clone(), qrels_q);
@@ -195,6 +196,7 @@ pub fn evaluate_run_jg(
     config: &EvalConfig,
     ci_config: Option<&BootstrapConfig>,
 ) -> Result<EvaluationOutput, EvaluationError> {
+    config.validate()?;
     let mut qrels_by_qid: HashMap<String, &QrelsJGQuery> =
         HashMap::with_capacity(qrels.queries.len());
     for qrels_q in &qrels.queries {

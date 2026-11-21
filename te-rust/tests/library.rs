@@ -271,3 +271,29 @@ fn all_query_values_adds_the_measures_printed_only_in_the_summary() {
         ]
     );
 }
+
+#[test]
+fn a_negative_relevance_level_is_refused_even_without_topics() {
+    let qrels = qrels(vec![]);
+    let qrels_jg = QrelsJGData {
+        queries: vec![],
+        comments: vec![],
+        warnings: vec![],
+    };
+    let run = run(vec![]);
+    for level in [-1, i64::MIN] {
+        let config = EvalConfig {
+            relevance_level: level,
+            ..Default::default()
+        };
+        for result in [
+            evaluate_run(&qrels, &run, &[], &config, None),
+            evaluate_run_jg(&qrels_jg, &run, &[], &config, None),
+        ] {
+            assert_eq!(
+                result.unwrap_err().to_string(),
+                format!("Unusable relevance level '{level}'")
+            );
+        }
+    }
+}

@@ -89,6 +89,8 @@ impl Evaluator {
             global_gains: parsed_gains,
         };
 
+        config.validate().map_err(evaluation_error)?;
+
         Ok(Self {
             qrels: qrels_data,
             measure_names,

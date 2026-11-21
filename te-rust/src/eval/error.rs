@@ -9,6 +9,8 @@ pub enum DuplicateSource {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EvaluationError {
+    /// The relevance threshold is negative.
+    NegativeRelevanceLevel { value: i64 },
     /// A document appears twice in a topic that would be scored.
     DuplicateDocument {
         source: DuplicateSource,
@@ -28,6 +30,9 @@ pub enum EvaluationError {
 impl std::fmt::Display for EvaluationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::NegativeRelevanceLevel { value } => {
+                write!(f, "Unusable relevance level '{}'", value)
+            }
             Self::DuplicateDocument { qid, docno, .. } => {
                 write!(f, "duplicate document '{}' for query '{}'", docno, qid)
             }

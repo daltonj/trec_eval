@@ -688,25 +688,64 @@ mod geometric_means {
 }
 
 /// Relevance levels of 0 and below, at which nonrelevant and unjudged documents can count as
-/// relevant, as in trec_eval.
+/// relevant, as in trec_eval 10.0. The evaluator refuses a negative level, so these tests call
+/// the measures directly.
 mod negative_levels {
-    use super::common::{eval, fixture, rows, summary, test_data, trec_eval_bin, write};
+    use super::common::{eval, fixture, summary, test_data, write};
+    use std::path::Path;
+    use te_rust::eval::align_query;
+    use te_rust::io::{parse_trec_qrels, parse_trec_run};
+    use te_rust::metrics::registry::resolve_measures;
+    use te_rust::metrics::{EvalConfig, EvalState, Measure, MetricValue};
+
+    fn mean_scores(qrels: &Path, run: &Path, request: &str, config: &EvalConfig) -> Vec<f64> {
+        let qrels = parse_trec_qrels(qrels).unwrap();
+        let run = parse_trec_run(run).unwrap();
+        let resolved = resolve_measures(&[request.to_string()]).unwrap();
+        let measure = &resolved.measures[0];
+        let mut sums = vec![0.0; measure.sub_metrics().len()];
+        for qrels_q in &qrels.queries {
+            let run_q = run.queries.iter().find(|q| q.qid == qrels_q.qid);
+            let state = align_query(
+                run_q,
+                qrels_q,
+                &run.run_id,
+                config.relevance_level,
+                usize::MAX,
+                false,
+            )
+            .unwrap();
+            for (sum, value) in sums
+                .iter_mut()
+                .zip(measure.calc(config, &EvalState::Standard(state)))
+            {
+                *sum += match value {
+                    MetricValue::Float(v) => v,
+                    MetricValue::Integer(v) => v as f64,
+                    MetricValue::Str(_) => panic!("expected a numeric score"),
+                };
+            }
+        }
+        sums.iter_mut()
+            .for_each(|v| *v /= qrels.queries.len() as f64);
+        sums
+    }
 
     #[test]
     fn eleven_pt_avg_matches_the_c_reverse_scan_for_unjudged_documents() {
         // a is relevant, b nonrelevant and u has grade -1; x is not judged. Each run ranks the
         // documents its name spells.
         let qrels = write("negative.qrels", "q 0 a 1\nq 0 b 0\nq 0 u -1\n");
-        // Columns are -l-2, -l-1, -l0 and -l1, as printed by trec_eval.
+        // Columns are levels -2, -1, 0 and 1, as trec_eval 10.0 prints them.
         for (docs, values) in [
-            ("xa", ["0.3636", "0.3636", "0.3636", "0.5000"]),
-            ("ax", ["0.3636", "0.3636", "0.7273", "1.0000"]),
-            ("ua", ["0.3636", "0.3636", "0.3636", "0.5000"]),
-            ("au", ["0.3636", "0.7273", "0.7273", "1.0000"]),
-            ("xua", ["0.2424", "0.2424", "0.2424", "0.3333"]),
-            ("aux", ["0.2424", "0.2424", "0.7273", "1.0000"]),
-            ("xu", ["0.0000", "0.0000", "0.0000", "0.0000"]),
-            ("ab", ["1.0000", "1.0000", "1.0000", "1.0000"]),
+            ("xa", [0.3636, 0.3636, 0.3636, 0.5000]),
+            ("ax", [0.3636, 0.3636, 0.7273, 1.0000]),
+            ("ua", [0.3636, 0.3636, 0.3636, 0.5000]),
+            ("au", [0.3636, 0.7273, 0.7273, 1.0000]),
+            ("xua", [0.2424, 0.2424, 0.2424, 0.3333]),
+            ("aux", [0.2424, 0.2424, 0.7273, 1.0000]),
+            ("xu", [0.0000, 0.0000, 0.0000, 0.0000]),
+            ("ab", [1.0000, 1.0000, 1.0000, 1.0000]),
         ] {
             let run: String = docs
                 .chars()
@@ -715,54 +754,62 @@ mod negative_levels {
                 .collect();
             let run = write(&format!("{docs}.run"), run);
             for (level, value) in [-2, -1, 0, 1].into_iter().zip(values) {
-                let relevant = match (docs, level) {
-                    ("ab", ..=0) => "2",
-                    ("xu", _) => "0",
-                    _ => "1",
+                let config = EvalConfig {
+                    relevance_level: level,
+                    ..Default::default()
                 };
-                let level = format!("-l{level}");
-                let options = [level.as_str(), "-m", "11pt_avg", "-m", "num_rel_ret"];
-                let out = eval(&options, &qrels, &run);
-                let printed = (summary(&out, "num_rel_ret"), summary(&out, "11pt_avg"));
+                let relevant = match (docs, level) {
+                    ("ab", ..=0) => 2.0,
+                    ("xu", _) => 0.0,
+                    _ => 1.0,
+                };
                 assert_eq!(
-                    printed,
-                    (relevant.to_string(), value.to_string()),
-                    "{docs}, {level}"
+                    mean_scores(&qrels, &run, "num_rel_ret", &config),
+                    [relevant]
                 );
-                let reference = std::process::Command::new(trec_eval_bin())
-                    .args(options)
-                    .arg(&qrels)
-                    .arg(&run)
-                    .output()
-                    .unwrap();
-                let expected = (
-                    summary(&reference, "num_rel_ret"),
-                    summary(&reference, "11pt_avg"),
+                let actual = mean_scores(&qrels, &run, "11pt_avg", &config)[0];
+                assert!(
+                    (actual - value).abs() < 0.00005,
+                    "{docs}, {level}: {actual}"
                 );
-                assert_eq!(printed, expected, "trec_eval: {docs}, {level}");
             }
         }
     }
 
     #[test]
     fn rprec_mult_avgjg_stops_its_reverse_scan_at_zero_relevant_documents() {
+        use te_rust::eval::align_query_jg;
+        use te_rust::io::parse_trec_qrels_jg;
+        use te_rust::metrics::rprec_mult_avgjg::RprecMultAvgjgMeasure;
+
         let qrels = write("one.qrels", "1 g a 1\n");
         let run = write("axy.run", "1 Q0 a 1 3 r\n1 Q0 x 2 2 r\n1 Q0 y 3 1 r\n");
-        for level in ["-l-1", "-l-2"] {
-            let out = eval(
-                &["-R", "qrels_jg", level, "-m", "Rprec_mult_avgjg.0.5,1,2,4"],
-                &qrels,
-                &run,
-            );
+        let qrels = parse_trec_qrels_jg(qrels).unwrap();
+        let run = parse_trec_run(run).unwrap();
+        let measure = RprecMultAvgjgMeasure::new(vec![0.5, 1.0, 2.0, 4.0]).unwrap();
+        for level in [-1, -2] {
+            let config = EvalConfig {
+                relevance_level: level,
+                ..Default::default()
+            };
+            let states = align_query_jg(
+                Some(&run.queries[0]),
+                &qrels.queries[0],
+                &run.run_id,
+                level,
+                usize::MAX,
+                false,
+            )
+            .unwrap();
+            let state = EvalState::JudgmentGroups(states);
             assert_eq!(
-                rows(&out),
+                measure.calc(&config, &state),
                 [
-                    "Rprec_mult_avgjg_0.50 all 0.0000",
-                    "Rprec_mult_avgjg_1.00 all 0.0000",
-                    "Rprec_mult_avgjg_2.00 all 0.0000",
-                    "Rprec_mult_avgjg_4.00 all 0.2500",
-                ],
-                "{level}"
+                    MetricValue::Float(0.0),
+                    MetricValue::Float(0.0),
+                    MetricValue::Float(0.0),
+                    MetricValue::Float(0.25),
+                ]
             );
         }
     }
@@ -772,35 +819,23 @@ mod negative_levels {
         // ab.qrels judges a 1 and b 0, and the run ranks a, x, y. At level -1, a and b are
         // relevant, and x and y are not in the qrels. Retrieved relevant 1 (a), retrieved
         // nonrelevant 2, missed relevant 1 (b), so 1 - 2 + 1 = 0, and with 10 documents
-        // d = 10 + 1 - 3 - 2 = 6, as trec_eval -l-1 prints. At level 0, a and b are relevant:
-        // 1 - 2 + 1 = 0. At level 1, only a is: 1 - 2 + 0 = -1. trec_eval prints the same.
+        // d = 10 + 1 - 3 - 2 = 6, as trec_eval 10.0 prints with -l-1. At level 0, a and b are
+        // relevant: 1 - 2 + 1 = 0. At level 1, only a is: 1 - 2 + 0 = -1.
         let run = write("axy.run", "1 Q0 a 1 3 r\n1 Q0 x 2 2 r\n1 Q0 y 3 1 r\n");
-        for (options, row, value) in [
-            (
-                &["-l-1", "-m", "utility.1,-1,1,0"][..],
-                "utility_1,-1,1,0",
-                "0.0000",
-            ),
-            (
-                &["-l-1", "-N", "10", "-m", "utility.0,0,0,1"],
-                "utility_0,0,0,1",
-                "6.0000",
-            ),
-            (
-                &["-l0", "-m", "utility.1,-1,1,0"],
-                "utility_1,-1,1,0",
-                "0.0000",
-            ),
-            (
-                &["-l1", "-m", "utility.1,-1,1,0"],
-                "utility_1,-1,1,0",
-                "-1.0000",
-            ),
+        for (level, num_docs, request, value) in [
+            (-1, 0, "utility.1,-1,1,0", 0.0),
+            (-1, 10, "utility.0,0,0,1", 6.0),
+            (0, 0, "utility.1,-1,1,0", 0.0),
+            (1, 0, "utility.1,-1,1,0", -1.0),
         ] {
+            let config = EvalConfig {
+                relevance_level: level,
+                num_docs_in_coll: num_docs,
+                ..Default::default()
+            };
             assert_eq!(
-                summary(&eval(options, &fixture("ab.qrels"), &run), row),
-                value,
-                "{options:?}"
+                mean_scores(&fixture("ab.qrels"), &run, request, &config),
+                [value]
             );
         }
     }
@@ -808,14 +843,18 @@ mod negative_levels {
     #[test]
     fn utility_matches_trec_eval_at_a_negative_level_on_its_test_files() {
         let (qrels, run) = (test_data("qrels.test"), test_data("results.test"));
+        let config = EvalConfig {
+            relevance_level: -1,
+            ..Default::default()
+        };
+        assert_eq!(mean_scores(&qrels, &run, "utility", &config), [-8.0]);
+        let config = EvalConfig {
+            num_docs_in_coll: 100000,
+            ..config
+        };
         assert_eq!(
-            summary(&eval(&["-l-1", "-m", "utility"], &qrels, &run), "utility"),
-            "-8.0000"
-        );
-        let options = ["-l-1", "-N", "100000", "-m", "utility.2,-1,1,0.5"];
-        assert_eq!(
-            summary(&eval(&options, &qrels, &run), "utility_2,-1,1,0.5"),
-            "50478.5000"
+            mean_scores(&qrels, &run, "utility.2,-1,1,0.5", &config),
+            [50478.5]
         );
     }
 
