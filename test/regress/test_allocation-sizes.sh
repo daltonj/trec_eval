@@ -4,5 +4,5 @@
 # program checks the byte counts the macros pass to malloc and realloc.
 . test/regress/lib.sh
 
-make -s alloc-test TEST_ALLOC="$T/alloc" || fail "cannot build the allocation test"
+TEST_ALLOC="$T/alloc" make -s alloc-test || fail "cannot build the allocation test"
 "$T/alloc" || fail "Malloc or Realloc requested a wrong size"

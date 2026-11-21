@@ -56,7 +56,7 @@ trec_eval: $(SRCS) Makefile $(SRCH)
 
 .PHONY: alloc-test
 alloc-test:
-	$(CC) $(CFLAGS) -o "$(TEST_ALLOC)" test/regress/allocation-sizes/alloc.c
+	$(CC) $(CFLAGS) -o "$$TEST_ALLOC" test/regress/allocation-sizes/alloc.c
 
 install: $(BIN)/trec_eval
 
