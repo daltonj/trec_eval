@@ -56,6 +56,7 @@ static int check_gain_params(const TREC_MEAS * tm,
         if (error) {
             fprintf(stderr, "trec_eval: Unusable relevance level '%s'\n",
                     pairs[i].name);
+            Free(levels);
             return (UNDEF);
         }
         for (j = 0; j < i; j++) {
@@ -63,6 +64,7 @@ static int check_gain_params(const TREC_MEAS * tm,
                 fprintf(stderr,
                         "trec_eval: relevance level %ld of measure '%s' is given more than once\n",
                         levels[i], tm->name);
+                Free(levels);
                 return (UNDEF);
             }
         }
