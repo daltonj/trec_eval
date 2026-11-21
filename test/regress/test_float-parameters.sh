@@ -5,9 +5,9 @@ D=test/regress/float-parameters
 Q=test/regress/qrels
 R=test/regress/results
 
-for m in iprec_at_recall.x Rprec_mult.x 11pt_avg.x \
+for measure in iprec_at_recall.x Rprec_mult.x 11pt_avg.x \
          iprec_at_recall..1,,.2 ndcg.1=x rbp.p=x; do
-    expect_status 2 -m $m $Q $R
+    expect_status 2 -m $measure $Q $R
 done
 
 # Values such as .25, 1. and 0.5 are numbers, in lists and in gain pairs.

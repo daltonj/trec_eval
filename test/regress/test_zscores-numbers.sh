@@ -1,8 +1,8 @@
 # Zscores need finite means and finite, non-negative standard deviations.
 . test/regress/lib.sh
 D=test/regress/zscores-numbers
-Q=$T/qrels
-R=$T/results
+Q="$T/qrels"
+R="$T/results"
 printf '1 0 d 1\n' > "$Q"
 printf '1 Q0 d 1 1 r\n' > "$R"
 
@@ -33,8 +33,8 @@ done
 printf '1 map 1 1e-310\n' > "$T/zscores"
 expect_status 0 -Z "$T/zscores" -m map "$Q" "$R"
 printf '1 map -1 2\n' > "$T/zscores"
-expect_output "$D/out.one" -q -Z "$T/zscores" -m map "$Q" "$R"
+expect_output $D/out.one -q -Z "$T/zscores" -m map "$Q" "$R"
 printf '1 map 1 0\n' > "$T/zscores"
-expect_output "$D/out.zero" -q -Z "$T/zscores" -m map "$Q" "$R"
+expect_output $D/out.zero -q -Z "$T/zscores" -m map "$Q" "$R"
 printf '1 map 0 0\n' > "$T/zscores"
-expect_output "$D/out.missing" -q -Z "$T/zscores" -m map "$Q" "$R"
+expect_output $D/out.missing -q -Z "$T/zscores" -m map "$Q" "$R"

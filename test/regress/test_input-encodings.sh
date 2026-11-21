@@ -34,18 +34,18 @@ done
 
 cr="CR character without LF in line"
 expect_message 2 "$cr 1 of results file '$T/results.cr'" \
-    -m num_ret "$Q" "$T/results.cr"
+    -m num_ret $Q "$T/results.cr"
 expect_message 2 "$cr 1 of results file '-'" \
-    -m num_ret "$Q" - < "$T/results.cr"
+    -m num_ret $Q - < "$T/results.cr"
 expect_message 2 "$cr 1 of qrels file '$T/qrels.cr'" \
-    -m num_rel "$T/qrels.cr" "$R"
+    -m num_rel "$T/qrels.cr" $R
 expect_message 2 "$cr 1 of qrels file '$T/qrels.cr'" \
-    -R qrels_jg -m map_avgjg "$T/qrels.cr" "$R"
+    -R qrels_jg -m map_avgjg "$T/qrels.cr" $R
 expect_message 2 "$cr 1 of qrels file '$T/qrels.cr'" \
-    -R qrels_prefs -m prefs_num_prefs_poss "$T/qrels.cr" "$R"
+    -R qrels_prefs -m prefs_num_prefs_poss "$T/qrels.cr" $R
 expect_message 2 "$cr 1 of prefs file '$T/prefs.cr'" \
-    -R prefs -m prefs_num_prefs_poss "$T/prefs.cr" "$R"
+    -R prefs -m prefs_num_prefs_poss "$T/prefs.cr" $R
 expect_message 2 "$cr 1 of zscores file '$T/zscores.cr'" \
-    -Z "$T/zscores.cr" -m map "$Q" "$R"
+    -Z "$T/zscores.cr" -m map $Q $R
 expect_message 2 "$cr 2 of qrels file '$T/qrels.mixed'" \
-    -m num_rel "$T/qrels.mixed" "$R"
+    -m num_rel "$T/qrels.mixed" $R

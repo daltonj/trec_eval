@@ -12,8 +12,8 @@ grep '^301 ' test/qrels.test > "$T/qrels.301"
 head -n 40 test/results.test > "$T/head"
 for n in 4093 4094 4095 8190; do
     pad=$(( n - $(wc -c < "$T/head") - 1 ))
-    { printf "#%${pad}s\n" ''; printf '%s' "$(cat "$T/head")"; } > "$T/run.$n"
-    [ "$(wc -c < "$T/run.$n")" -eq $n ] || fail "$T/run.$n is not $n bytes"
-    save_output "$T/out.$n" -q "$T/qrels.301" "$T/run.$n"
-    expect_output "$T/out.$n" -q "$T/qrels.301" - < "$T/run.$n"
+    { printf "#%${pad}s\n" ''; printf '%s' "$(cat "$T/head")"; } > "$T/results.$n"
+    [ "$(wc -c < "$T/results.$n")" -eq $n ] || fail "$T/results.$n is not $n bytes"
+    save_output "$T/out.$n" -q "$T/qrels.301" "$T/results.$n"
+    expect_output "$T/out.$n" -q "$T/qrels.301" - < "$T/results.$n"
 done

@@ -10,7 +10,7 @@ D=test/regress/run-score-range
 m="-q -m relstring test/regress/qrels.abc"
 w="out of range, read as"
 
-expect_result 0 $D/out.over $D/err.over $m $D/run.over
-expect_result 0 $D/out.under $D/err.under $m $D/run.under
-expect_message 0 "value \`1e400' $w \`inf' (line 2 of" $m $D/run.comment
-expect_result 0 $D/out.subnormal /dev/null $m $D/run.subnormal
+expect_result 0 $D/out.over $D/err.over $m $D/results.over
+expect_result 0 $D/out.under $D/err.under $m $D/results.under
+expect_message 0 "value \`1e400' $w \`inf' (line 2 of" $m $D/results.comment
+expect_result 0 $D/out.subnormal /dev/null $m $D/results.subnormal

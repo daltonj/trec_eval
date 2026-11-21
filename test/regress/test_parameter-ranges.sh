@@ -31,9 +31,9 @@ expect_message 2 "persistence p=1.5 of measure 'rbp_resid' is not in [0, 1)" \
 
 # The bounds that are part of each range, and the defaults, are accepted.
 # 11pt_avg may repeat a recall level, in any order.
-for m in iprec_at_recall.0,1 iprec_at_recall 11pt_avg.1,0 11pt_avg \
+for measure in iprec_at_recall.0,1 iprec_at_recall 11pt_avg.1,0 11pt_avg \
          11pt_avg.0.5,0.5 \
          Rprec_mult.0.01 Rprec_mult set_F.0 set_F rbp.p=0 rbp \
          rbp_resid.p=0.99 rbp_resid; do
-    expect_status 0 -m $m $Q $R
+    expect_status 0 -m $measure $Q $R
 done

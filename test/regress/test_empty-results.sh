@@ -4,7 +4,7 @@
 D=test/regress/empty-results
 Q=test/regress/qrels
 
-for run in $D/run.blank $D/run.comment; do
-    expect_message 2 "No data lines in results file '$run'" $Q $run
+for results in $D/results.blank $D/results.comment; do
+    expect_message 2 "No data lines in results file '$results'" $Q $results
 done
 expect_message 2 "No data lines in results file '-'" $Q - < /dev/null

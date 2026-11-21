@@ -2,8 +2,8 @@
 # Rounding to zero warns; a subnormal value does not.
 . test/regress/lib.sh
 D=test/regress/underflow-parameters
-Q=$T/qrels
-R=$T/run
+Q="$T/qrels"
+R="$T/results"
 printf '1 0 a 1\n' > "$Q"
 printf '1 Q0 a 1 1 r\n' > "$R"
 

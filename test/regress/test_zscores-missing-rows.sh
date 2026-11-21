@@ -4,6 +4,6 @@
 # taken from topic 2's line. Topic 3 is absent from the zscores file
 # and prints -1000000.
 . test/regress/lib.sh
-d=test/regress/zscores-missing-rows
-expect_output $d/out -q -n -Z $d/zscores -m num_ret -m num_rel \
-    $d/qrels $d/results
+D=test/regress/zscores-missing-rows
+expect_output $D/out -q -n -Z $D/zscores -m num_ret -m num_rel \
+    $D/qrels $D/results
