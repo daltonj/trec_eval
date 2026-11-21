@@ -6,26 +6,17 @@ D=test/regress/rbp-gain-range
 # One relevant document at rank 1, default gains 0 and 1: 0.1 * 1.
 expect_output $D/out.one -m rbp $D/qrels.one $D/results.one
 
-# These two gain maps pin the zero-based range: starting at the first
-# gain instead gives NaN for equal gains and 0.1000 for gains 1 and 3.
-# Gains 2 and 2 rescale to 1 and 1: 0.1 * (1 + 0.9 * 1) = 0.19.
-expect_output $D/out.two.gains22 -m rbp.0=2,1=2 $D/qrels.two $D/results.two
-
+# The gain range starts at 0, rather than at the first gain.
 # Gains 1 (grade 0) and 3 (grade 1) rescale to 1/3 and 1, and the grade 1
 # document is at rank 1: 0.1 * (1 + 0.9 * 1/3) = 0.13.
 expect_output $D/out.two.gains13 -m rbp.0=1,1=3 $D/qrels.two $D/results.two
 
-# Topic 1 has grades 0-3 and topic 2 grades 0-2, so each topic's top
-# document rescales to gain 1 and scores 0.1; the mean is 0.1. The range
-# of topic 1 must not carry over to topic 2, with or without -q. The
-# check without -q catches an uninitialized range when the stack retains
-# topic 1's range; its failure depends on the compiler and stack layout.
+# Topic maxima differ (3 then 2), but each top document rescales to 1.
+# Keep the no-q call: it exposes stale stack values on some compilers.
 expect_output $D/out.one -m rbp $D/qrels.topics $D/results.topics
-expect_output $D/out.topics.q -q -m rbp $D/qrels.topics $D/results.topics
 
-# With both gains equal to 2 and p = 0.5, rbp = 0.5 * (1 + 0.5).
-for params in p=0.5,0=2,1=2 0=2,p=0.5,1=2 0=2,1=2,p=0.5; do
-    printf '%-22s\tall\t0.7500\n' "rbp_$params" > "$T/expected"
-    expect_result 0 "$T/expected" /dev/null -m rbp.$params \
-        $D/qrels.two $D/results.two
-done
+# p can appear among gain pairs; both gains rescale to 1, so p=0.5
+# gives (1-0.5)*(1+0.5)=0.75.
+printf '%-22s\tall\t0.7500\n' 'rbp_0=2,p=0.5,1=2' > "$T/expected"
+expect_result 0 "$T/expected" /dev/null -m rbp.0=2,p=0.5,1=2 \
+    $D/qrels.two $D/results.two

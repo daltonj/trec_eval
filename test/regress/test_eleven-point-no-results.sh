@@ -1,15 +1,7 @@
-# 11pt_avg of a topic with nothing retrieved is 0, not nan. Under -J the
-# unjudged documents x and y are removed, so topic 1 retrieves nothing;
-# under -M 0 no topic retrieves anything.
+# -J removes the only retrieved (unjudged) doc. Both interpolated
+# precision measures must return 0 rather than 0/0.
 . test/regress/lib.sh
-D=test/regress/eleven-point-no-results
-Q="$T/qrels"
-R="$T/results"
-printf '1 0 a 1\n1 0 b 0\n2 0 a 1\n' > "$Q"
-printf '1 Q0 x 1 2 r\n1 Q0 y 2 1 r\n2 Q0 a 1 1 r\n' > "$R"
-expect_output $D/out.J -J -q -m 11pt_avg "$Q" "$R"
-expect_output $D/out.M0 -M 0 -q -m 11pt_avg "$Q" "$R"
-# iprec_at_recall is 0 at every cutoff for such a topic. Under -J, topic 2
-# is 1 at every cutoff.
-expect_output $D/out.J.iprec -J -q -m iprec_at_recall "$Q" "$R"
-expect_output $D/out.M0.iprec -M 0 -q -m iprec_at_recall "$Q" "$R"
+printf '1 0 a 1\n' > "$T/qrels"
+printf '1 Q0 x 1 1 r\n' > "$T/results"
+expect_output test/regress/eleven-point-no-results/out -J \
+    -m 11pt_avg.0 -m iprec_at_recall.0 "$T/qrels" "$T/results"

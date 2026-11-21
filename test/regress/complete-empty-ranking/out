@@ -1,0 +1,15 @@
+num_ret               	1	0
+relstring_3           	1	''
+utility_1,-1,2,3      	1	-1.0000
+rbp_resid_p=0.5       	1	0.0000
+num_ret               	2	1
+relstring_3           	2	'1'
+utility_1,-1,2,3      	2	-2.0000
+rbp_resid_p=0.5       	2	0.0000
+num_ret               	3	0
+relstring_3           	3	''
+utility_1,-1,2,3      	3	-1.0000
+rbp_resid_p=0.5       	3	0.0000
+num_ret               	all	1
+utility_1,-1,2,3      	all	-1.3333
+rbp_resid_p=0.5       	all	0.0000

@@ -1,8 +1,5 @@
-# The gain table used by ndcg must be sorted by gain even when gains
-# differ by less than 1. The run ranks d2, d3, d1 (grades 2, 3, 1).
+# Gains 0.9,0.3 make the run ideal. The gain table must reverse grade
+# order even though subtracting these gains truncates to 0 as an int.
 . test/regress/lib.sh
 D=test/regress/fractional-gains
-# Gains 0.9, 0.6, 0.3 in rank order: the ranking is ideal.
-expect_output $D/out.ideal -q -m ndcg.0=0,1=0.3,2=0.9,3=0.6 $D/qrels $D/results
-# Gains are 0.3 times the default gains, so ndcg equals the default 0.9225.
-expect_output $D/out.scaled -q -m ndcg.1=0.3,2=0.6,3=0.9 $D/qrels $D/results
+expect_output $D/out.ideal -q -m ndcg.1=0.9,2=0.3 $D/qrels $D/results

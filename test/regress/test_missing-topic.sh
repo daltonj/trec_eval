@@ -1,7 +1,5 @@
-# Topic 2 of the qrels has no results. Without -c, trec_eval exits 4 with
-# a message naming that topic before it evaluates any topic, so -q prints
-# no rows for topic 1. -D 0.1 selects topic 1 alone. A results topic that the qrels lack, topic 4 of
-# results.extra, is skipped without a message.
+# Missing qid 2 is reported before any query output. -D selects qid 1;
+# result qid 3, absent from the qrels, is ignored.
 . test/regress/lib.sh
 D=test/regress/missing-topic
 
