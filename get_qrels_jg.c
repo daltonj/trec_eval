@@ -152,14 +152,18 @@ te_get_qrels_jg(EPI * epi, char *text_qrels_file, ALL_REL_INFO * all_rel_info)
             return (UNDEF);
         }
         line_ptr->rel = str_to_long_ctx(rel_ptr, &error,
+                                        "document '%s' of topic '%s' in "
                                         "line %ld of qrels file '%s'",
+                                        line_ptr->docno, line_ptr->qid,
                                         line_num + 1, text_qrels_file);
         if (error)
             return (UNDEF);
         if (line_ptr->rel < MIN_REL_LEVEL || line_ptr->rel > MAX_REL_LEVEL) {
-            fprintf(stderr, "trec_eval.get_qrels_jg: Relevance level '%s' in "
+            fprintf(stderr, "trec_eval.get_qrels_jg: Relevance level '%s' "
+                    "for document '%s' of topic '%s' in "
                     "line %ld of qrels file '%s' is outside %d to %d\n",
-                    rel_ptr, line_num + 1, text_qrels_file,
+                    rel_ptr, line_ptr->docno, line_ptr->qid,
+                    line_num + 1, text_qrels_file,
                     MIN_REL_LEVEL, MAX_REL_LEVEL);
             return (UNDEF);
         }

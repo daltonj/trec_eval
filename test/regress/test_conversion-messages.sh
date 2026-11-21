@@ -7,9 +7,9 @@ R=test/regress/results
 
 w="Warning, value \`1.5' partially read as \`1'"
 expect_message 0 "$w (cutoff of measure 'P')." -m P.1.5 $Q $R
-expect_message 0 "$w (line 1 of qrels file '$D/qrels.partial')." \
+expect_message 0 "$w (document 'd1' of topic '1' in line 1 of qrels file '$D/qrels.partial')." \
     -m num_rel $D/qrels.partial $R
-expect_message 0 "$w (line 1 of qrels file '$D/qrels.partial')." \
+expect_message 0 "$w (document 'd1' of topic '1' in line 1 of qrels file '$D/qrels.partial')." \
     -R qrels_jg -m map_avgjg $D/qrels.partial $R
 
 # Floating-point parameters: cutoffs, plain parameters and name=value

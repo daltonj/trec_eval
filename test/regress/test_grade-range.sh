@@ -7,7 +7,11 @@ d=test/regress/grade-range
 expect_output $d/out.edge -q -m map -m ndcg $d/qrels.edge $d/results
 expect_output $d/out.edge.jg -R qrels_jg -m map_avgjg $d/qrels.edge $d/results
 for q in 128 -128 max; do
-    m="in line 2 of qrels file '$d/qrels.$q' is outside -127 to 127"
+    case $q in
+    max) level=2147483647 ;;
+    *) level=$q ;;
+    esac
+    m="Relevance level '$level' for document 'd1' of topic '2' in line 2 of qrels file '$d/qrels.$q' is outside -127 to 127"
     expect_message 2 "$m" -m map $d/qrels.$q $d/results
     expect_message 2 "$m" -R qrels_jg -m map_avgjg $d/qrels.$q $d/results
 done
