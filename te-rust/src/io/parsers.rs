@@ -273,22 +273,27 @@ fn round_binary(mantissa: u64, sticky: bool, exponent: i64) -> f64 {
     if mantissa == 0 {
         return 0.0;
     }
+    // m holds the significand with its leading 1 at bit 63.
     let zeros = mantissa.leading_zeros();
     let m = u128::from(mantissa << zeros);
-    let top = exponent.saturating_add(63 - i64::from(zeros)); // the value lies in [2^top, 2^(top + 1))
+    // The value lies in [2^top, 2^(top + 1)).
+    let top = exponent.saturating_add(63 - i64::from(zeros));
     if top > 1023 {
         return f64::INFINITY;
     }
     if top < -1075 {
         return 0.0;
     }
+    // Keep the 53 bits of a normal f64, or one bit fewer for each binary place below 2^-1022.
     let shift = (11 + (-1022 - top).max(0)) as u32;
+    // Round the dropped bits r to nearest, ties to even; `sticky` counts as a nonzero bit below r.
     let (q, r, half) = (m >> shift, m & ((1u128 << shift) - 1), 1u128 << (shift - 1));
     let up = r > half || (r == half && (sticky || q & 1 == 1));
     let q = (q + u128::from(up)) as u64;
     if top < -1022 {
         return f64::from_bits(q); // subnormal; a carry into bit 52 gives the smallest normal
     }
+    // Rounding up can carry into a 54th bit.
     let (q, top) = if q >> 53 == 1 { (q >> 1, top + 1) } else { (q, top) };
     if top > 1023 {
         return f64::INFINITY;
