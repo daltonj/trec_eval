@@ -334,29 +334,31 @@ pub fn resolve_measures(requested: &[String]) -> Result<ResolvedMeasures, Measur
         .map(|arg| named_spec(arg).map(|(spec, params)| (arg.as_str(), spec, params)))
         .collect::<Result<Vec<_>, _>>()?;
 
-    // Each measure with the parameters it uses and the request that gave them.
-    let mut selected: Vec<(&MeasureSpec, &str, &str)> = Vec::new();
+    /// A measure to build, with the parameters it uses and the request that gave them.
+    struct Selected<'a> {
+        spec: &'static MeasureSpec,
+        params: &'a str,
+        source: &'a str,
+    }
+    let mut selected: Vec<Selected> = Vec::new();
     let mut warnings = Vec::new();
     for (arg, spec, params) in &named {
-        let Some((_, chosen, source)) = selected.iter_mut().find(|(s, ..)| s.name == spec.name) else {
-            selected.push((spec, params, arg));
-            continue;
-        };
-        if params.is_empty() || params == chosen {
-            continue;
-        }
-        if chosen.is_empty() {
-            (*chosen, *source) = (params, arg);
-        } else {
-            warnings.push(format!(
+        match selected.iter_mut().find(|s| s.spec.name == spec.name) {
+            None => selected.push(Selected { spec, params, source: arg }),
+            Some(s) if params.is_empty() || params == s.params => {}
+            Some(s) if s.params.is_empty() => {
+                s.params = params;
+                s.source = arg;
+            }
+            Some(s) => warnings.push(format!(
                 "measure '{}': parameters ignored; {} uses those of '{}'",
-                arg, spec.name, source
-            ));
+                arg, spec.name, s.source
+            )),
         }
     }
 
     let mut measures: Vec<Box<dyn Measure>> = Vec::with_capacity(selected.len());
-    for (spec, params, source) in selected {
+    for Selected { spec, params, source } in selected {
         let warning_count = warnings.len();
         let measure = (spec.factory)(params, &mut warnings)
             .map_err(|e| MeasureParseError::new(format!("measure '{}': {}", source, e)))?;
