@@ -58,6 +58,10 @@ trec_eval: $(SRCS) Makefile $(SRCH)
 alloc-test:
 	$(CC) $(CFLAGS) -o "$$TEST_ALLOC" test/regress/allocation-sizes/alloc.c
 
+.PHONY: prefs-rank-test
+prefs-rank-test:
+	$(CC) $(CFLAGS) -o "$$TEST_PREFS_RANK" test/regress/prefs-rank-comparators/cmp.c utility_pool.c
+
 install: $(BIN)/trec_eval
 
 quicktest: trec_eval
