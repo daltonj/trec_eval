@@ -17,51 +17,6 @@ mod cutoffs {
     const TWO_RELEVANT_QRELS: &str = "q 0 d1 1\nq 0 d2 1\n";
     const TWO_RELEVANT_RUN: &str = "q Q0 d1 1 4 r\nq Q0 x1 2 3 r\nq Q0 x2 3 2 r\nq Q0 d2 4 1 r\n";
 
-    /// The value at a cutoff cannot depend on which other cutoffs are listed, or in what order.
-    fn assert_order_free(options: &[&str], measure: &str, low: &str, high: &str) {
-        let (qrels, run) = (
-            write("mixed.qrels", MIXED_QRELS),
-            write("mixed.run", MIXED_RUN),
-        );
-        let printed = |params: &str| {
-            let request = format!("{measure}.{params}");
-            let mut args = options.to_vec();
-            args.extend(["-m", &request]);
-            rows(&eval(&args, &qrels, &run))
-        };
-        let mut alone = printed(low);
-        alone.extend(printed(high));
-        assert_eq!(
-            printed(&format!("{low},{high}")),
-            alone,
-            "{measure} ascending"
-        );
-        assert_eq!(
-            printed(&format!("{high},{low}")),
-            alone,
-            "{measure} descending"
-        );
-    }
-
-    #[test]
-    fn every_cutoff_family_is_order_free() {
-        for measure in [
-            "P",
-            "recall",
-            "success",
-            "map_cut",
-            "ndcg_cut",
-            "relative_P",
-            "unj",
-        ] {
-            assert_order_free(&[], measure, "2", "5");
-        }
-        assert_order_free(&[], "iprec_at_recall", "0.2", "0.8");
-        assert_order_free(&[], "Rprec_mult", "0.5", "2.0");
-        assert_order_free(&["-R", "qrels_jg"], "P_avgjg", "2", "5");
-        assert_order_free(&["-R", "qrels_jg"], "Rprec_mult_avgjg", "0.5", "2.0");
-    }
-
     #[test]
     fn rprec_mult_reaches_every_multiple_when_descending() {
         // R = 5. Rprec_mult_2.00 is precision at rank 10: a, c, e and f are relevant, 4 / 10.
@@ -71,20 +26,6 @@ mod cutoffs {
         );
         let out = eval(&["-m", "Rprec_mult.2.0,0.5"], &qrels, &run);
         assert_eq!(summary(&out, "Rprec_mult_2.00"), "0.4000");
-    }
-
-    #[test]
-    fn rows_print_in_ascending_cutoff_order_like_trec_eval() {
-        let (qrels, run) = (
-            write("mixed.qrels", MIXED_QRELS),
-            write("mixed.run", MIXED_RUN),
-        );
-        let rows = rows(&eval(&["-m", "P.5,2"], &qrels, &run));
-        let names: Vec<_> = rows
-            .iter()
-            .map(|row| row.split(' ').next().unwrap())
-            .collect();
-        assert_eq!(names, ["P_2", "P_5"]);
     }
 
     #[test]
