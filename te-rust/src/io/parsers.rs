@@ -438,7 +438,9 @@ fn decode_line(mut bytes: Vec<u8>, line_num: usize, byte_offset: usize) -> Resul
     })
 }
 
-/// Parses standard qrels relevance judgments file format.
+/// Parses standard qrels relevance judgments file format. A document judged twice in a topic
+/// is kept: evaluation refuses it only in a scored topic, and only when a measure reads the
+/// ranking ([`Measure::reads_ranking`](crate::metrics::Measure::reads_ranking)).
 pub fn parse_trec_qrels<P: AsRef<Path>>(path: P) -> Result<QrelsData, IOError> {
     let file = File::open(path).map_err(IOError::FileReadError)?;
     parse_trec_qrels_from(BufReader::new(file))
@@ -499,8 +501,6 @@ fn parse_trec_qrels_from(reader: impl BufRead) -> Result<QrelsData, IOError> {
             other => mt_cmp_order(other),
         }
     });
-
-    // Preserve duplicates: evaluation rejects them only in scored topics when a measure reads the ranking.
 
     // Group into QrelsQuery records in a linear pass
     let mut queries = Vec::new();
@@ -664,7 +664,10 @@ fn parse_trec_qrels_jg_from(reader: impl BufRead) -> Result<QrelsJGData, IOError
     Ok(QrelsJGData { queries, comments, warnings })
 }
 
-/// Parses standard results (run) file format.
+/// Parses standard results (run) file format. A document retrieved twice for a topic is kept:
+/// evaluation refuses it only among the first `max_num_docs_per_topic` documents of a scored
+/// topic, and only when a measure reads the ranking
+/// ([`Measure::reads_ranking`](crate::metrics::Measure::reads_ranking)).
 pub fn parse_trec_run<P: AsRef<Path>>(path: P) -> Result<RunData, IOError> {
     let file = File::open(path).map_err(IOError::FileReadError)?;
     parse_trec_run_from(BufReader::new(file))
@@ -726,9 +729,6 @@ fn parse_trec_run_from(reader: impl BufRead) -> Result<RunData, IOError> {
             other => mt_cmp_order(other),
         }
     });
-
-    // Evaluation checks duplicates only in scored topics when a measure reads the ranking,
-    // after truncating the run.
 
     // Group into RunQuery records in a linear pass
     let mut queries = Vec::new();
