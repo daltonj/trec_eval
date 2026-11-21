@@ -229,7 +229,7 @@ mod output {
     }
 
     #[test]
-    fn failed_message_write_still_exits_8() {
+    fn a_lost_write_error_message_keeps_status_8() {
         // With stderr on the same full disk, the message is lost but the status is not.
         let (qrels, run) = (test_data("qrels.test"), test_data("results.test"));
         let both = file("both.out");
@@ -248,7 +248,7 @@ mod output {
     }
 
     #[test]
-    fn failed_error_message_write_keeps_the_status() {
+    fn a_lost_input_or_help_error_message_keeps_its_status() {
         let qrels = test_data("qrels.test");
         for args in [
             &[qrels.to_str().unwrap(), "absent.run"][..],
@@ -282,7 +282,7 @@ mod output {
     }
 
     #[test]
-    fn successful_writes_print_every_row() {
+    fn a_successful_write_prints_the_topic_count() {
         // qrels.test and results.test share topics 301, 302 and 303.
         let output = te_rust()
             .args(["-m", "num_q"])
@@ -302,7 +302,7 @@ mod documented_differences {
     use std::fs::File;
     use std::process::Output;
 
-    fn eval(options: &[&str], run: &str) -> Output {
+    fn eval_test_data(options: &[&str], run: &str) -> Output {
         let mut command = te_rust();
         command.args(options).arg(test_data("qrels.test")).arg(run);
         if run == "-" {
@@ -326,10 +326,10 @@ mod documented_differences {
             (&["-R", "prefs"], 2, "Unsupported relevance judgments format 'prefs'"),
             (&["-R", "qrels_prefs"], 2, "Unsupported relevance judgments format 'qrels_prefs'"),
         ] {
-            assert_refused(&eval(options, run), status, message);
+            assert_refused(&eval_test_data(options, run), status, message);
         }
         // trec_eval reads the run from standard input when its name is "-".
-        assert_refused(&eval(&["-m", "map"], "-"), 2, "Error parsing run file '-'");
+        assert_refused(&eval_test_data(&["-m", "map"], "-"), 2, "Error parsing run file '-'");
         assert_refused(&te_rust().arg("-v").output().unwrap(), 1, "unexpected argument '-v'");
     }
 
@@ -380,7 +380,7 @@ mod documented_differences {
             ("MAP", "map"),
             ("ndcg_p", "ndcg_p"),
         ] {
-            let output = eval(&["-m", measure], run.to_str().unwrap());
+            let output = eval_test_data(&["-m", measure], run.to_str().unwrap());
             assert!(output.status.success(), "{measure}");
             let stdout = String::from_utf8_lossy(&output.stdout);
             assert!(
@@ -419,7 +419,7 @@ mod documented_differences {
             (&["-m=recip_rank"], &["-m", "recip_rank"]),
             (&["-R=qrels", "-m", "map"], &["-R", "qrels", "-m", "map"]),
         ] {
-            let (joined_out, separate_out) = (eval(joined, run), eval(separate, run));
+            let (joined_out, separate_out) = (eval_test_data(joined, run), eval_test_data(separate, run));
             assert!(separate_out.status.success(), "{separate:?}");
             assert!(!separate_out.stdout.is_empty(), "{separate:?}");
             assert_eq!(
@@ -434,7 +434,7 @@ mod documented_differences {
 
 /// Which measures te-rust evaluates for its `-m` options, and the order of their rows.
 mod measure_requests {
-    use super::common::{assert_refused, eval, fixture, rows};
+    use super::common::{eval, fixture, rows};
 
     /// The measure and topic of each row for `options` on `name`.qrels and `name`.run.
     fn printed(name: &str, options: &[&str]) -> Vec<String> {
@@ -566,8 +566,15 @@ mod measure_requests {
         }
     }
 
+
+}
+
+/// Gain maps supplied with --global-gains.
+mod global_gains {
+    use super::common::{assert_refused, eval, fixture};
+
     #[test]
-    fn global_gains_follow_the_rules_of_a_gain_map() {
+    fn invalid_gains_and_repeated_levels_are_refused() {
         let (qrels, run) = (fixture("topics.qrels"), fixture("topics.run"));
         let out = eval(&["--global-gains", "1=x", "-m", "ndcg"], &qrels, &run);
         assert_refused(&out, 1, "invalid gain 'x' for relevance level 1");
@@ -657,7 +664,7 @@ mod integer_options {
     }
 
     #[test]
-    fn values_without_a_leading_integer_are_refused() {
+    fn unusable_integer_values_are_refused() {
         // trec_eval: "could not be parsed", and "out of range" for a value beyond a long.
         for (options, status, message) in [
             (&["-m", "P.x"][..], 2, "invalid integer cutoff 'x'"),
@@ -697,7 +704,7 @@ mod integer_options {
     }
 }
 
-/// Relevance levels that select no judged document, given with -l.
+/// Relevance levels given with -l, including levels above every judged grade.
 mod relevance_level {
     use super::common::{assert_refused, fixture, summary, te_rust};
     use std::process::{Output, Stdio};
@@ -793,13 +800,15 @@ mod complete_set {
     }
 
     #[test]
-    fn no_shared_topic_exits_4_without_complete() {
+    fn no_shared_topics_require_complete_averaging() {
         let (qrels, run) = (fixture("topics.qrels"), topic_3_run());
         let out = eval(&["-m", "map"], &qrels, &run);
         assert_refused(&out, 4, "no topic has both results and judgments");
-        assert!(!eval(&["-R", "qrels_jg", "-m", "map_avgjg"], &qrels, &run)
-            .status
-            .success());
+        assert_refused(
+            &eval(&["-R", "qrels_jg", "-m", "map_avgjg"], &qrels, &run),
+            4,
+            "no topic has both results and judgments",
+        );
         assert_eq!(
             summary(&eval(&["-c", "-m", "map"], &qrels, &run), "map"),
             "0.0000"
@@ -846,21 +855,4 @@ mod complete_set {
         );
         assert_eq!(rows(&out), Vec::<String>::new());
     }
-}
-
-#[test]
-#[cfg(target_pointer_width = "64")]
-fn relstring_limit_larger_than_the_ranking_does_not_overflow() {
-    use common::{eval, fixture, rows};
-
-    let qrels = fixture("topics.qrels");
-    let run = fixture("topics.run");
-    let large = eval(&["-q", "-m", "relstring.18446744073709551615"], &qrels, &run);
-    assert_eq!(
-        rows(&large),
-        [
-            "relstring_18446744073709551615 1 '102'",
-            "relstring_18446744073709551615 2 '10'"
-        ]
-    );
 }

@@ -104,7 +104,7 @@ fn a_repeated_document_in_a_scored_ranking_is_refused() {
 }
 
 #[test]
-fn only_the_retained_ranks_of_a_ranking_that_a_measure_reads_are_checked() {
+fn duplicates_are_ignored_after_truncation_or_without_ranking_measures() {
     let repeat = run(vec![results("1", &[("a", 2.0), ("a", 1.0)])]);
     let qrels = qrels(vec![judgments("1", &[("a", 1)])]);
     for (request, max_docs) in [("map", 1), ("num_q", usize::MAX), ("runid", usize::MAX)] {
@@ -184,7 +184,7 @@ fn alignment_accepts_the_documented_grade_boundaries() {
 }
 
 #[test]
-fn alignment_pads_grade_counts_up_to_the_highest_level() {
+fn grade_counts_stop_at_grade_127() {
     let state = align_query(
         None,
         &judgments("1", &[("a", 1)]),

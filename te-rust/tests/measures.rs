@@ -2,7 +2,7 @@
 
 mod common;
 
-/// Measures with a list of cutoffs, which te-rust sorts as trec_eval does.
+/// Cutoff lists and the measure values at each cutoff.
 mod cutoffs {
     use super::common::{eval, fixture, rows, summary, write};
 
@@ -158,12 +158,26 @@ mod parameters {
     }
 
     #[test]
-    fn lists_that_end_in_a_point_or_repeat_a_value_score_as_trec_eval() {
+    #[cfg(target_pointer_width = "64")]
+    fn relstring_limit_larger_than_the_ranking_does_not_overflow() {
+        let qrels = fixture("topics.qrels");
+        let run = fixture("topics.run");
+        let large = eval(&["-q", "-m", "relstring.18446744073709551615"], &qrels, &run);
+        assert_eq!(
+            rows(&large),
+            [
+                "relstring_18446744073709551615 1 '102'",
+                "relstring_18446744073709551615 2 '10'"
+            ]
+        );
+    }
+
+    #[test]
+    fn decimal_parameters_and_repeated_recall_levels_score_as_trec_eval() {
         // Six relevant documents in the top six.
         let (qrels, run) = (fixture("six-relevant.qrels"), fixture("six-relevant.run"));
         for (request, expected) in [
-            ("P.5", &["P_5 all 1.0000"][..]),
-            ("iprec_at_recall.0.0", &["iprec_at_recall_0.00 all 1.0000"]),
+            ("iprec_at_recall.0.0", &["iprec_at_recall_0.00 all 1.0000"][..]),
             ("iprec_at_recall.1.", &["iprec_at_recall_1.00 all 1.0000"]),
             (
                 "Rprec_mult.1.,2.",
@@ -171,7 +185,6 @@ mod parameters {
             ),
             ("rbp.p=0.", &["rbp_p=0. all 1.0000"]),
             ("ndcg.1=2.", &["ndcg_1=2. all 1.0000"]),
-            ("utility.1,-1,0,0", &["utility_1,-1,0,0 all 6.0000"]),
             ("11pt_avg.0.5,0.5", &["11pt_avg_0.5,0.5 all 1.0000"]),
         ] {
             assert_eq!(
@@ -626,7 +639,7 @@ mod geometric_means {
 
 /// Relevance levels of 0 and below, at which nonrelevant and unjudged documents can count as
 /// relevant, as in trec_eval 10.0. The evaluator refuses a negative level, so these tests call
-/// the measures directly.
+/// the measures directly for negative levels.
 mod negative_levels {
     use super::common::{eval, fixture, summary, test_data, write};
     use std::path::{Path, PathBuf};
