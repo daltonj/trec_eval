@@ -652,7 +652,10 @@ mod tests {
     fn a_list_that_ends_in_an_underscore_is_read_in_part() {
         let resolved = resolve_measures(&["P.5_".to_string()]).unwrap();
         assert_eq!(resolved.measures[0].sub_metrics(), ["P_5"]);
-        assert_eq!(resolved.warnings.len(), 1, "{:?}", resolved.warnings);
+        assert_eq!(
+            resolved.warnings,
+            ["measure 'P.5_': value '5_' partially read as '5'"]
+        );
     }
 
     #[test]

@@ -416,6 +416,10 @@ mod parser_tests {
     fn int_cutoffs_rejects_bad_token() {
         assert!(parse_int_cutoffs("5,x,20", &[], &mut Vec::new()).is_err());
         assert!(parse_int_cutoffs("5,-1", &[], &mut Vec::new()).is_err());
+        for bad in [".5", "x5", "+"] {
+            let err = parse_int_cutoffs(bad, &[], &mut Vec::new()).unwrap_err();
+            assert_eq!(err.message, format!("invalid integer cutoff '{bad}'"));
+        }
     }
 
     #[test]
@@ -440,9 +444,6 @@ mod parser_tests {
         let mut warnings = Vec::new();
         assert_eq!(parse_int_cutoffs("5,20", &[], &mut warnings).unwrap(), vec![5, 20]);
         assert!(warnings.is_empty());
-        for bad in [".5", "x5", "+", "-1", "9223372036854775808"] {
-            assert!(parse_int_cutoffs(bad, &[], &mut Vec::new()).is_err(), "{bad}");
-        }
     }
 
     #[test]

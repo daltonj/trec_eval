@@ -144,7 +144,10 @@ fn alignment_refuses_grades_outside_the_documented_range() {
     for grade in [i64::MAX, i64::MIN, 128, -128] {
         let qrels = judgments("1", &[("a", grade)]);
         assert!(
-            align_query(None, &qrels, "r", 1, usize::MAX, false).is_err(),
+            matches!(
+                align_query(None, &qrels, "r", 1, usize::MAX, false),
+                Err(EvaluationError::RelevanceOutOfBounds { .. })
+            ),
             "{grade}"
         );
     }
@@ -155,7 +158,10 @@ fn alignment_refuses_grades_outside_the_documented_range() {
             records: judgments("1", &[("a", i64::MAX)]).records,
         }],
     };
-    assert!(align_query_jg(None, &qrels, "r", 1, usize::MAX, false).is_err());
+    assert!(matches!(
+        align_query_jg(None, &qrels, "r", 1, usize::MAX, false),
+        Err(EvaluationError::RelevanceOutOfBounds { .. })
+    ));
 }
 
 #[test]
