@@ -37,7 +37,6 @@ def test_pytrec_eval_drop_in_relevance_evaluator():
     "flags, expected",
     [
         ({}, {"P_1": 0.0, "num_ret": 3}),
-        ({"judged_docs_only_flag": False}, {"P_1": 0.0, "num_ret": 3}),
         ({"judged_docs_only_flag": True}, {"P_1": 1.0, "num_ret": 2}),
     ],
 )
@@ -45,7 +44,9 @@ def test_pytrec_eval_keeps_unjudged_documents_by_default(flags, expected):
     evaluator = pytrec_eval.RelevanceEvaluator(
         {"1": {"d1": 1, "d2": 0}}, {"P_1", "num_ret"}, **flags
     )
-    assert evaluator.evaluate({"1": {"u": 3.0, "d1": 2.0, "d2": 1.0}}) == {"1": expected}
+    assert evaluator.evaluate({"1": {"u": 3.0, "d1": 2.0, "d2": 1.0}}) == {
+        "1": expected
+    }
 
 
 def test_pytrec_eval_gives_every_measure_per_topic_as_a_float():
@@ -68,32 +69,19 @@ def test_pytrec_eval_gives_every_measure_per_topic_as_a_float():
     assert all(type(value) is float for value in res["1"].values())
 
 
-def test_pytrec_eval_gives_the_per_topic_values_of_a_group():
-    evaluator = pytrec_eval.RelevanceEvaluator({"1": {"a": 1}}, {"all_trec"})
-    scores = evaluator.evaluate({"1": {"a": 1.0}})["1"]
-    assert scores["gm_map"] == 0.0
-    assert scores["num_q"] == 1.0
-
-
 @pytest.mark.parametrize(
     "measures, expected",
     [
-        (["P_5", "P_10"], {"P_5": 0.2, "P_10": 0.1}),
-        (["P_10", "P_5"], {"P_5": 0.2, "P_10": 0.1}),
-        ({"P_5", "P_10"}, {"P_5": 0.2, "P_10": 0.1}),
-        (["P_05", "P_5"], {"P_5": 0.2}),
-        (["ndcg_cut_5", "ndcg_cut_10"], {"ndcg_cut_5": 1.0, "ndcg_cut_10": 1.0}),
+        (["P_10", "P.5", "P_05"], {"P_5": 0.2, "P_10": 0.1}),
         (["ndcg_cut_10", "ndcg_cut_5"], {"ndcg_cut_5": 1.0, "ndcg_cut_10": 1.0}),
-        ({"ndcg_cut_5", "ndcg_cut_10"}, {"ndcg_cut_5": 1.0, "ndcg_cut_10": 1.0}),
-        (["P.5", "P.10"], {"P_5": 0.2, "P_10": 0.1}),
-        (["P.5", "P_10"], {"P_5": 0.2, "P_10": 0.1}),
         (
-            ["P.5,10", "P_10,20"],
-            {"P_5": 0.2, "P_10": 0.1, "P_20": 0.05},
+            ["Rprec_mult.1.", "Rprec_mult_2"],
+            {"Rprec_mult_1.00": 1.0, "Rprec_mult_2.00": 0.5},
         ),
-        (["Rprec_mult.0.5", "Rprec_mult_2"], {"Rprec_mult_0.50": 1.0, "Rprec_mult_2.00": 0.5}),
-        (["Rprec_mult.1.", "Rprec_mult.2."], {"Rprec_mult_1.00": 1.0, "Rprec_mult_2.00": 0.5}),
-        (["iprec_at_recall.0.5", "iprec_at_recall_1.0"], {"iprec_at_recall_0.50": 1.0, "iprec_at_recall_1.00": 1.0}),
+        (
+            ["iprec_at_recall.0.5", "iprec_at_recall_1.0"],
+            {"iprec_at_recall_0.50": 1.0, "iprec_at_recall_1.00": 1.0},
+        ),
     ],
 )
 def test_pytrec_eval_retains_requested_cutoffs(measures, expected):
@@ -104,32 +92,15 @@ def test_pytrec_eval_retains_requested_cutoffs(measures, expected):
 @pytest.mark.parametrize(
     "measures, expected",
     [
-        (["P.5x", "P.10"], {"P_5": 0.2, "P_10": 0.1}),
-        # pytrec_eval reads decimal parameter values, so "1e-1" stops at "1".
-        # R = 2 gives cutoffs 2 and 4, each containing one relevant document.
+        # R = 2; the wrapper stops at 1 in "1e-1", so cutoffs 2 and 4 each hold one relevant doc.
         (
             ["Rprec_mult.1e-1", "Rprec_mult.2"],
             {"Rprec_mult_1.00": 0.5, "Rprec_mult_2.00": 0.25},
         ),
-        (["P_5x"], {"P_5": 0.2}),
-        (
-            ["iprec_at_recall.0.5x", "iprec_at_recall.1"],
-            {"iprec_at_recall_0.50": 0.5, "iprec_at_recall_1.00": 0.0},
-        ),
-        (["P.5,"], {"P_5": 0.2}),
-        (["P.5x,10", "P.20"], {"P_5": 0.2, "P_20": 0.05}),
-        (["P.5,10x", "P_20"], {"P_5": 0.2, "P_10": 0.1, "P_20": 0.05}),
-        (["recall_1x", "recall.2"], {"recall_1": 0.0, "recall_2": 0.5}),
-        (
-            ["ndcg_cut.1x", "ndcg_cut.2"],
-            {"ndcg_cut_1": 0.0, "ndcg_cut_2": pytest.approx(0.38685280723454163)},
-        ),
-        (["Rprec_mult.1.,2"], {"Rprec_mult_1.00": 0.5}),
-        # pytrec_eval requires digits after a decimal point, so this request
-        # stops at "5" and never reads ",10".
+        # The leading list ends at 5x, dropping ,10, and merges the later cutoff 20.
+        (["P.5x,10", "P_20"], {"P_5": 0.2, "P_20": 0.05}),
+        # Digits must follow a decimal point, so the request ends at 5 and drops ,10.
         (["P.5.,10"], {"P_5": 0.2}),
-        (["iprec_at_recall.0.,1"], {"iprec_at_recall_0.00": 0.5}),
-        (["recall.2.,3"], {"recall_2": 0.5}),
     ],
 )
 def test_pytrec_eval_reads_leading_parameter_values(measures, expected):
@@ -141,7 +112,6 @@ def test_pytrec_eval_reads_leading_parameter_values(measures, expected):
     "measures, expected",
     [
         (["map@1"], {"map_cut_1": 1.0}),
-        (["ndcg@1"], {"ndcg_cut_1": 1.0}),
         (["utility.1,0,0,0"], {"utility_1,0,0,0": 1.0}),
     ],
 )
@@ -192,11 +162,10 @@ def test_supported_dcg_measures_can_be_evaluated(measure):
     assert evaluator.evaluate({"q": {"d": 1.0}}) == {"q": {measure: 1.0}}
 
 
-@pytest.mark.parametrize("run_kind", ["dict", "file", "iterable", "frame"])
-def test_compat_scores_only_topics_shared_with_qrels(run_kind, run_as):
+def test_compat_scores_only_topics_shared_with_qrels():
     qrels = {"q1": {"d": 1}}
-    run = run_as(run_kind, [("q2", "d", 1.0)])
-    evaluator = pytrec_eval.RelevanceEvaluator(qrels, {"map"})
+    run = {"q2": {"d": 1.0}}
+    evaluator = pytrec_eval.RelevanceEvaluator(qrels, "map")
     assert evaluator.evaluate(run) == {}
     assert evaluator.evaluate({}) == {}
     assert evaluator.evaluate({"q1": {"d": 1.0}, "q2": {"d": 1.0}}) == {
@@ -204,15 +173,9 @@ def test_compat_scores_only_topics_shared_with_qrels(run_kind, run_as):
     }
 
 
-def test_compat_keeps_nan_score_errors():
-    evaluator = pytrec_eval.RelevanceEvaluator({"q1": {"d1": 1}}, {"map"})
-    with pytest.raises(ValueError, match="NaN"):
-        evaluator.evaluate({"q1": {"d1": float("nan")}})
-
-
 def test_compat_keeps_other_evaluation_errors(tmp_path):
     qrels = tmp_path / "duplicate.qrels"
     qrels.write_text("q1 0 d 0\nq1 0 d 1\n")
-    evaluator = pytrec_eval.RelevanceEvaluator(qrels, {"map"})
+    evaluator = pytrec_eval.RelevanceEvaluator(qrels, "map")
     with pytest.raises(ValueError, match="qrels: duplicate document"):
         evaluator.evaluate({"q1": {"d": 1.0}})

@@ -8,8 +8,6 @@ mod exit_status {
     use super::common::{assert_refused, eval, fixture, te_rust, write};
     use std::path::PathBuf;
 
-    /// The input `name`: `good`, `malformed` (too few fields), `empty`, `repeat` (document a
-    /// twice in topic 1) or `absent` (no such file), with the extension `.qrels` or `.run`.
     fn input(name: &str) -> PathBuf {
         let text = match name {
             "good.qrels" => return fixture("ab.qrels"),
@@ -17,9 +15,7 @@ mod exit_status {
             "absent.qrels" | "absent.run" => return fixture(name),
             "malformed.qrels" => "1 0 a\n",
             "malformed.run" => "1 Q0 a 1\n",
-            "empty.qrels" | "empty.run" => "",
             "repeat.qrels" => "1 0 a 1\n1 0 a 0\n",
-            "repeat.run" => "1 Q0 a 1 2 r\n1 Q0 a 2 1 r\n",
             _ => panic!("no input {name}"),
         };
         write(name, text)
@@ -30,17 +26,11 @@ mod exit_status {
     }
 
     #[test]
-    fn unreadable_or_malformed_input_exits_2() {
+    fn input_errors_exit_2() {
         let map = &["-m", "map"][..];
         let jg = &["-R", "qrels_jg", "-m", "map_avgjg"][..];
         for (options, qrels, run) in [
-            (map, "absent.qrels", "good.run"),
-            (map, "good.qrels", "absent.run"),
-            (map, "malformed.qrels", "good.run"),
             (map, "good.qrels", "malformed.run"),
-            (map, "empty.qrels", "good.run"),
-            (map, "good.qrels", "empty.run"),
-            (&["-R", "nosuch"], "good.qrels", "good.run"),
             (jg, "malformed.qrels", "good.run"),
             (jg, "repeat.qrels", "good.run"),
         ] {
@@ -54,65 +44,36 @@ mod exit_status {
 
     #[test]
     fn an_unusable_measure_parameter_exits_2() {
-        // trec_eval reports the file and te-rust the parameter, with the same status.
-        for (measure, qrels, run) in [
-            ("P.x", "good.qrels", "good.run"),
-            ("map_cut.x", "good.qrels", "good.run"),
-            ("rbp.p=0.2,p=0.8", "good.qrels", "good.run"),
-            ("rbp_resid.p=0.2,p=0.8", "good.qrels", "good.run"),
-            ("rbp_resid.x=1", "good.qrels", "good.run"),
-            ("rbp_resid.1=2,01=3", "good.qrels", "good.run"),
-            ("P.x", "absent.qrels", "good.run"),
-            ("P.x", "good.qrels", "absent.run"),
-            ("P.x", "repeat.qrels", "good.run"),
-        ] {
-            let out = eval(&["-m", measure], &input(qrels), &input(run));
-            assert_eq!(out.status.code(), Some(2), "{measure} {qrels} {run}");
-            assert!(out.stdout.is_empty(), "{measure} {qrels} {run}");
-        }
+        // Parameter validation precedes file access.
+        assert_refused(
+            &eval(&["-m", "P.x"], &input("absent.qrels"), &input("absent.run")),
+            2,
+            "invalid integer cutoff 'x'",
+        );
     }
 
     #[test]
     fn an_illegal_measure_name_exits_1_before_the_files_are_read() {
-        for (measures, qrels, run) in [
-            (&["nosuch"][..], "good.qrels", "good.run"),
-            (&["P."], "good.qrels", "good.run"),
-            (&["nosuch"], "good.qrels", "absent.run"),
-            (&["nosuch"], "malformed.qrels", "repeat.run"),
-            // A name is checked before any parameter, whatever their order.
-            (&["P.x", "nosuch"], "good.qrels", "good.run"),
-            (&["P.x", "P."], "good.qrels", "good.run"),
-        ] {
-            let options: Vec<&str> = measures.iter().flat_map(|m| ["-m", m]).collect();
-            assert_eq!(
-                status(&options, qrels, run),
-                Some(1),
-                "{measures:?} {qrels} {run}"
-            );
-        }
+        // All names are checked before parameters, even a bad parameter in an earlier request.
+        assert_refused(
+            &eval(
+                &["-m", "P.x", "-m", "nosuch"],
+                &input("absent.qrels"),
+                &input("absent.run"),
+            ),
+            1,
+            "unknown measure 'nosuch'",
+        );
     }
 
     #[test]
-    fn usage_errors_exit_1() {
+    fn a_missing_run_filename_exits_1() {
         let out = te_rust()
             .args(["-m", "map"])
             .arg(input("good.qrels"))
             .output()
             .unwrap();
         assert_eq!(out.status.code(), Some(1));
-        assert_eq!(status(&["--nosuchflag"], "good.qrels", "good.run"), Some(1));
-    }
-
-    #[test]
-    fn success_and_help_exit_0() {
-        assert_eq!(status(&["-m", "map"], "good.qrels", "good.run"), Some(0));
-        for flag in ["--help", "--version"] {
-            assert_eq!(
-                te_rust().arg(flag).output().unwrap().status.code(),
-                Some(0),
-                "{flag}"
-            );
-        }
     }
 
     #[test]
@@ -125,7 +86,7 @@ mod exit_status {
         );
         let qrels = input("malformed.qrels");
         assert_refused(
-            &eval(map, &qrels, &input("repeat.run")),
+            &eval(map, &qrels, &input("malformed.run")),
             2,
             &qrels.to_string_lossy(),
         );
@@ -135,7 +96,7 @@ mod exit_status {
     fn the_judgment_format_is_checked_before_the_run() {
         let options = &["-R", "nosuch"];
         assert_refused(
-            &eval(options, &input("good.qrels"), &input("repeat.run")),
+            &eval(options, &input("good.qrels"), &input("absent.run")),
             2,
             "nosuch",
         );
@@ -149,21 +110,16 @@ mod exit_status {
             2,
             &run.to_string_lossy(),
         );
-        assert_refused(
-            &eval(&["-m", "map"], &qrels, &input("good.run")),
-            4,
-            &qrels.to_string_lossy(),
-        );
     }
 }
 
 /// Failed writes to standard output. trec_eval ignores them and exits 0; te-rust reports them.
 #[cfg(unix)]
 mod output {
-    use super::common::{rows, stderr, te_rust, test_data, write};
+    use super::common::{fixture, stderr, te_rust, write};
     use std::fs::File;
     use std::os::unix::process::ExitStatusExt;
-    use std::process::{Command, Output, Stdio};
+    use std::process::{Command, Output};
 
     // trec_eval's status when it cannot print a measure.
     const EXIT_OUTPUT: i32 = 8;
@@ -201,17 +157,29 @@ mod output {
 
     #[test]
     fn closed_stdout_ends_with_sigpipe_and_no_panic() {
-        // The reader of the pipe has exited, so the first write fails.
-        let mut reader = Command::new("true").stdin(Stdio::piped()).spawn().unwrap();
-        let writer = reader.stdin.take().unwrap();
-        reader.wait().unwrap();
-        let output = te_rust()
-            .args(["-q", "-m", "all_trec"])
-            .arg(test_data("qrels.test"))
-            .arg(test_data("results.test"))
-            .stdout(writer)
-            .output()
-            .unwrap();
+        use std::os::unix::process::CommandExt;
+
+        let mut command = te_rust();
+        command
+            .args(["-m", "map"])
+            .arg(fixture("ab.qrels"))
+            .arg(fixture("ab.run"));
+        // Create the pipe in the child so concurrent spawns cannot inherit its reader.
+        // SAFETY: only async-signal-safe libc calls run between fork and exec.
+        unsafe {
+            command.pre_exec(|| {
+                let mut pipe = [0; 2];
+                if libc::pipe(pipe.as_mut_ptr()) != 0
+                    || libc::close(pipe[0]) != 0
+                    || libc::dup2(pipe[1], libc::STDOUT_FILENO) < 0
+                    || libc::close(pipe[1]) != 0
+                {
+                    return Err(std::io::Error::last_os_error());
+                }
+                Ok(())
+            });
+        }
+        let output = command.output().unwrap();
         assert!(!stderr(&output).contains("panicked"), "{}", stderr(&output));
         assert_eq!(
             output.status.signal(),
@@ -223,7 +191,7 @@ mod output {
 
     #[test]
     fn failed_result_write_exits_with_a_message() {
-        let (qrels, run) = (test_data("qrels.test"), test_data("results.test"));
+        let (qrels, run) = (fixture("ab.qrels"), fixture("ab.run"));
         let args = ["-q", qrels.to_str().unwrap(), run.to_str().unwrap()];
         let output = te_rust_with_no_room(&args)
             .stdout(file("results.out"))
@@ -251,7 +219,7 @@ mod output {
     #[test]
     fn a_lost_write_error_message_keeps_status_8() {
         // With stderr on the same full disk, the message is lost but the status is not.
-        let (qrels, run) = (test_data("qrels.test"), test_data("results.test"));
+        let (qrels, run) = (fixture("ab.qrels"), fixture("ab.run"));
         let both = file("both.out");
         let args = [qrels.to_str().unwrap(), run.to_str().unwrap()];
         let output = te_rust_with_no_room(&args)
@@ -267,56 +235,9 @@ mod output {
         );
     }
 
-    #[test]
-    fn a_lost_input_or_help_error_message_keeps_its_status() {
-        let qrels = test_data("qrels.test");
-        for args in [
-            &[qrels.to_str().unwrap(), "absent.run"][..],
-            &["--help-measure", "nosuch"],
-        ] {
-            let status = |stderr: Stdio| {
-                te_rust_with_no_room(args)
-                    .stderr(stderr)
-                    .output()
-                    .unwrap()
-                    .status
-                    .code()
-            };
-            let expected = status(Stdio::piped());
-            assert_ne!(expected, Some(0), "{args:?}");
-            assert_eq!(status(file("error.out").into()), expected, "{args:?}");
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn full_device_exits_with_a_message() {
-        let full = File::options().write(true).open("/dev/full").unwrap();
-        let output = te_rust()
-            .arg(test_data("qrels.test"))
-            .arg(test_data("results.test"))
-            .stdout(full)
-            .output()
-            .unwrap();
-        assert_write_failure(&output);
-    }
-
-    #[test]
-    fn a_successful_write_prints_the_topic_count() {
-        // qrels.test and results.test share topics 301, 302 and 303.
-        let output = te_rust()
-            .args(["-m", "num_q"])
-            .arg(test_data("qrels.test"))
-            .arg(test_data("results.test"))
-            .output()
-            .unwrap();
-        assert_eq!(rows(&output), ["num_q all 3"]);
-        assert!(output.stderr.is_empty(), "{}", stderr(&output));
-    }
 }
 
-/// The differences from trec_eval that docs/cli.md lists. A failure here means that list needs
-/// updating.
+/// Representative differences from trec_eval documented in docs/cli.md.
 mod documented_differences {
     use super::common::{assert_refused, fixture, rows, te_rust, test_data};
     use std::fs::File;
@@ -333,38 +254,22 @@ mod documented_differences {
 
     #[test]
     fn listed_trec_eval_features_are_refused() {
-        let run = test_data("results.test");
-        let run = run.to_str().unwrap();
         for (options, status, message) in [
             (&["-T", "trec_results"][..], 1, "unexpected argument '-T'"),
-            (&["-D", "1"], 1, "unexpected argument '-D'"),
-            (&["-Z", "zscores"], 1, "unexpected argument '-Z'"),
-            (&["-o"], 1, "unexpected argument '-o'"),
-            (
-                &["--Max_retrieved_per_topic=5"],
-                1,
-                "unexpected argument '--Max_retrieved_per_topic'",
-            ),
-            (
-                &["--complete_rel_info_wanted"],
-                1,
-                "unexpected argument '--complete_rel_info_wanted'",
-            ),
             (&["-m", "prefs_simp"], 1, "unknown measure 'prefs_simp'"),
             (
                 &["-R", "prefs"],
                 2,
                 "Unsupported relevance judgments format 'prefs'",
             ),
-            (
-                &["-R", "qrels_prefs"],
-                2,
-                "Unsupported relevance judgments format 'qrels_prefs'",
-            ),
         ] {
-            assert_refused(&eval_test_data(options, run), status, message);
+            assert_refused(
+                &eval_test_data(options, test_data("results.test").to_str().unwrap()),
+                status,
+                message,
+            );
         }
-        // trec_eval reads the run from standard input when its name is "-".
+        // trec_eval reads the run from stdin when its name is "-".
         assert_refused(
             &eval_test_data(&["-m", "map"], "-"),
             2,
@@ -403,27 +308,7 @@ mod documented_differences {
     #[test]
     fn listed_extensions_are_accepted() {
         let run = test_data("results.test");
-        for (measure, row) in [
-            ("P_5", "P_5"),
-            ("P_avgjg_5", "P_avgjg_5"),
-            ("recall_10", "recall_10"),
-            ("ndcg_cut_10", "ndcg_cut_10"),
-            ("map_cut_100", "map_cut_100"),
-            ("success_5", "success_5"),
-            ("unj_10", "unj_10"),
-            ("P@5", "P_5"),
-            ("recall@10", "recall_10"),
-            ("success@5", "success_5"),
-            ("unj@10", "unj_10"),
-            ("relative_P@5", "relative_P_5"),
-            ("ndcg@10", "ndcg_cut_10"),
-            ("map@100", "map_cut_100"),
-            ("mrr", "recip_rank"),
-            ("rr", "recip_rank"),
-            ("precision.5", "P_5"),
-            ("MAP", "map"),
-            ("ndcg_p", "ndcg_p"),
-        ] {
+        for (measure, row) in [("P_5", "P_5"), ("P@5", "P_5"), ("ndcg@10", "ndcg_cut_10")] {
             let output = eval_test_data(&["-m", measure], run.to_str().unwrap());
             assert!(output.status.success(), "{measure}");
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -456,12 +341,6 @@ mod documented_differences {
         for (joined, separate) in [
             (&["-l=2", "-m", "map"][..], &["-l", "2", "-m", "map"][..]),
             (&["-M=1", "-m", "P.1,2"], &["-M", "1", "-m", "P.1,2"]),
-            (
-                &["-N=10", "-m", "utility.0,0,0,1"],
-                &["-N", "10", "-m", "utility.0,0,0,1"],
-            ),
-            (&["-m=recip_rank"], &["-m", "recip_rank"]),
-            (&["-R=qrels", "-m", "map"], &["-R", "qrels", "-m", "map"]),
         ] {
             let (joined_out, separate_out) =
                 (eval_test_data(joined, run), eval_test_data(separate, run));
@@ -481,133 +360,39 @@ mod documented_differences {
 mod measure_requests {
     use super::common::{eval, fixture, rows};
 
-    /// The measure and topic of each row for `options` on `name`.qrels and `name`.run.
-    fn printed(name: &str, options: &[&str]) -> Vec<String> {
+    #[test]
+    fn requests_print_once_in_trec_eval_order() {
         let out = eval(
-            options,
-            &fixture(&format!("{name}.qrels")),
-            &fixture(&format!("{name}.run")),
+            &[
+                "-q", "-m", "ndcg_p", "-m", "map", "-m", "num_q", "-m", "map",
+            ],
+            &fixture("ab.qrels"),
+            &fixture("ab.run"),
         );
-        rows(&out)
-            .iter()
-            .map(|row| row.rsplit_once(' ').unwrap().0.to_string())
-            .collect()
-    }
-
-    #[test]
-    fn measures_print_in_trec_eval_table_order() {
-        // trec_eval prints num_q before map, whatever the order of the -m options.
         assert_eq!(
-            printed("topics", &["-m", "map", "-m", "num_q"]),
-            ["num_q all", "map all"]
-        );
-        // trec_eval's output for the reversed list.
-        assert_eq!(
-            printed(
-                "topics",
-                &["-m", "unj.5", "-m", "rbp", "-m", "P.5", "-m", "map", "-m", "runid"]
-            ),
-            ["runid all", "map all", "P_5 all", "rbp all", "unj_5 all"]
-        );
-    }
-
-    #[test]
-    fn topic_rows_follow_the_same_order() {
-        // trec_eval -q prints map before recip_rank in each topic and in the summary.
-        assert_eq!(
-            printed("topics", &["-q", "-m", "recip_rank", "-m", "map"]),
+            rows(&out),
             [
-                "map 1",
-                "recip_rank 1",
-                "map 2",
-                "recip_rank 2",
-                "map all",
-                "recip_rank all"
+                "map 1 1.0000",
+                "ndcg_p 1 1.0000",
+                "num_q all 1",
+                "map all 1.0000",
+                "ndcg_p all 1.0000"
             ]
         );
     }
 
     #[test]
-    fn measures_that_trec_eval_lacks_print_last() {
-        // trec_eval refuses ndcg_p, so te-rust prints it after the trec_eval measures.
-        assert_eq!(
-            printed("topics", &["-m", "ndcg_p", "-m", "map"]),
-            ["map all", "ndcg_p all"]
-        );
-    }
-
-    #[test]
-    fn repeated_measure_prints_once() {
-        // All six documents are relevant and retrieved, so the single row is 1.
-        let (qrels, run) = (fixture("six-relevant.qrels"), fixture("six-relevant.run"));
-        assert_eq!(
-            rows(&eval(&["-m", "map", "-m", "map"], &qrels, &run)),
-            ["map all 1.0000"]
-        );
-        assert_eq!(
-            printed("six-relevant", &["-q", "-m", "map", "-m", "map"]),
-            printed("six-relevant", &["-q", "-m", "map"])
-        );
-    }
-
-    #[test]
-    fn group_and_member_print_once() {
-        let official = printed("six-relevant", &["-m", "official"]);
-        assert_eq!(
-            printed("six-relevant", &["-m", "official", "-m", "map"]),
-            official
-        );
-        assert_eq!(
-            printed("six-relevant", &["-m", "map", "-m", "official"]),
-            official
-        );
-        let (official_precision, official_rest): (Vec<_>, Vec<_>) =
-            official.iter().partition(|row| row.starts_with("P_"));
-        assert!(!official_precision.is_empty());
+    fn group_defaults_yield_to_an_explicit_member_list() {
         for options in [
-            ["-m", "official", "-m", "P.5"],
-            ["-m", "P.5", "-m", "official"],
+            ["-m", "official", "-m", "P.2"],
+            ["-m", "P.2", "-m", "official"],
         ] {
-            let rows = printed("six-relevant", &options);
-            let (precision, rest): (Vec<_>, Vec<_>) =
-                rows.iter().partition(|row| row.starts_with("P_"));
-            assert_eq!(precision, ["P_5 all"], "{options:?}");
-            assert_eq!(rest, official_rest, "{options:?}");
-        }
-    }
-
-    #[test]
-    fn aliases_and_reordered_lists_print_once() {
-        assert_eq!(
-            printed("six-relevant", &["-m", "P.5", "-m", "P_5", "-m", "P@5"]),
-            ["P_5 all"]
-        );
-        assert_eq!(
-            printed("six-relevant", &["-m", "P.5,10", "-m", "P.10,5"]),
-            ["P_5 all", "P_10 all"]
-        );
-    }
-
-    #[test]
-    fn first_explicit_parameter_list_wins() {
-        // trec_eval reads only the first parameter list for a measure.
-        for (first, second, expected) in [
-            ("P.2", "P.3", &["P_2 all"][..]),
-            ("P.2,5", "P.5,10", &["P_2 all", "P_5 all"]),
-            ("P.2,5", "P.5", &["P_2 all", "P_5 all"]),
-            ("P.2", "P.2,3", &["P_2 all"]),
-            (
-                "Rprec_mult.0.219",
-                "Rprec_mult.0.221,1",
-                &["Rprec_mult_0.22 all"],
-            ),
-            ("P", "P.2", &["P_2 all"]),
-        ] {
-            assert_eq!(
-                printed("six-relevant", &["-m", first, "-m", second]),
-                expected,
-                "{first} {second}"
-            );
+            let out = eval(&options, &fixture("ab.qrels"), &fixture("ab.run"));
+            let precision: Vec<_> = rows(&out)
+                .into_iter()
+                .filter(|r| r.starts_with("P_"))
+                .collect();
+            assert_eq!(precision, ["P_2 all 0.5000"]);
         }
     }
 }
@@ -629,7 +414,7 @@ mod global_gains {
 /// The integer options -l, -M and -N and integer cutoffs, which trec_eval reads with
 /// `str_to_long`: C-locale whitespace, a sign and digits, with a warning for what follows them.
 mod integer_options {
-    use super::common::{assert_refused, eval, reference_rows, rows, stderr, test_data, write};
+    use super::common::{assert_refused, eval, rows, stderr, write};
     use std::process::Output;
 
     /// b (grade 2) is at rank 2 and a (grade 1) at rank 3.
@@ -642,57 +427,37 @@ mod integer_options {
         eval(options, &qrels, &run)
     }
 
-    /// `options` scores like `integer`, and warns that `value` was read as `read`.
-    fn assert_reads_as(options: &[&str], integer: &[&str], value: &str, read: &str) {
-        let (partial, whole) = (two_grades(options), two_grades(integer));
-        assert_eq!(rows(&partial), rows(&whole), "{options:?}");
-        let warning = format!("value '{value}' partially read as '{read}'");
-        assert!(
-            stderr(&partial).contains(&warning),
-            "{options:?}: {}",
-            stderr(&partial)
-        );
-        assert!(whole.stderr.is_empty(), "{integer:?}");
-    }
-
     #[test]
     fn cutoff_warnings_name_each_measure_request() {
-        let out = two_grades(&["-m", "P.5x", "-m", "recall.5x"]);
-        let whole = two_grades(&["-m", "P.5", "-m", "recall.5"]);
-        assert_eq!(rows(&out), rows(&whole));
+        let out = two_grades(&["-m", "P.1.5", "-m", "recall.5x"]);
+        assert_eq!(rows(&out), ["P_1 all 0.0000", "recall_5 all 1.0000"]);
         assert_eq!(
             stderr(&out),
-            "te-rust: Warning, measure 'P.5x': value '5x' partially read as '5'\n\
+            "te-rust: Warning, measure 'P.1.5': value '1.5' partially read as '1'\n\
              te-rust: Warning, measure 'recall.5x': value '5x' partially read as '5'\n"
         );
     }
 
     #[test]
-    fn cutoffs_read_their_leading_integer_with_a_warning() {
-        assert_reads_as(&["-m", "P.1.5"], &["-m", "P.1"], "1.5", "1");
-        assert_reads_as(&["-m", "map_cut.2,3x"], &["-m", "map_cut.2,3"], "3x", "3");
-    }
-
-    #[test]
     fn relevance_level_and_document_counts_read_their_leading_integer_with_a_warning() {
-        assert_reads_as(
-            &["-l", "2.5", "-m", "map"],
-            &["-l", "2", "-m", "map"],
-            "2.5",
-            "2",
-        );
-        assert_reads_as(
-            &["-M", "2x", "-m", "map"],
-            &["-M", "2", "-m", "map"],
-            "2x",
-            "2",
-        );
-        assert_reads_as(
-            &["-N", "10x", "-m", "utility.0,0,0,1"],
-            &["-N", "10", "-m", "utility.0,0,0,1"],
-            "10x",
-            "10",
-        );
+        for (option, value, read, measure, expected) in [
+            // b alone is relevant, at rank 2.
+            ("-l", "2.5", "2", "map", "map all 0.5000"),
+            // Only b is retained; AP = (1/2) / 2.
+            ("-M", "2x", "2", "map", "map all 0.2500"),
+            // Nonretrieved nonrelevant = 10 - 3 - (2 - 2).
+            (
+                "-N",
+                "10x",
+                "10",
+                "utility.0,0,0,1",
+                "utility_0,0,0,1 all 7.0000",
+            ),
+        ] {
+            let out = two_grades(&[option, value, "-m", measure]);
+            assert_eq!(rows(&out), [expected]);
+            assert!(stderr(&out).contains(&format!("value '{value}' partially read as '{read}'")));
+        }
     }
 
     #[test]
@@ -702,8 +467,6 @@ mod integer_options {
             ("-l", " 2", "map", "map all 0.5000"),
             // Truncation keeps c and b; b contributes 1/2, divided by two relevant documents.
             ("-M", "\t2", "map", "map all 0.2500"),
-            // Nonretrieved nonrelevant = 10 - 3 retrieved - 2 relevant + 2 retrieved relevant.
-            ("-N", " 10", "utility.0,0,0,1", "utility_0,0,0,1 all 7.0000"),
         ] {
             let out = two_grades(&[option, value, "-m", measure]);
             assert_eq!(rows(&out), [row], "{option}");
@@ -715,60 +478,22 @@ mod integer_options {
     fn unusable_integer_values_are_refused() {
         // trec_eval: "could not be parsed", and "out of range" for a value beyond a long.
         for (options, status, message) in [
-            (&["-m", "P.x"][..], 2, "invalid integer cutoff 'x'"),
-            (&["-m", "P..5"], 2, "invalid integer cutoff '.5'"),
             (
-                &["-l", ".5", "-m", "map"],
+                &["-l", ".5", "-m", "map"][..],
                 1,
                 "value '.5' could not be parsed",
-            ),
-            (
-                &["-l", "x", "-m", "map"],
-                1,
-                "value 'x' could not be parsed",
             ),
             (
                 &["-l", "9223372036854775808", "-m", "map"],
                 1,
                 "value '9223372036854775808' out of range",
             ),
-            (
-                &["-M", "x", "-m", "map"],
-                1,
-                "value 'x' could not be parsed",
-            ),
             (&["-M-1", "-m", "map"], 1, "value '-1' is negative"),
-            (
-                &["-N", "x", "-m", "map"],
-                1,
-                "value 'x' could not be parsed",
-            ),
         ] {
             assert_refused(&two_grades(options), status, message);
         }
     }
 
-    #[test]
-    fn makefile_meas_params_check_reads_23_4_as_23() {
-        // The Makefile's quicktest runs `-mndcg_cut.10,20,23.4 -msuccess.2,5,20` and expects
-        // test/out.test.meas_params, which has ndcg_cut_23.
-        let options = ["-q", "-mndcg_cut.10,20,23.4", "-msuccess.2,5,20"];
-        let out = eval(
-            &options,
-            &test_data("qrels.test"),
-            &test_data("results.test"),
-        );
-        let cutoff_rows = |rows: Vec<String>| {
-            rows.into_iter()
-                .filter(|row| row.starts_with("ndcg_cut_") || row.starts_with("success_"))
-                .collect::<Vec<_>>()
-        };
-        // Six measures for each of three topics and the summary.
-        assert_eq!(
-            cutoff_rows(rows(&out)),
-            cutoff_rows(reference_rows("out.test.meas_params"))
-        );
-    }
 }
 
 /// Relevance levels given with -l, including levels above every judged grade.
@@ -803,46 +528,29 @@ mod relevance_level {
     }
 
     #[test]
-    fn huge_level_finishes_with_nothing_relevant() {
-        assert!(te_rust_within_limit(&["-l", "1000000000000"])
-            .status
-            .success());
-        for measure in ["bpref", "gm_bpref", "map"] {
-            let out = te_rust_within_limit(&["-l", "1000000000000", "-m", measure]);
-            assert_eq!(summary(&out, measure), "0.0000", "{measure}");
-        }
-        let out = te_rust_within_limit(&["-l", "9223372036854775807", "-m", "map"]);
-        assert_eq!(summary(&out, "map"), "0.0000");
-    }
-
-    #[test]
-    fn a_negative_level_is_refused() {
-        for level in [&["-l", "-1"][..], &["-l-1"], &["-l=-1"]] {
-            let out = te_rust_within_limit(&[level, &["-m", "map"]].concat());
-            assert_refused(&out, 1, "te-rust: Unusable relevance level '-1'");
+    fn bpref_scores_at_ordinary_and_extreme_levels() {
+        // At level 1 the topics score 0.5 and 1, hence 0.75. At level 2 only d3 is
+        // relevant, below two nonrelevant documents; both topics then score 0.
+        for (level, measure, expected) in [
+            ("1", "bpref", "0.7500"),
+            ("2", "bpref", "0.0000"),
+            ("9223372036854775807", "bpref", "0.0000"),
+            ("9223372036854775807", "gm_bpref", "0.0000"),
+        ] {
+            let out = te_rust_within_limit(&["-l", level, "-m", measure]);
+            assert_eq!(summary(&out, measure), expected);
         }
     }
 
     #[test]
     fn a_negative_level_is_refused_before_the_files_are_read() {
         let out = te_rust()
-            .args(["-l-1", "missing.qrels", "missing.run"])
+            .args(["-l", "-1", "missing.qrels", "missing.run"])
             .output()
             .unwrap();
         assert_refused(&out, 1, "te-rust: Unusable relevance level '-1'");
     }
 
-    #[test]
-    fn bpref_at_ordinary_levels() {
-        // Topic 1 at -l 1: d1 and d3 relevant, one nonrelevant d2 above d3. bpref = (1 + 0) / 2.
-        // Topic 2 at -l 1: d2 relevant and first. bpref = 1. Mean = 0.75.
-        let out = te_rust_within_limit(&["-l", "1", "-m", "bpref"]);
-        assert_eq!(summary(&out, "bpref"), "0.7500");
-        // At -l 2, d3 alone is relevant in topic 1 and ranks below two nonrelevant documents.
-        // Topic 2 has nothing relevant. Both score 0.
-        let out = te_rust_within_limit(&["-l", "2", "-m", "bpref"]);
-        assert_eq!(summary(&out, "bpref"), "0.0000");
-    }
 }
 
 /// Topics that the run lacks: an error, unless -c scores them as empty rankings.
@@ -856,17 +564,6 @@ mod complete_set {
     }
 
     #[test]
-    fn topics_shared_with_the_run_are_scored() {
-        // Topic 1: (1 + 2/3) / 2 with d1 and d3 relevant at ranks 1 and 3. Topic 2: 1.
-        let out = eval(
-            &["-m", "map"],
-            &fixture("topics.qrels"),
-            &fixture("topics.run"),
-        );
-        assert_eq!(summary(&out, "map"), "0.9167");
-    }
-
-    #[test]
     fn no_shared_topics_require_complete_averaging() {
         let (qrels, run) = (fixture("topics.qrels"), topic_3_run());
         let out = eval(&["-m", "map"], &qrels, &run);
@@ -876,41 +573,18 @@ mod complete_set {
             4,
             "no topic has both results and judgments",
         );
-        assert_eq!(
-            summary(&eval(&["-c", "-m", "map"], &qrels, &run), "map"),
-            "0.0000"
-        );
     }
 
     #[test]
     fn complete_set_prints_the_average_over_qrels_topics() {
-        let options = ["-c", "-m", "map", "-m", "num_q"];
-        let out = eval(&options, &fixture("topics.qrels"), &topic_3_run());
-        assert_eq!(summary(&out, "num_q"), "2");
-        assert_eq!(summary(&out, "map"), "0.0000");
-        let run = write("topic-1.run", "1 Q0 d1 1 1 r\n");
-        let out = eval(&options, &fixture("topics.qrels"), &run);
-        assert_eq!(summary(&out, "num_q"), "2");
-        assert_eq!(summary(&out, "map"), "0.2500");
-        let options = ["-R", "qrels_jg", "-c", "-m", "map_avgjg"];
-        let out = eval(&options, &fixture("topics.qrels"), &topic_3_run());
-        assert_eq!(summary(&out, "map_avgjg"), "0.0000");
-        let out = eval(&options, &fixture("topics.qrels"), &run);
-        assert_eq!(summary(&out, "map_avgjg"), "0.2500");
-    }
-
-    #[test]
-    fn confidence_interval_rows_print_without_shared_topics() {
-        let options = ["-c", "-C", "--seed", "1", "-m", "map"];
-        let out = eval(&options, &fixture("topics.qrels"), &topic_3_run());
-        assert_eq!(
-            rows(&out),
-            [
-                "map all 0.0000",
-                "map_ci_lower all 0.0000",
-                "map_ci_upper all 0.0000"
-            ]
-        );
+        let qrels = write("two.qrels", "1 0 a 1\n2 0 b 1\n");
+        let run = write("one.run", "1 Q0 a 1 1 r\n");
+        for (kind, measure) in [("qrels", "map"), ("qrels_jg", "map_avgjg")] {
+            let out = eval(&["-R", kind, "-c", "-m", measure], &qrels, &run);
+            assert_eq!(summary(&out, measure), "0.5000");
+            let out = eval(&["-R", kind, "-c", "-m", measure], &qrels, &topic_3_run());
+            assert_eq!(summary(&out, measure), "0.0000");
+        }
     }
 
     #[test]

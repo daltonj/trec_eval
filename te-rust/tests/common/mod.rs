@@ -1,16 +1,4 @@
-//! Running te-rust from the integration tests, and the inputs they share.
-//!
-//! `tests/fixtures` holds the inputs that tests in more than one place read:
-//!
-//! - `ab.qrels` judges a relevant and b nonrelevant in topic 1, and `ab.run` ranks a, then b.
-//! - `graded.qrels` grades a 2, b 0, c 1 and d 3 in topic t, and `graded.run` ranks d, x
-//!   (unjudged), a, b, c.
-//! - `six-relevant.qrels` judges d1 to d6 relevant in topic q1, and `six-relevant.run` ranks
-//!   them in that order.
-//! - `topics.qrels` judges d1 (1), d2 (0) and d3 (2) in topic 1, and d1 (0) and d2 (1) in
-//!   topic 2. `topics.run` ranks d1, d2, d3 for topic 1 and d2, d1 for topic 2.
-//!
-//! A test writes any other input with [`write`].
+//! Commands and file helpers for integration tests.
 #![allow(dead_code)]
 
 use std::path::{Path, PathBuf};
@@ -72,11 +60,6 @@ pub fn rows(output: &Output) -> Vec<String> {
         stderr(output)
     );
     normalized_rows(&String::from_utf8_lossy(&output.stdout))
-}
-
-/// The stored rows from trec_eval's `test` directory.
-pub fn reference_rows(name: &str) -> Vec<String> {
-    normalized_rows(&std::fs::read_to_string(test_data(name)).unwrap())
 }
 
 fn normalized_rows(text: &str) -> Vec<String> {

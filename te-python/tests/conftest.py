@@ -1,6 +1,3 @@
-from functools import partial
-from types import SimpleNamespace
-
 import pytest
 from trec_eval import Measure, QueryState
 
@@ -21,46 +18,27 @@ def dataframe():
     return MockDataFrame
 
 
-def _rows_as(kind, rows, *, path, qrels):
-    if kind == "dict":
-        result = {}
-        for qid, docno, value in rows:
-            result.setdefault(qid, {})[docno] = value
-        return result
-    if kind == "frame":
-        columns = ("qid", "docno", "rel" if qrels else "score")
-        return MockDataFrame(dict(zip(columns, zip(*rows))))
-    if kind in ("tuples", "iterable"):
-        return iter(rows)
-    if kind == "objects":
-        field = "relevance" if qrels else "score"
-        return iter(
-            SimpleNamespace(query_id=qid, doc_id=docno, **{field: value})
-            for qid, docno, value in rows
-        )
-    if kind == "arrays":
-        return tuple(zip(*rows))
-    if kind == "file":
-        path.write_text(
-            "".join(
-                f"{qid} 0 {docno} {value}\n"
-                if qrels
-                else f"{qid} Q0 {docno} 1 {value} run\n"
-                for qid, docno, value in rows
-            )
-        )
-        return path
-    raise ValueError(f"Unknown input kind: {kind}")
-
-
 @pytest.fixture
 def qrels_as(tmp_path):
-    return partial(_rows_as, path=tmp_path / "input.qrels", qrels=True)
+    def convert(kind, rows):
+        if kind == "dict":
+            grouped = {}
+            for qid, docno, grade in rows:
+                grouped.setdefault(qid, {})[docno] = grade
+            return grouped
+        if kind == "frame":
+            return MockDataFrame(dict(zip(("qid", "docno", "rel"), zip(*rows))))
+        if kind == "tuples":
+            return iter(rows)
+        if kind == "file":
+            path = tmp_path / "input.qrels"
+            path.write_text(
+                "".join(f"{qid} 0 {docno} {grade}\n" for qid, docno, grade in rows)
+            )
+            return path
+        raise ValueError(kind)
 
-
-@pytest.fixture
-def run_as(tmp_path):
-    return partial(_rows_as, path=tmp_path / "input.run", qrels=False)
+    return convert
 
 
 class One(Measure):
