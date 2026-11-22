@@ -1,5 +1,5 @@
 # The help text gives the default of -N as 0, and the long form of -M
-# with two dashes. Both statements are checked against the behaviour.
+# with two dashes. Both statements are checked against the behavior.
 . test/regress/lib.sh
 D=test/regress/help-text-defaults
 Q=test/regress/qrels
