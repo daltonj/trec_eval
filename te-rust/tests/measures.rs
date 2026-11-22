@@ -77,7 +77,7 @@ mod parameters {
     }
 }
 
-/// rbp normalises the gains to [0, 1] by their range, which includes the gain 0 of an
+/// rbp normalizes the gains to [0, 1] by their range, which includes the gain 0 of an
 /// unjudged document.
 mod rbp {
     use super::common::{eval, fixture, summary, write};
@@ -102,7 +102,7 @@ mod rbp {
     }
 
     #[test]
-    fn the_normalisation_range_includes_zero() {
+    fn the_normalization_range_includes_zero() {
         // Equal positive gains normalize to 1, giving .1 * (1 + .9).
         // Negative gains [-4, -2] normalize against zero to [0, .5], giving .1 * .5.
         for (gains, expected) in [("0=2,1=2", "0.1900"), ("0=-4,1=-2", "0.0500")] {
