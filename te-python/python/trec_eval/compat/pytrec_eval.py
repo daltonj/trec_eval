@@ -113,8 +113,7 @@ class RelevanceEvaluator:
             for value in match[2].split(","):
                 values[name].setdefault(Decimal(value), value)
         for name, index in positions.items():
-            listed = values[name]
-            native_measures[index] = f"{name}.{','.join(listed[v] for v in sorted(listed))}"
+            native_measures[index] = f"{name}.{','.join(values[name].values())}"
 
         self._evaluator = Evaluator(
             qrels=qrel,
