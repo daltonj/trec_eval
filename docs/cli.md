@@ -187,6 +187,7 @@ bpref                 	all	0.2589 [0.2215, 0.2974]
 - The long options of `trec_eval`, such as `--Max_retrieved_per_topic=5` and `--complete_rel_info_wanted`, other than `--help` and `--version`. `te-rust` refuses them.
 - The preference measures (`prefs_simp` and the other `prefs_*` measures, and the `prefs` and `all_prefs` groups), and the `prefs` and `qrels_prefs` formats for `-R`. `te-rust` reports an unknown measure or an unsupported format.
 - A negative relevance level. `te-rust` refuses it with exit status 1, whether written as `-l -1`, `-l-1` or `-l=-1`. `trec_eval` 10.0 accepts negative levels and counts documents outside the qrels as relevant while `num_rel` does not, so `map` can exceed 1.
+- Measure parameters other than integer cutoffs in a form that only `trec_eval` reads: with characters after the number, as in `set_F.0.5x` or `relstring.5x`, or in hexadecimal, as in `dcg.1=0x1p0` or `rbp.p=0x1p-1`. `trec_eval` reads the leading number, with a warning when characters follow it. `te-rust` refuses these parameters with exit status 2, and also a `relstring` length that is not an integer, such as `relstring.5.0`.
 
 ### `te-rust` extensions
 

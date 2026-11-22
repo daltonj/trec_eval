@@ -578,6 +578,20 @@ mod tests {
     }
 
     #[test]
+    fn a_float_parameter_that_does_not_parse_is_refused() {
+        for request in ["set_F.x", "rbp.p=x", "rbp_resid.p=x"] {
+            assert_eq!(
+                refusal(request),
+                format!("measure '{request}': invalid float parameter 'x'")
+            );
+        }
+        assert_eq!(
+            refusal("iprec_at_recall.x"),
+            "measure 'iprec_at_recall.x': invalid float value 'x'"
+        );
+    }
+
+    #[test]
     fn float_parameters_must_be_in_the_domain_of_their_measure() {
         for (request, message) in [
             ("set_F.-0.5", "set_F weight -0.5 is negative"),
