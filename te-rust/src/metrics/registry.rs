@@ -599,7 +599,7 @@ mod tests {
     }
 
     #[test]
-    fn rbp_takes_p_once_and_integer_gain_levels() {
+    fn rbp_takes_p_once() {
         for root in ["rbp", "rbp_resid"] {
             let request = format!("{root}.p=0.2,p=0.8");
             assert_eq!(

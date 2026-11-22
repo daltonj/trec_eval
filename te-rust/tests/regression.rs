@@ -159,6 +159,66 @@ fn compare_outputs(rust_args: &[&str], c_args: &[&str], qrels_name: &str, result
 }
 
 #[test]
+fn runids_and_relstrings_are_compared_as_strings() {
+    for (c, rust) in [
+        ("runid all 01", "runid all 1"),
+        (
+            "runid all 9223372036854775808",
+            "runid all 9223372036854775809",
+        ),
+        ("runid all 1.0", "runid all 1.00"),
+        ("relstring q 01", "relstring q 1"),
+        ("relstring_3 q 01", "relstring_3 q 1"),
+    ] {
+        let (c_rows, rust_rows) = (parse_output(c), parse_output(rust));
+        assert!(output_differences(&c_rows, &c_rows).is_empty());
+        assert!(
+            !output_differences(&c_rows, &rust_rows).is_empty(),
+            "{c:?} and {rust:?} compared equal"
+        );
+    }
+}
+
+#[test]
+fn harness_reports_every_kind_of_difference() {
+    let c = parse_output("num_q\tall\t2\nmap\tall\t0.5000\nP_5\tall\t0.2000\n");
+    assert!(output_differences(&c, &c).is_empty());
+    let within_tolerance = parse_output("num_q\tall\t2\nmap\tall\t0.50004\nP_5\tall\t0.2000\n");
+    assert!(output_differences(&c, &within_tolerance).is_empty());
+
+    let cases = [
+        ("num_q\tall\t2\nmap\tall\t0.5000\n", "te-rust lacks P_5 all"),
+        (
+            "num_q\tall\t2\nmap\tall\t0.5000\nmap\tall\t0.5000\nP_5\tall\t0.2000\n",
+            "te-rust prints map all 2 times",
+        ),
+        (
+            "num_q\tall\t2\nmap\tall\t0.5000\nP_5\tall\t0.2000\nP_10\tall\t0.1000\n",
+            "te-rust adds P_10 all",
+        ),
+        (
+            "map\tall\t0.5000\nnum_q\tall\t2\nP_5\tall\t0.2000\n",
+            "row order differs at shared row 1",
+        ),
+        (
+            "num_q\tall\t2\nmap\tall\t0.5002\nP_5\tall\t0.2000\n",
+            "map all: C Float(0.5), te-rust Float(0.5002)",
+        ),
+        (
+            "num_q\tall\t2.0000\nmap\tall\t0.5000\nP_5\tall\t0.2000\n",
+            "num_q all: C Int(2), te-rust Float(2.0)",
+        ),
+    ];
+    for (rust, expected) in cases {
+        let differences = output_differences(&c, &parse_output(rust));
+        assert!(
+            differences.iter().any(|d| d.starts_with(expected)),
+            "{expected:?} not in {differences:?}"
+        );
+    }
+}
+
+#[test]
 fn test_regression_default() {
     compare_outputs(&[], &[], "qrels.test", "results.test");
 }

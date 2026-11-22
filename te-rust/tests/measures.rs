@@ -102,6 +102,19 @@ mod rbp {
     }
 
     #[test]
+    fn rbp_resid_accepts_a_gain_map_and_ignores_it() {
+        // The residual is the weight of unjudged x, .1, and of the ranks after the last, .81.
+        let run = write("xa.run", "1 Q0 x 1 2 r\n1 Q0 a 2 1 r\n");
+        for (request, name) in [
+            ("rbp_resid", "rbp_resid"),
+            ("rbp_resid.1=0.5", "rbp_resid_1=0.5"),
+        ] {
+            let out = eval(&["-m", request], &fixture("ab.qrels"), &run);
+            assert_eq!(summary(&out, name), "0.9100");
+        }
+    }
+
+    #[test]
     fn the_normalization_range_includes_zero() {
         // Equal positive gains normalize to 1, giving .1 * (1 + .9).
         // Negative gains [-4, -2] normalize against zero to [0, .5], giving .1 * .5.
@@ -206,7 +219,6 @@ mod ndcg {
             ["dcg all 0.0000", "ideal_dcg all 2.6309"]
         );
     }
-
 }
 
 /// gm_map and gm_bpref, which floor a topic's value at 1e-5 before taking its log.

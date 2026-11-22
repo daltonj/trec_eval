@@ -1,7 +1,7 @@
 //! The library API on data that a caller builds in memory, which no file reader has checked.
 
 use te_rust::eval::{
-    align_query, align_query_jg, evaluate_run, evaluate_run_jg, EvaluationError,
+    align_query, align_query_jg, evaluate_run, evaluate_run_jg, DuplicateSource, EvaluationError,
 };
 use te_rust::io::{
     QrelsData, QrelsJGData, QrelsJGGroup, QrelsJGQuery, QrelsQuery, QrelsRecord, RunData, RunQuery,
@@ -84,6 +84,31 @@ fn alignment_refuses_grades_outside_the_documented_range() {
         align_query_jg(None, &qrels, "r", 1, usize::MAX, false),
         Err(EvaluationError::RelevanceOutOfBounds { .. })
     ));
+}
+
+#[test]
+fn judgment_group_alignment_refuses_a_document_judged_twice_in_one_group() {
+    let group = |jg: &str, records: &[(&str, i64)]| QrelsJGGroup {
+        jg: jg.into(),
+        records: judgments("1", records).records,
+    };
+    let twice = QrelsJGQuery {
+        qid: "1".into(),
+        groups: vec![group("g", &[("a", 0), ("a", 1)])],
+    };
+    assert_eq!(
+        align_query_jg(None, &twice, "r", 1, usize::MAX, false).unwrap_err(),
+        EvaluationError::DuplicateDocument {
+            source: DuplicateSource::Qrels,
+            qid: "1".into(),
+            docno: "a".into(),
+        }
+    );
+    let once_per_group = QrelsJGQuery {
+        qid: "1".into(),
+        groups: vec![group("g", &[("a", 0)]), group("h", &[("a", 1)])],
+    };
+    assert!(align_query_jg(None, &once_per_group, "r", 1, usize::MAX, false).is_ok());
 }
 
 #[test]
