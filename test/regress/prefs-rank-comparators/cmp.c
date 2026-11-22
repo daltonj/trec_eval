@@ -33,12 +33,8 @@ int main(void)
     check(1, 2, -1);
     check(2, 1, 1);
     check(1, 1, 0);
-#if LONG_MAX > INT_MAX
-    check(-1, 2147483648L, -1);
-    check(2147483648L, -1, 1);
-    check(4294967297L, 1, 1);
-    check(1, 4294967297L, -1);
-    check(4294967297L, 4294967297L, 0);
-#endif
+    /* An unjudged document has rank -1 */
+    check(-1, LONG_MAX, -1);
+    check(LONG_MAX, -1, 1);
     return (failed);
 }

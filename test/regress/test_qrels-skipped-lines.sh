@@ -5,7 +5,13 @@ R=test/regress/results
 for format in qrels qrels_jg qrels_prefs prefs; do
     kind=qrels
     [ "$format" = prefs ] && kind=prefs
-    { printf '  # x y z 1\n'; head -n 1 test/regress/$kind; printf '\n \t \n'; tail -n +2 test/regress/$kind; echo '# end'; } > "$T/input"
+    {
+        printf '  # x y z 1\n'
+        head -n 1 test/regress/$kind
+        printf '\n \t \n'
+        tail -n +2 test/regress/$kind
+        echo '# end'
+    } > "$T/input"
     save_output "$T/plain" -c -q -R $format test/regress/$kind $R
     for line in 3 4; do
         printf "Warning, blank line skipped (line %s of %s file '%s').\n" \

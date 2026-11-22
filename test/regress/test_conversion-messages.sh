@@ -16,12 +16,10 @@ for format in qrels qrels_jg; do
     expect_message 0 "partially read as \`1' (document 'd1' of topic '1' in line 1 of qrels file 'test/regress/conversion-messages/qrels.partial')." \
         -R $format test/regress/conversion-messages/qrels.partial $R
 done
-while IFS='|' read -r measure value prefix context; do
-    expect_message 0 "Warning, value \`$value' partially read as \`$prefix' ($context)." \
-        -m "$measure" $Q $R
-    [ "$value" != .25x ] || te_same output test/regress/conversion-messages/out.partial
-done <<'EOF'
-iprec_at_recall..25x|.25x|.25|cutoff of measure 'iprec_at_recall'
-set_F.0.5x|0.5x|0.5|parameter of measure 'set_F'
-ndcg.1=2x|2x|2|parameter '1' of measure 'ndcg'
-EOF
+expect_message 0 "Warning, value \`.25x' partially read as \`.25' (cutoff of measure 'iprec_at_recall')." \
+    -m iprec_at_recall..25x $Q $R
+te_same output test/regress/conversion-messages/out.partial
+expect_message 0 "Warning, value \`0.5x' partially read as \`0.5' (parameter of measure 'set_F')." \
+    -m set_F.0.5x $Q $R
+expect_message 0 "Warning, value \`2x' partially read as \`2' (parameter '1' of measure 'ndcg')." \
+    -m ndcg.1=2x $Q $R

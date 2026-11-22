@@ -1,33 +1,43 @@
-# BOM, CRLF and a final CR preserve values in every reader. Appending LF
-# makes a final CR valid; a CR within a line must still be refused.
+# A UTF-8 byte-order mark, CRLF line ends and a CR ending the last line do
+# not change what any reader reads. In the qrels copies the first line is a
+# comment. A CR within a line is still refused.
 . test/regress/lib.sh
 Q=test/regress/qrels
+P=test/regress/prefs
 R=test/regress/results
-for source in qrels prefs results zscores; do
-    f=test/regress/$source
-    { printf '\357\273\277'; [ "$source" != qrels ] || echo '# comment'; cat $f; } > "$T/$source.bom"
-    awk '{ printf "%s\r\n", $0 }' $f > "$T/$source.crlf"
-    printf '%s\r' "$(cat $f)" > "$T/$source.lastcr"
-done
-for format in qrels qrels_jg qrels_prefs prefs results zscores; do
-    case $format in
-    qrels|qrels_jg|qrels_prefs) source=qrels; set -- -R $format ;;
-    prefs) source=prefs; set -- -R prefs ;;
-    results) source=results; set -- ;;
-    zscores) source=zscores; set -- -m map -Z ;;
-    esac
-    case $format in
-    results) save_output "$T/plain" $Q $R ;;
-    zscores) save_output "$T/plain" "$@" test/regress/$source $Q $R ;;
-    *) save_output "$T/plain" "$@" test/regress/$source $R ;;
-    esac
+Z=test/regress/zscores
+
+# encode NAME FILE: write the copies $T/NAME.bom, .crlf and .lastcr of FILE.
+encode() {
+    { printf '\357\273\277'; cat "$2"; } > "$T/$1.bom"
+    awk '{ printf "%s\r\n", $0 }' "$2" > "$T/$1.crlf"
+    printf '%s\r' "$(cat "$2")" > "$T/$1.lastcr"
+}
+{ echo '# comment'; cat $Q; } > "$T/commented"
+encode qrels "$T/commented"
+encode prefs $P
+encode results $R
+encode zscores $Z
+
+for format in qrels qrels_jg qrels_prefs; do
+    save_output "$T/plain" -R $format $Q $R
     for ending in bom crlf lastcr; do
-        case $format in
-        results) expect_output "$T/plain" $Q "$T/$source.$ending" ;;
-        zscores) expect_output "$T/plain" "$@" "$T/$source.$ending" $Q $R ;;
-        *) expect_output "$T/plain" "$@" "$T/$source.$ending" $R ;;
-        esac
+        expect_output "$T/plain" -R $format "$T/qrels.$ending" $R
     done
 done
+save_output "$T/plain" -R prefs $P $R
+for ending in bom crlf lastcr; do
+    expect_output "$T/plain" -R prefs "$T/prefs.$ending" $R
+done
+save_output "$T/plain" $Q $R
+for ending in bom crlf lastcr; do
+    expect_output "$T/plain" $Q "$T/results.$ending"
+done
+save_output "$T/plain" -m map -Z $Z $Q $R
+for ending in bom crlf lastcr; do
+    expect_output "$T/plain" -m map -Z "$T/zscores.$ending" $Q $R
+done
+
 printf '1 0 d1 1\n1 0 d2 0\r1 0 d3 1\n' > "$T/cr"
-expect_message 2 "CR character without LF in line 2 of qrels file '$T/cr'" "$T/cr" $R
+expect_message 2 "CR character without LF in line 2 of qrels file '$T/cr'" \
+    "$T/cr" $R
