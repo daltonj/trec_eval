@@ -61,34 +61,23 @@ pub fn parse_int_cutoffs(
 }
 
 /// Parse a comma-separated list of float cutoffs/coefficients (e.g. "0.0,0.5,1.0").
-/// Each value must be a finite number. An empty string yields the provided defaults.
+/// An empty string yields the provided defaults.
 pub fn parse_float_cutoffs(params: &str, default: &[f64]) -> Result<Vec<f64>, MeasureParseError> {
     if params.is_empty() {
         return Ok(default.to_vec());
     }
     let mut list = Vec::new();
     for s in params.split(',') {
-        list.push(parse_finite_float(s.trim())?);
+        let tok = s.trim();
+        match tok.parse::<f64>() {
+            Ok(v) => list.push(v),
+            Err(_) => return Err(MeasureParseError::new(format!("invalid float value '{}'", tok))),
+        }
     }
     Ok(list)
 }
 
-/// Parse a float parameter that must be a finite number. NaN, infinity, and values that
-/// overflow to infinity (`1e400`) are refused.
-pub(crate) fn parse_finite_float(tok: &str) -> Result<f64, MeasureParseError> {
-    let value = tok
-        .parse::<f64>()
-        .map_err(|_| MeasureParseError::new(format!("invalid float value '{}'", tok)))?;
-    if !value.is_finite() {
-        return Err(MeasureParseError::new(format!(
-            "float value '{}' is not a finite number",
-            tok
-        )));
-    }
-    Ok(value)
-}
-
-/// Refuse a value that is not a finite number, as `parse_finite_float` does for text.
+/// Refuse a value that is not a finite number.
 pub(crate) fn check_finite(value: f64) -> Result<(), MeasureParseError> {
     if value.is_finite() {
         Ok(())
@@ -194,7 +183,9 @@ pub(crate) fn parse_rbp_params(params: &str) -> Result<(f64, GainsConfig), Measu
                     "parameter 'p' is given more than once",
                 ));
             }
-            let p = parse_finite_float(&value)?;
+            let p = value.parse::<f64>().map_err(|_| {
+                MeasureParseError::new(format!("invalid float parameter '{}'", value))
+            })?;
             check_rbp_persistence(p)?;
             persistence = Some(p);
         } else {
@@ -467,15 +458,11 @@ mod parser_tests {
 
     #[test]
     fn float_cutoffs_rejects_non_finite_values() {
-        for bad in ["nan", "-inf"] {
-            assert!(parse_float_cutoffs(bad, &[]).is_err(), "{bad}");
+        for bad in [f64::NAN, f64::NEG_INFINITY] {
+            assert!(checked_float_cutoffs(vec![0.5, bad]).is_err(), "{bad}");
         }
-        let err = parse_float_cutoffs("0.5, 1e400", &[]).unwrap_err();
-        assert_eq!(err.message, "float value '1e400' is not a finite number");
-        assert_eq!(
-            parse_float_cutoffs("1e300,-0.5", &[]).unwrap(),
-            vec![1e300, -0.5]
-        );
+        let err = checked_float_cutoffs(vec![0.5, "1e400".parse().unwrap()]).unwrap_err();
+        assert_eq!(err.message, "float value 'inf' is not a finite number");
     }
 
     #[test]

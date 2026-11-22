@@ -146,7 +146,7 @@ pub fn registry() -> &'static [MeasureSpec] {
                 let beta = if p.is_empty() {
                     1.0
                 } else {
-                    metrics::common::parse_finite_float(p)?
+                    p.parse::<f64>().map_err(|_| MeasureParseError::new(format!("invalid float parameter '{}'", p)))?
                 };
                 Ok(Box::new(metrics::set_f::SetFMeasure::new(beta, p)?))
             },
