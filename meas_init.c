@@ -29,7 +29,9 @@ static int get_long_cutoffs(PARAMS * params, char *param_string,
 static int get_double_cutoffs(PARAMS * params, char *param_string,
                               const char *measure);
 static int get_double_params(PARAMS * params, char *param_string,
-                             const char *measure);
+                             const char *what, const char *measure);
+static int get_double(const char *str, double *value, const char *what,
+                      const char *name, const char *measure);
 static int get_param_pairs(PARAMS * params, char *param_string,
                            const char *measure);
 static int comp_long(const void * ptr1, const void * ptr2);
@@ -198,7 +200,7 @@ int te_init_meas_s_double_p_double(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
             if (0 == strcmp(meas_arg_ptr->measure_name, tm->name)) {
                 if (UNDEF == get_double_params(tm->meas_params,
                                               meas_arg_ptr->parameters,
-                                              tm->name))
+                                              "parameter", tm->name))
                     return (UNDEF);
                 break;
             }
@@ -335,61 +337,18 @@ static int get_long_cutoffs(PARAMS * params, char *param_string,
 static int get_double_cutoffs(PARAMS * params, char *param_string,
                               const char *measure)
 {
-    long num_cutoffs;
-    char *ptr, *start_ptr;
     double *cutoffs;
     long i;
-    int error = 0;
 
-    /* Count number of parameters in param_string (comma separated) */
-    num_cutoffs = 1;
-    for (ptr = param_string; *ptr; ptr++) {
-        if (*ptr == ',')
-            num_cutoffs++;
-    }
-
-    /* Reserve space for cutoffs */
-    if (NULL == (params->printable_params =
-                 Malloc(strlen(param_string) + 1, char)) ||
-        NULL == (cutoffs = Malloc(num_cutoffs, double)))
-         return (UNDEF);
-    (void) strncpy(params->printable_params,
-                   param_string, strlen(param_string) + 1);
-
-    params->num_params = num_cutoffs;
-    params->param_values = cutoffs;
-    start_ptr = param_string;
-    num_cutoffs = 0;
-    for (ptr = param_string; *ptr; ptr++) {
-        if (*ptr == ',') {
-            *ptr = '\0';
-            cutoffs[num_cutoffs++] =
-                str_to_double_ctx(start_ptr, &error,
-                                  "cutoff of measure '%s'", measure);
-            if (error)
-                return (UNDEF);
-            start_ptr = ptr + 1;
-        }
-    }
-    cutoffs[num_cutoffs++] =
-        str_to_double_ctx(start_ptr, &error, "cutoff of measure '%s'",
-                          measure);
-    if (error)
+    if (UNDEF == get_double_params(params, param_string, "cutoff", measure))
         return (UNDEF);
-    for (i = 0; i < num_cutoffs; i++) {
-        if (!isfinite(cutoffs[i])) {
-            fprintf(stderr,
-                    "trec_eval: cutoff %g of measure '%s' is not finite\n",
-                    cutoffs[i], measure);
-            return (UNDEF);
-        }
-    }
+    cutoffs = (double *) params->param_values;
 
     /* Sort cutoffs in increasing order */
-    qsort((char *) cutoffs, num_cutoffs, sizeof(double), comp_double);
+    qsort((char *) cutoffs, params->num_params, sizeof(double), comp_double);
 
     /* Sanity checking: non-duplicates */
-    for (i = 1; i < num_cutoffs; i++) {
+    for (i = 1; i < params->num_params; i++) {
         if (cutoffs[i - 1] == cutoffs[i]) {
             fprintf(stderr, "trec_eval: duplicate cutoffs detected\n");
             return (UNDEF);
@@ -399,14 +358,13 @@ static int get_double_cutoffs(PARAMS * params, char *param_string,
     return (1);
 }
 
+/* Comma separated doubles; what names them in messages, as "parameter" */
 static int get_double_params(PARAMS * params, char *param_string,
-                             const char *measure)
+                             const char *what, const char *measure)
 {
     long num_params;
     char *ptr, *start_ptr;
     double *values;
-    long i;
-    int error = 0;
 
     /* Count number of parameters in param_string (comma separated) */
     num_params = 1;
@@ -429,27 +387,15 @@ static int get_double_params(PARAMS * params, char *param_string,
     for (ptr = param_string; *ptr; ptr++) {
         if (*ptr == ',') {
             *ptr = '\0';
-            values[num_params++] =
-                str_to_double_ctx(start_ptr, &error,
-                                  "parameter of measure '%s'", measure);
-            if (error)
+            if (UNDEF == get_double(start_ptr, &values[num_params++], what,
+                                    NULL, measure))
                 return (UNDEF);
             start_ptr = ptr + 1;
         }
     }
-    values[num_params++] =
-        str_to_double_ctx(start_ptr, &error,
-                          "parameter of measure '%s'", measure);
-    if (error)
+    if (UNDEF == get_double(start_ptr, &values[num_params++], what, NULL,
+                            measure))
         return (UNDEF);
-    for (i = 0; i < num_params; i++) {
-        if (!isfinite(values[i])) {
-            fprintf(stderr,
-                    "trec_eval: parameter %g of measure '%s' is not finite\n",
-                    values[i], measure);
-            return (UNDEF);
-        }
-    }
     params->param_values = values;
     params->num_params = num_params;
     return (1);
@@ -463,8 +409,6 @@ static int get_param_pairs(PARAMS * params, char *param_string,
     char last_seen;
     char *ptr, *start_ptr;
     DOUBLE_PARAM_PAIR *values;
-    long i;
-    int error = 0;
 
     /* Count number of parameters in param_string (comma separated), all
        of form name=value.  Return error if not of right form */
@@ -508,36 +452,48 @@ static int get_param_pairs(PARAMS * params, char *param_string,
             start_ptr = ptr + 1;
         } else if (*ptr == ',') {
             *ptr = '\0';
-            values[num_params].value =
-                str_to_double_ctx(start_ptr, &error,
-                                  "parameter '%s' of measure '%s'",
-                                  values[num_params].name, measure);
-            num_params++;
-            if (error)
+            if (UNDEF == get_double(start_ptr, &values[num_params].value,
+                                    "parameter", values[num_params].name,
+                                    measure))
                 return (UNDEF);
+            num_params++;
             start_ptr = ptr + 1;
         }
     }
-    values[num_params].value =
-        str_to_double_ctx(start_ptr, &error,
-                          "parameter '%s' of measure '%s'",
-                          values[num_params].name, measure);
-    num_params++;
-    if (error)
+    if (UNDEF == get_double(start_ptr, &values[num_params].value,
+                            "parameter", values[num_params].name, measure))
         return (UNDEF);
-    for (i = 0; i < num_params; i++) {
-        if (!isfinite(values[i].value)) {
-            fprintf(stderr,
-                    "trec_eval: parameter %s=%g of measure '%s' is not finite\n",
-                    values[i].name, values[i].value, measure);
-            return (UNDEF);
-        }
-    }
+    num_params++;
 
     params->param_values = values;
     params->num_params = num_params;
 
     return (1);
+}
+
+/* Convert str, a parameter of measure, to a finite double. what and, for
+   a name=value pair, name say which parameter in messages. */
+static int get_double(const char *str, double *value, const char *what,
+                      const char *name, const char *measure)
+{
+    int error;
+
+    if (name)
+        *value = str_to_double_ctx(str, &error, "%s '%s' of measure '%s'",
+                                   what, name, measure);
+    else
+        *value = str_to_double_ctx(str, &error, "%s of measure '%s'",
+                                   what, measure);
+    if (!error && !isfinite(*value)) {
+        if (name)
+            fprintf(stderr, "trec_eval: %s %s=%g of measure '%s' "
+                    "is not finite\n", what, name, *value, measure);
+        else
+            fprintf(stderr, "trec_eval: %s %g of measure '%s' "
+                    "is not finite\n", what, *value, measure);
+        error = 1;
+    }
+    return (error ? UNDEF : 1);
 }
 
 static int comp_long(const void *ptr1, const void *ptr2)
