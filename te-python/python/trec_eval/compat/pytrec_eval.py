@@ -15,7 +15,7 @@ from typing import Any, Dict, Iterable, List, Set, Union
 from trec_eval._trec_eval import Evaluator, NoSharedTopicError, __version__
 
 
-# Known measures supported by pytrec_eval
+# Measures the wrapper evaluates by name: pytrec_eval's, and those only te-rust has.
 supported_measures: Set[str] = {
     "official", "all_trec", "set",
     "runid", "num_q", "num_ret", "num_rel", "num_rel_ret", "num_nonrel_judged_ret",
@@ -116,7 +116,8 @@ class RelevanceEvaluator:
         for name, index in positions.items():
             native_measures[index] = f"{name}.{','.join(values[name].values())}"
         if isinstance(qrel, dict):
-            # pytrec_eval drops a topic that has no judgments.
+            # pytrec_eval drops a topic whose judgments are empty. len() raises
+            # TypeError for None, as in pytrec_eval.
             qrel = {
                 qid: judgments for qid, judgments in qrel.items() if len(judgments) > 0
             }

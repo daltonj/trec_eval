@@ -153,6 +153,19 @@ def test_pytrec_eval_supported_measures():
     assert "official" in pytrec_eval.supported_measures
 
 
+def test_supported_measures_include_every_pytrec_eval_measure():
+    # pytrec_eval.supported_measures in pytrec-eval-terrier 0.5.11
+    names = {
+        "11pt_avg", "G", "P", "Rndcg", "Rprec", "Rprec_mult", "binG", "bpref",
+        "gm_bpref", "gm_map", "infAP", "iprec_at_recall", "map", "map_cut", "ndcg",
+        "ndcg_cut", "ndcg_rel", "num_nonrel_judged_ret", "num_q", "num_rel",
+        "num_rel_ret", "num_ret", "recall", "recip_rank", "relative_P", "relstring",
+        "runid", "set_F", "set_P", "set_map", "set_recall", "set_relative_P",
+        "success", "utility",
+    }
+    assert names <= pytrec_eval.supported_measures
+
+
 @pytest.mark.parametrize(
     "measure", sorted(pytrec_eval.supported_measures - {"official", "all_trec", "set"})
 )
