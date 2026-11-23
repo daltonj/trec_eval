@@ -47,12 +47,12 @@ te-rust [OPTIONS] <QRELS_FILE> <RUN_FILE>
 | :--- | :--- | :--- | :--- |
 | `-q` | | Print evaluations for each individual query/topic in addition to the summary averages. | Disabled |
 | `-n` | | Suppress printing of the summary averages/totals at the end. | Disabled |
-| `-l` | `<int>` | Minimum relevance level at which a document is considered relevant. Must be 0 or more. Documents with judgments $< l$ are considered non-relevant. Both tools read a value such as `1.5` as its leading integer, 1. `te-rust` warns; `trec_eval` 10.0 reads it silently. | `1` |
+| `-l` | `<int>` | Minimum relevance level at which a document is considered relevant. Must be 0 or more. Documents with judgments $< l$ are considered non-relevant. Read as its [leading integer](#integer-values). | `1` |
 | `-c` | | **Complete set average**: Average over the complete set of queries present in the qrels file rather than the intersection of queries evaluated in the run. It evaluates each qrels topic missing from the run as an empty ranking. | Disabled |
 | `-J` | | **Judged docs only**: Remove all unjudged documents from the retrieved ranking before evaluating. | Disabled |
-| `-M` | `<int>` | Maximum number of retrieved documents per topic to evaluate. Read as `-l` is. | No limit |
-| `-N` | `<int>` | Number of documents in the collection. Only `utility` reads it, when its fourth coefficient is not zero. Read as `-l` is. | `0` |
-| `-m` | `<measure>` | Calculate only the indicated measure or measure group (e.g. `-m map`, `-m P.5,10`, `-m official`). Repeatable. When two requests give parameters for one measure, the first list is used, as in `trec_eval`, and `te-rust` warns that the other is ignored. An integer cutoff is read as `-l` is, so `-m P.5x` gives `P_5` with a warning. | `official` for `qrels`; `qrels_jg` for `qrels_jg` |
+| `-M` | `<int>` | Maximum number of retrieved documents per topic to evaluate. Read as its [leading integer](#integer-values). | No limit |
+| `-N` | `<int>` | Number of documents in the collection. Only `utility` reads it, when its fourth coefficient is not zero. Read as its [leading integer](#integer-values). | `0` |
+| `-m` | `<measure>` | Calculate only the indicated measure or measure group (e.g. `-m map`, `-m P.5,10`, `-m official`). Repeatable. When two requests give parameters for one measure, the first list is used, as in `trec_eval`, and `te-rust` warns that the other is ignored. An integer cutoff is read as its [leading integer](#integer-values), so `-m P.5x` gives `P_5` with a warning. | `official` for `qrels`; `qrels_jg` for `qrels_jg` |
 | `-R` | `--rel-format <format>` | Format of the relevance judgments file: `qrels` or `qrels_jg`. | `qrels` |
 | | `--global-gains <gains>` | Custom global relevance-to-gain mapping (e.g. `--global-gains 1=3.5,2=9.0`). | Default gains |
 
@@ -91,7 +91,7 @@ qid  iter  docno  rel
 - `iter`: Iteration/judgment tag (traditionally `0` or accessor ID; ignored during scoring).
 - `docno`: Unique document identifier (`str`).
 - `rel`: Integer relevance grade from -127 to 127 ($\ge 0$ for judged grades; negative integers reserved for unjudged pool sentinels). A grade outside that range is an error. `trec_eval` 10.x accepts such grades.
-  Both tools read a grade such as `1.5` as its leading integer, 1. `te-rust` warns on stderr; `trec_eval` 10.0 reads it silently. `te-rust` refuses a grade with no leading integer, such as `.5` or `abc`, with exit status `2`; `trec_eval` 10.0 reads it as 0.
+  A grade is read as its [leading integer](#integer-values). `te-rust` refuses a grade with no leading integer, such as `.5` or `abc`, with exit status `2`; `trec_eval` 10.0 reads it as 0.
 
 Example `qrels.txt`:
 ```text
@@ -212,6 +212,10 @@ bpref                 	all	0.2589 [0.2215, 0.2974]
 | `set_F. 0.5` | Exit `2`; `set_F` does not trim its parameter | Accepted |
 
 The `ndcg` and `rbp` values above use judgments `a=1,b=2` and run order `a,b`. Both tools accept ASCII whitespace around a gain value, as in `ndcg.1= 3 `, and give `1.0000` on that input.
+
+### Integer values
+
+Both tools read an integer value with characters after its leading integer, such as `1.5`, `0.9` or `5x`, as that integer: 1, 0 or 5. This applies to the values of `-l`, `-M` and `-N`, to integer cutoffs in `-m`, and to grades in `qrels` and `qrels_jg` files. `te-rust` warns on stderr; `trec_eval` 10.0 reads the value silently.
 
 ### Judgment groups
 

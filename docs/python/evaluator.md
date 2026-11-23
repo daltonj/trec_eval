@@ -32,7 +32,7 @@ class Evaluator(
 - `qid`, `docno`, `rel` (`str`, optional): Explicit column names when `qrels` is a DataFrame.
 - `all_query_values` (`bool`, default `False`): When `True`, the per-query results also hold the measures that the CLI prints only in the summary: `gm_map` and `gm_bpref` as log(max(v, 0.00001)) of the topic's `map` or `bpref` value v, `num_q` as 1, and `runid`. The pytrec_eval wrapper sets it, as pytrec_eval returns these values.
 
-The Python API issues `UserWarning` for problems that do not stop evaluation, with the messages that the CLI prints on stderr. The constructor warns when a cutoff is read only in part, as `'P.5x'` is read as `P_5`, and when a later request gives other parameters for a measure, as in `['P_5', 'P_10']`: the first list is used and the other is ignored. Reading a qrels or run file warns about a grade or score read only in part, such as `1.5x`, a score outside the range of a double, and a blank line in a qrels file. These warnings are issued only when the whole file is read without error.
+The Python API issues `UserWarning` for problems that do not stop evaluation. Each warning carries the text of the CLI's stderr message without the CLI's `te-rust: Warning,` or `Warning in` prefix, such as `measure 'P.5x': value '5x' partially read as '5'` or `qrels file 'qrels.txt': Line 3: blank line skipped`. The constructor warns when a cutoff is read only in part, as `'P.5x'` is read as `P_5`, and when a later request gives other parameters for a measure, as in `['P_5', 'P_10']`: the first list is used and the other is ignored. Reading a qrels or run file warns about a grade or score read only in part, such as `1.5x`, a score outside the range of a double, and a blank line in a qrels file. These warnings are issued only when the whole file is read without error.
 
 ---
 
@@ -49,7 +49,7 @@ Evaluates a system run against the pre-indexed judgments. The Python GIL is rele
 - `run` (`str`, `PathLike`, `dict`, `DataFrame`, or `Iterable`): System run results.
 - `qid`, `docno`, `score` (`str`, optional): Column name overrides for DataFrame inputs.
 
-Raises `trec_eval._trec_eval.NoSharedTopicError`, a subclass of `ValueError`, when the run shares no topic with `qrels`, unless `complete_set_average` is `True`. `evaluate_arrays` does the same.
+Raises `trec_eval.NoSharedTopicError`, a subclass of `ValueError`, when the run shares no topic with `qrels`, unless `complete_set_average` is `True`. `evaluate_arrays` does the same.
 
 #### `evaluate_arrays`
 
@@ -63,7 +63,7 @@ Evaluates 1D arrays or contiguous buffer slices directly without creating interm
 
 ## `trec_eval.evaluate`
 
-`evaluate(qrels, run, ...)` constructs an `Evaluator` and evaluates the run. It raises `ValueError` for an unusable argument or input, such as a negative `relevance_level`, an invalid measure parameter, a NaN score or a document repeated within a topic, and `trec_eval._trec_eval.NoSharedTopicError` (a subclass of `ValueError`) when the run shares no topic with `qrels` unless `complete_set_average=True`. A negative level is rejected by the `Evaluator` constructor before `Evaluator.evaluate` can be called.
+`evaluate(qrels, run, ...)` constructs an `Evaluator` and evaluates the run. It raises `ValueError` for an unusable argument or input, such as a negative `relevance_level`, an invalid measure parameter, a NaN score or a document repeated within a topic. It raises `trec_eval.NoSharedTopicError` as [`Evaluator.evaluate`](#evaluate) does.
 
 ---
 
