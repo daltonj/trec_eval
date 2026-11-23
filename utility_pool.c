@@ -13,15 +13,15 @@
 
 void *te_malloc_array(size_t n, size_t size)
 {
-    if (n > (size_t) -1 / size)
+    if (size > 0 && n > (size_t) -1 / size)
         return (NULL);
     /* malloc(0) may return NULL, which callers take for a failure */
-    return (malloc(n > 0 ? n * size : 1));
+    return (malloc(n * size > 0 ? n * size : 1));
 }
 
 void *te_realloc_array(void *ptr, size_t n, size_t size)
 {
-    if (n > (size_t) -1 / size)
+    if (size > 0 && n > (size_t) -1 / size)
         return (NULL);
     return (realloc(ptr, n * size));
 }
