@@ -34,7 +34,7 @@ results = evaluator.evaluate(run)
 # }
 ```
 
-pytrec_eval itself gives other output in some cases. It ranks documents by their scores rounded to single precision, so scores that differ only beyond that precision tie and are ordered by document number; the wrapper reads scores as `trec_eval` 10.0 does. pytrec-eval-terrier follows `trec_eval` 9.0.8: it has no `rbp`, `rbp_resid`, `unj` or `ndcg_p`, and it computes `iprec_at_recall` and `11pt_avg` as 9.0.8 does. It names the rows of a parameterised `relstring`, `11pt_avg`, `set_F` or `utility` without the parameters, as `relstring` where the wrapper gives `relstring_4`, and it stops the Python process on a gain map such as `ndcg.1=2`.
+pytrec_eval itself gives other output in some cases. It ranks documents by their scores rounded to single precision, so scores that differ only beyond that precision tie and are ordered by document number; the wrapper reads scores as `trec_eval` 10.0 does. pytrec-eval-terrier follows `trec_eval` 9.0.8: it has no `rbp`, `rbp_resid`, `unj` or `ndcg_p`, and it computes `iprec_at_recall` and `11pt_avg` as 9.0.8 does. It names the rows of a parameterised `relstring`, `11pt_avg`, `set_F` or `utility` without the parameters, as `relstring` where the wrapper gives `relstring_4`, and it stops the Python process on a gain map such as `ndcg.1=2`. It reads only the leading digits of a parameter, so it reads `set_F.1e1` as 1 and `utility.1,-1,0,0` as one coefficient, where the wrapper reads 10 and four coefficients. The wrapper reads a request written with an underscore, such as `P_5`, only for the measures that print a row per value; it passes other requests to `te-rust` as written, so it refuses `set_F_0.5`, which pytrec-eval-terrier reads as `set_F.0.5`.
 
 ### Parsing Utilities
 

@@ -27,7 +27,7 @@ Cutoffs and parameters are specified following a period:
 - `-m set_F.0.25` ($F_\beta$-measure with $\beta = 0.5$; the parameter is $\beta^2$)
 
 ### 3. Parameter Aliases (`@params`)
-`@` can replace the period before any parameter list, as in `rbp@p=0.5` for `rbp.p=0.5`. Cutoff aliases include:
+`@` can replace the period before a parameter list, as in `rbp@p=0.5` for `rbp.p=0.5`. `ndcg@` and `map@` are the exception: they select the cutoff measures `ndcg_cut` and `map_cut`, so `ndcg@1=3` is `ndcg_cut.1` and not a gain map. Cutoff aliases include:
 
 - `ndcg@10` $\rightarrow$ `ndcg_cut.10`
 - `P@5,10` $\rightarrow$ `P.5,10`
@@ -36,7 +36,7 @@ Cutoffs and parameters are specified following a period:
 - `mrr` $\rightarrow$ `recip_rank`
 
 ### 4. Parameter Checks
-`te-rust` refuses a parameter that its measure cannot use, with a message that names the measure. `trec_eval` 10.0 accepts all the examples below, clamping the overflowing integer cutoff to 9223372036854775807:
+`te-rust` refuses each of the following parameters with a message that names the measure. A measure that takes no parameters ignores one in both tools, as `map.foo` prints `map`. `trec_eval` 10.0 accepts all the examples below, clamping the overflowing integer cutoff to 9223372036854775807:
 
 - a float parameter that is not a finite number, such as `set_F.nan`, `rbp.p=inf` or `iprec_at_recall.1e400`
 - an integer cutoff above 9223372036854775807, the largest `i64`, such as `P.9223372036854775808`

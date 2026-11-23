@@ -91,7 +91,7 @@ qid  iter  docno  rel
 - `iter`: Iteration/judgment tag (traditionally `0` or accessor ID; ignored during scoring).
 - `docno`: Unique document identifier (`str`).
 - `rel`: Integer relevance grade from -127 to 127 ($\ge 0$ for judged grades; negative integers reserved for unjudged pool sentinels). A grade outside that range is an error. `trec_eval` 10.x accepts such grades.
-  Both tools read a grade such as `1.5` as its leading integer, 1. `te-rust` warns on stderr; `trec_eval` 10.0 reads it silently. A grade with no leading integer, such as `.5`, is an error.
+  Both tools read a grade such as `1.5` as its leading integer, 1. `te-rust` warns on stderr; `trec_eval` 10.0 reads it silently. `te-rust` refuses a grade with no leading integer, such as `.5` or `abc`, with exit status `2`; `trec_eval` 10.0 reads it as 0.
 
 Example `qrels.txt`:
 ```text
@@ -101,9 +101,11 @@ Example `qrels.txt`:
 302 0 LA010189-0001 1
 ```
 
-Blank lines are skipped with a warning that names the line. `trec_eval` stops at a blank line in a qrels file with "Malformed line" and exits 2.
+Blank lines are skipped with a warning that names the line. `trec_eval` stops at a blank line in a qrels file with "Malformed line" and exits 2. `te-rust` prints its warnings about a file only when it reads the whole file without error.
 
-Lines that start with `#` are comments and are ignored. Comments in qrels files were a trec_eval 10.x feature to support documenting how a qrels file should be use to reproduce published scores. Leading ASCII whitespace before `#` is allowed. `trec_eval` 10.0 accepts a qrels comment only when `#` is in the first column; an indented comment such as `  # comment` gives "Malformed line" and exit status `2`.
+A topic whose judgments are all negative has no relevant document, and `te-rust` scores its ranking as such. When that topic sorts first, `trec_eval` 10.0 exits `4` with "Can't calculate measure" for every measure except `num_q`. When it sorts later, `trec_eval` 10.0 uses the grade counts of the topic before it, and with grades of -2 or lower it can crash.
+
+Lines that start with `#` are comments and are ignored. Comments in qrels files were a trec_eval 10.x feature to support documenting how a qrels file should be use to reproduce published scores. Leading ASCII whitespace before `#` is allowed. `trec_eval` 10.0 accepts a qrels comment only when `#` is in the first column; an indented comment such as `  # comment` gives "Malformed line" and exit status `2`. When the last line of a qrels file is a comment without a newline, `trec_eval` 10.0 reads past the end of the file and can crash or report "Malformed line"; `te-rust` ignores the comment.
 
 ### 2. System Run File
 
@@ -188,14 +190,15 @@ bpref                 	all	0.2589 [0.2215, 0.2974]
 - The preference measures (`prefs_simp` and the other `prefs_*` measures, and the `prefs` and `all_prefs` groups), and the `prefs` and `qrels_prefs` formats for `-R`. `te-rust` reports an unknown measure or an unsupported format.
 - A negative relevance level. `te-rust` refuses it with exit status 1, whether written as `-l -1`, `-l-1` or `-l=-1`. `trec_eval` 10.0 accepts negative levels and counts documents outside the qrels as relevant while `num_rel` does not, so `map` can exceed 1.
 - Measure parameters other than integer cutoffs in a form that only `trec_eval` 10.0 reads: with characters after the number, as in `set_F.0.5x` or `relstring.5x`, or in hexadecimal, as in `dcg.1=0x1p0` or `rbp.p=0x1p-1`. `trec_eval` 10.0 reads the leading number silently. `te-rust` refuses these parameters with exit status `2`. It also refuses negative, non-integer or out-of-range `relstring` lengths. With retrieved grades `1,0,1,0,2`, `trec_eval` 10.0 prints `''` for `relstring.-1`, `'10'` for `relstring.2.5`, and `'10102'` for `relstring.1e300` and `relstring.20000000000000000000`; `te-rust` exits `2` for each. `relstring.5.0` is also refused by `te-rust` and read as length 5 by `trec_eval` 10.0.
+- Float parameters that are empty or have no leading number. `trec_eval` 10.0 reads them as 0: `iprec_at_recall.x` prints the row `iprec_at_recall_0.00`, `iprec_at_recall.0.5,` adds the level 0, `utility.1,-1,,0` reads a third coefficient of 0, and `rbp.p=x` sets `p` to 0. `te-rust` refuses each of them with exit status `2`.
 
 ### Options, parameters and inputs
 
 - Repeated options: `te-rust` refuses `-q -q` and `-M2 -M1` with exit status `1`. `trec_eval` 10.0 accepts repeated flags and uses the last value of a repeated value option: `-M2 -M1 -m num_ret` evaluates one retrieved document per topic. `-m` is repeatable in both tools.
-- Numeric option values: `te-rust` requires the leading integer of `-M` and `-N` to lie between 0 and 9223372036854775807 and exits `1` for a negative or out-of-range value. `trec_eval` 10.0 accepts `-N-1`, `-M9223372036854775808` and `-N9223372036854775808`. It also accepts `-M-1`: `-m num_q` succeeds. With judgments `a=1,b=0` and run order `a,b`, `-M-1 -m map` terminates with SIGSEGV. `te-rust` refuses `-l x` with exit status `1`; `trec_eval` 10.0 reads it as level 0.
+- Numeric option values: `te-rust` requires the leading integer of `-M` and `-N` to lie between 0 and 9223372036854775807 and exits `1` for a negative or out-of-range value. `trec_eval` 10.0 accepts `-N-1`, `-M9223372036854775808` and `-N9223372036854775808`. It also accepts `-M-1`: `-m num_q` succeeds. With judgments `a=1,b=0` and run order `a,b`, `-M-1 -m map` terminates with SIGSEGV. `te-rust` refuses `-l x`, `-M x` and `-N x` with exit status `1`; `trec_eval` 10.0 reads each value as 0. `te-rust` also refuses a level above 9223372036854775807, which `trec_eval` 10.0 accepts.
 - Repeated parameters within one measure: `te-rust` refuses `rbp.p=0.5,p=0.8` with exit status `2`. `trec_eval` 10.0 uses the last `p`. With one relevant document followed by a nonrelevant document, its output is `rbp_p=0.5,p=0.8 all 0.2000`.
 
-`te-rust` trims leading and trailing Unicode whitespace around float cutoffs, gain-map keys and values, and the `relstring` length. `trec_eval` 10.0 accepts ASCII whitespace around float cutoffs and lengths. Its treatment of gain-map keys and non-breaking spaces differs. In this table, `NBSP` stands for U+00A0. Parameter lists containing whitespace must be quoted in the shell.
+`te-rust` trims leading and trailing Unicode whitespace around float cutoffs, gain-map keys and values, the `rbp` and `rbp_resid` key `p`, and the `relstring` length. `trec_eval` 10.0 accepts ASCII whitespace around float cutoffs and lengths. Its treatment of gain-map keys and non-breaking spaces differs. In this table, `NBSP` stands for U+00A0. Parameter lists containing whitespace must be quoted in the shell.
 
 | Parameter | `te-rust` | `trec_eval` 10.0 |
 | :--- | :--- | :--- |
@@ -205,9 +208,10 @@ bpref                 	all	0.2589 [0.2215, 0.2974]
 | `ndcg. 1=3`, `ndcg.1 =3` | `1.0000` | `0.8597` |
 | `ndcg.NBSP1=3`, `ndcg.1NBSP=3` | `1.0000` | `0.8597` |
 | `ndcg.1=NBSP3` | `1.0000` | `0.6309` |
+| `rbp. p=0.5`, `rbp.p =0.5` | `p` is 0.5: `0.5000` | ` p` is read as a gain level and `p` stays 0.9: `0.1400` |
 | `set_F. 0.5` | Exit `2`; `set_F` does not trim its parameter | Accepted |
 
-The `ndcg` values above use judgments `a=1,b=2` and run order `a,b`. Both tools accept ASCII whitespace around a gain value, as in `ndcg.1= 3 `, and give `1.0000` on that input.
+The `ndcg` and `rbp` values above use judgments `a=1,b=2` and run order `a,b`. Both tools accept ASCII whitespace around a gain value, as in `ndcg.1= 3 `, and give `1.0000` on that input.
 
 ### Judgment groups
 
