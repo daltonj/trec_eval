@@ -126,9 +126,7 @@ def test_pytrec_eval_passes_repeated_coefficient_lists_unchanged():
             {"1": {"a": 1}},
             ["utility.1,0,0,0", "utility.0,1,0,0"],
         )
-    assert evaluator.evaluate({"1": {"a": 1.0}}) == {
-        "1": {"utility_1,0,0,0": 1.0}
-    }
+    assert evaluator.evaluate({"1": {"a": 1.0}}) == {"1": {"utility_1,0,0,0": 1.0}}
 
 
 def test_pytrec_eval_parse_helpers():
@@ -171,6 +169,16 @@ def test_compat_scores_only_topics_shared_with_qrels():
     assert evaluator.evaluate({"q1": {"d": 1.0}, "q2": {"d": 1.0}}) == {
         "q1": {"map": 1.0}
     }
+
+
+def test_compat_drops_topics_without_judgments():
+    evaluator = pytrec_eval.RelevanceEvaluator(
+        {"empty": {}, "q1": {"d": 1}}, {"map", "num_q"}
+    )
+    run = {"empty": {"d": 1.0}, "q1": {"d": 1.0}}
+    assert evaluator.evaluate(run) == {"q1": {"map": 1.0, "num_q": 1.0}}
+    evaluator = pytrec_eval.RelevanceEvaluator({"empty": {}}, "map")
+    assert evaluator.evaluate({"empty": {"d": 1.0}}) == {}
 
 
 def test_compat_keeps_other_evaluation_errors(tmp_path):
