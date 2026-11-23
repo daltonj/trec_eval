@@ -153,11 +153,13 @@ def test_pytrec_eval_supported_measures():
     assert "official" in pytrec_eval.supported_measures
 
 
-@pytest.mark.parametrize("measure", ["dcg", "ideal_dcg"])
-def test_supported_dcg_measures_can_be_evaluated(measure):
-    assert measure in pytrec_eval.supported_measures
+@pytest.mark.parametrize(
+    "measure", sorted(pytrec_eval.supported_measures - {"official", "all_trec", "set"})
+)
+def test_every_supported_measure_can_be_evaluated(measure):
     evaluator = pytrec_eval.RelevanceEvaluator({"q": {"d": 1}}, {measure})
-    assert evaluator.evaluate({"q": {"d": 1.0}}) == {"q": {measure: 1.0}}
+    (scores,) = evaluator.evaluate({"q": {"d": 1.0}}).values()
+    assert scores and all(name.startswith(measure) for name in scores), scores
 
 
 def test_compat_scores_only_topics_shared_with_qrels():

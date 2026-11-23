@@ -18,12 +18,13 @@ from trec_eval._trec_eval import Evaluator, NoSharedTopicError, __version__
 # Known measures supported by pytrec_eval
 supported_measures: Set[str] = {
     "official", "all_trec", "set",
-    "runid", "num_ret", "num_rel", "num_rel_ret", "num_nonrel_judged_ret",
+    "runid", "num_q", "num_ret", "num_rel", "num_rel_ret", "num_nonrel_judged_ret",
     "map", "map_cut", "gm_map", "Rprec", "Rprec_mult", "recip_rank",
     "P", "relative_P", "bpref", "gm_bpref", "binG", "G",
     "ndcg", "dcg", "ideal_dcg", "ndcg_cut", "ndcg_rel", "ndcg_p", "Rndcg",
     "recall", "success", "11pt_avg", "iprec_at_recall", "utility", "relstring",
-    "set_relative_P", "set_map", "set_F", "infap", "unj", "rbp", "rbp_resid", "yaap",
+    "set_P", "set_recall", "set_relative_P", "set_map", "set_F", "infAP", "unj", "rbp",
+    "rbp_resid", "yaap",
 }
 
 # Measures that print one row per parameter value. pytrec_eval merges the
