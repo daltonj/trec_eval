@@ -26,7 +26,7 @@ Fixes for issues #57 to #60, #66, #67, #80, #162, #167, #173, #177 and #199 on u
 ### Command line
 
 - Exit statuses follow `trec_eval`: 1 for a usage error or an unknown measure, 2 for unusable input or parameters, 4 for an evaluation error. A failed write to standard output exits with status 8 instead of a panic; on a closed pipe, te-rust ends through SIGPIPE as `trec_eval` does (#67, #177).
-- Warnings go to standard error and name the file and the line.
+- Warnings go to standard error and name the file and the line. A repeated document is reported with the lines that give it.
 
 ### Rust library
 
@@ -41,5 +41,5 @@ These changes break source compatibility:
 
 ### Python
 
-- `Evaluator` and `evaluate` refuse a negative relevance level, check grades, repeated documents and NaN scores as the file readers do, and raise `NoSharedTopicError`, a subclass of `ValueError`, when the run shares no topic with the qrels and `complete_set_average` is false (#80, #167, #177). Warnings are issued as `UserWarning`.
+- `Evaluator` and `evaluate` refuse a negative relevance level, check grades, repeated documents and NaN scores as the file readers do, and raise `NoSharedTopicError`, a subclass of `ValueError`, when the run shares no topic with the qrels and `complete_set_average` is false (#80, #167, #177). Warnings are issued as `UserWarning`, at most ten for one input, then one that counts the rest.
 - The pytrec_eval wrapper keeps unjudged documents by default, returns every value as a float, returns per-topic `gm_map`, `gm_bpref`, `num_q` and `runid`, and leaves out a topic whose judgments are an empty mapping, as pytrec_eval does (#199). [docs/python/compat.md](docs/python/compat.md) describes the effect on results.
