@@ -3,9 +3,9 @@ import os
 import pytest
 from pathlib import Path
 import trec_eval
-from trec_eval import Evaluator, EvalResult, ScoredDoc, Qrel, evaluate
+from trec_eval import Evaluator, EvalResult, Measure, QueryState, ScoredDoc, Qrel, evaluate
 
-from helpers import One
+from helpers import MockDataFrame
 
 TEST_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "te-rust" / "tests" / "test-data"
 QRELS_FILE = str(TEST_DATA_DIR / "qrels.test")
@@ -41,6 +41,37 @@ def sample_run_dict():
             "d3": 0.5,
         },
     }
+
+
+@pytest.fixture
+def qrels_as(tmp_path):
+    def convert(kind, rows):
+        if kind == "dict":
+            grouped = {}
+            for qid, docno, grade in rows:
+                grouped.setdefault(qid, {})[docno] = grade
+            return grouped
+        if kind == "frame":
+            return MockDataFrame(dict(zip(("qid", "docno", "rel"), zip(*rows))))
+        if kind == "tuples":
+            return iter(rows)
+        if kind == "file":
+            path = tmp_path / "input.qrels"
+            path.write_text(
+                "".join(f"{qid} 0 {docno} {grade}\n" for qid, docno, grade in rows)
+            )
+            return path
+        raise ValueError(kind)
+
+    return convert
+
+
+class One(Measure):
+    def __init__(self):
+        super().__init__(name="one")
+
+    def calc_query(self, query: QueryState) -> float:
+        return 1.0
 
 
 def test_evaluator_dict_inputs(sample_qrels_dict, sample_run_dict):

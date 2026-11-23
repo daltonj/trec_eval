@@ -2,15 +2,7 @@ import pytest
 import trec_eval
 from trec_eval import Evaluator, evaluate
 
-
-class MockDataFrame:
-    """Mock DataFrame implementing column access and .columns attribute."""
-    def __init__(self, data: dict):
-        self.data = data
-        self.columns = list(data.keys())
-
-    def __getitem__(self, col):
-        return self.data[col]
+from helpers import MockDataFrame
 
 
 def test_evaluate_arrays():
