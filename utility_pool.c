@@ -70,7 +70,8 @@ void *te_chk_and_realloc(void *ptr, long *current_bound,
 }
 
 /* Remove a UTF-8 byte-order mark before line termination is appended.
-   At least one byte stays, since the judgments readers test buf[size - 1]. */
+   At least one byte stays, since the judgments and zscores readers test
+   buf[size - 1]. */
 size_t te_skip_bom(char *buf, size_t size)
 {
     if (size > 3 && 0 == memcmp(buf, "\357\273\277", 3)) {
