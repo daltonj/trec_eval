@@ -62,14 +62,12 @@ test_prefs-rank-comparators: test/regress/prefs-rank-comparators/cmp.c \
 	$(CC) $(CFLAGS) -o test_prefs-rank-comparators \
 		test/regress/prefs-rank-comparators/cmp.c utility_pool.c
 
-test_reader-limits: test/regress/reader-limits/readers.c get_qrels.c \
-		get_qrels_jg.c get_prefs.c get_qrels_prefs.c get_zscores.c \
-		get_trec_results.c convert_zscores.c utility_pool.c $(SRCH)
+test_reader-limits: test/regress/reader-limits/readers.c convert_zscores.c \
+		get_qrels.c get_trec_results.c utility_pool.c $(SRCH)
 	$(CC) $(CFLAGS) -Dftell=reader_ftell -Dmalloc=reader_malloc \
 		-Drealloc=reader_realloc -o test_reader-limits \
-		test/regress/reader-limits/readers.c get_qrels.c get_qrels_jg.c \
-		get_prefs.c get_qrels_prefs.c get_zscores.c get_trec_results.c \
-		utility_pool.c
+		test/regress/reader-limits/readers.c get_qrels.c \
+		get_trec_results.c utility_pool.c
 
 install: $(BIN)/trec_eval
 

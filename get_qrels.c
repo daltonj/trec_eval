@@ -157,9 +157,6 @@ static REL_INFO *rel_info_pool = NULL;
 
 int te_get_qrels(EPI *epi, char *text_qrels_file, ALL_REL_INFO *all_rel_info)
 {
-    FILE *fd;
-    long long file_size;
-    size_t size = 0;
     char *ptr;
     char *current_qid;
     char *rel_ptr;
@@ -175,35 +172,9 @@ int te_get_qrels(EPI *epi, char *text_qrels_file, ALL_REL_INFO *all_rel_info)
     TEXT_QRELS_INFO *text_info_ptr;
     TEXT_QRELS *text_qrels_ptr;
 
-    /* Read entire file into memory */
-    if (!(fd = fopen(text_qrels_file, "rb")) ||
-        fseek(fd, 0L, SEEK_END) != 0 || 0 >= (file_size = ftell(fd)) ||
-        (size = file_size) != file_size || size > (size_t) -1 - 2 ||
-        NULL == (trec_qrels_buf = malloc(size + 2)) ||
-        -1 == fseek(fd, 0L, SEEK_SET) ||
-        size != fread(trec_qrels_buf, 1, size, fd) ||
-        -1 == fclose(fd))
-    {
-        fprintf(stderr,
-                "trec_eval.get_qrels: Cannot read qrels file '%s'\n",
-                text_qrels_file);
-        return (UNDEF);
-    }
-
-    size = te_skip_bom(trec_qrels_buf, size);
-
-    /* Append ending newline if not present, Append NULL terminator */
-    if (trec_qrels_buf[size - 1] != '\n')
-    {
-        trec_qrels_buf[size] = '\n';
-        size++;
-    }
-    trec_qrels_buf[size] = '\0';
-
-    /* Count number of lines in file */
-    if (UNDEF == (num_lines = te_count_lines(trec_qrels_buf, size,
-                                             "get_qrels", "qrels",
-                                             text_qrels_file)))
+    /* Read entire file into memory, and count its lines */
+    if (UNDEF == (num_lines = te_read_lines(text_qrels_file, &trec_qrels_buf,
+                                            "get_qrels", "qrels")))
         return (UNDEF);
 
     /* Get all lines */
@@ -212,18 +183,8 @@ int te_get_qrels(EPI *epi, char *text_qrels_file, ALL_REL_INFO *all_rel_info)
     line_ptr = lines;
     ptr = trec_qrels_buf;
     while (*ptr) {
-		/* Skip comment lines, and blank lines with a warning */
-		while (*ptr != '\n' && isspace(*ptr))
-			ptr++;
-		if (*ptr == '\n' || *ptr == '#') {
-			if (*ptr == '\n')
-				fprintf(stderr, "Warning, blank line skipped "
-						"(line %ld of qrels file '%s').\n",
-						line_num + 1, text_qrels_file);
-			ptr = index(ptr, '\n') + 1;
-			line_num++;
+		if (te_skip_line(&ptr, &line_num, "qrels", text_qrels_file))
 			continue;
-		}
 		if (UNDEF == parse_qrels_line (&ptr, &line_ptr->qid,
 									   &line_ptr->docno, &rel_ptr)) {
 			fprintf (stderr, "trec_eval.get_qrels: Malformed line %ld\n",

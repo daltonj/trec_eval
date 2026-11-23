@@ -57,6 +57,8 @@ static int parse_zscore_line(char **start_ptr, char **qid_ptr, char **meas_ptr,
                              char **mean_ptr, char **stddev_ptr);
 
 static int comp_lines_qid_meas(const void * ptr1, const void * ptr2);
+static int get_field(const char *str, double *value, const char *field,
+                     double min, long line_num, const char *zscores_file);
 
 
 /* static pools of memory, allocated here and never changed.  */
@@ -68,11 +70,8 @@ int
 te_get_zscores(const EPI * epi, const char *zscores_file,
                ALL_ZSCORES * all_zscores)
 {
-    FILE* fd;
-    long long file_size;
-    size_t size = 0;
     char *ptr;
-    char *mean_ptr, *stddev_ptr, *end_ptr;
+    char *mean_ptr, *stddev_ptr;
     char *current_qid;
     long i;
     LINES *lines;
@@ -84,33 +83,9 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
     ZSCORE_QID *text_zscores_ptr;
     ZSCORES *zscores_ptr;
 
-    /* Read entire file into memory */
-    if (!(fd = fopen (zscores_file, "rb")) ||
-        fseek (fd, 0L, SEEK_END) != 0 || 0 >= (file_size = ftell(fd)) ||
-        (size = file_size) != file_size || size > (size_t) -1 - 2 ||
-        NULL == (trec_zscores_buf = malloc (size + 2)) ||
-        -1 == fseek (fd, 0L, SEEK_SET) ||
-        size != fread (trec_zscores_buf, 1, size, fd) ||
-        -1 == fclose (fd)) {
-        fprintf (stderr,
-		 "trec_eval.get_zscores: Cannot read zscores file '%s'\n",
-		 zscores_file);
-        return (UNDEF);
-    }
-
-    size = te_skip_bom(trec_zscores_buf, size);
-
-    /* Append ending newline if not present, Append NULL terminator */
-    if (trec_zscores_buf[size - 1] != '\n') {
-        trec_zscores_buf[size] = '\n';
-        size++;
-    }
-    trec_zscores_buf[size] = '\0';
-
-    /* Count number of lines in file */
-    if (UNDEF == (num_lines = te_count_lines(trec_zscores_buf, size,
-                                             "get_zscores", "zscores",
-                                             zscores_file)))
+    /* Read entire file into memory, and count its lines */
+    if (UNDEF == (num_lines = te_read_lines(zscores_file, &trec_zscores_buf,
+                                            "get_zscores", "zscores")))
         return (UNDEF);
 
     /* Get all lines */
@@ -126,21 +101,11 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
                     line_num);
             return (UNDEF);
         }
-        line_ptr->mean = strtod(mean_ptr, &end_ptr);
-        if (end_ptr == mean_ptr || *end_ptr || !isfinite(line_ptr->mean)) {
-            fprintf(stderr, "trec_eval.get_zscores: Unusable mean '%s' in "
-                    "line %ld of zscores file '%s'\n",
-                    mean_ptr, line_num, zscores_file);
+        if (UNDEF == get_field(mean_ptr, &line_ptr->mean, "mean", -HUGE_VAL,
+                               line_num, zscores_file) ||
+            UNDEF == get_field(stddev_ptr, &line_ptr->stddev, "stddev", 0.0,
+                               line_num, zscores_file))
             return (UNDEF);
-        }
-        line_ptr->stddev = strtod(stddev_ptr, &end_ptr);
-        if (end_ptr == stddev_ptr || *end_ptr || !isfinite(line_ptr->stddev) ||
-            line_ptr->stddev < 0.0) {
-            fprintf(stderr, "trec_eval.get_zscores: Unusable stddev '%s' in "
-                    "line %ld of zscores file '%s'\n",
-                    stddev_ptr, line_num, zscores_file);
-            return (UNDEF);
-        }
         line_ptr++;
     }
     num_lines = line_ptr - lines;
@@ -201,6 +166,25 @@ static int comp_lines_qid_meas(const void * ptr1, const void * ptr2)
     if (cmp)
         return (cmp);
     return (strcmp(p1->meas, p2->meas));
+}
+
+/* Convert field, the mean or stddev of a line, to a finite double of at
+   least min */
+static int
+get_field(const char *str, double *value, const char *field, double min,
+          long line_num, const char *zscores_file)
+{
+    int error;
+
+    *value = str_to_double_ctx(str, &error, "%s in line %ld of zscores file "
+                               "'%s'", field, line_num, zscores_file);
+    if (error || !isfinite(*value) || *value < min) {
+        fprintf(stderr, "trec_eval.get_zscores: Unusable %s '%s' in "
+                "line %ld of zscores file '%s'\n",
+                field, str, line_num, zscores_file);
+        return (UNDEF);
+    }
+    return (1);
 }
 
 static int

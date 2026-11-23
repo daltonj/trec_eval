@@ -102,31 +102,26 @@ te_get_trec_results(EPI * epi, char *text_results_file,
         }
     } else {
         /* Read standard input into a growing buffer, keeping two bytes
-           free for the newline and NUL terminator appended below */
+           free for the newline and NUL that te_prepare_lines appends.
+           fread returns a short count only at end of file or on error. */
         size_t capacity = 4096;
-        size_t num_read;
-        char *new_buf;
+        char *new_buf = malloc(capacity);
 
         size = 0;
-        if (NULL == (trec_results_buf = malloc(capacity))) {
+        while (new_buf != NULL) {
+            trec_results_buf = new_buf;
+            size += fread(trec_results_buf + size, 1, capacity - 2 - size,
+                          stdin);
+            if (size < capacity - 2)
+                break;
+            capacity *= 2;
+            new_buf = realloc(trec_results_buf, capacity);
+        }
+        if (new_buf == NULL) {
             fprintf(stderr,
                     "trec_eval.get_results: Cannot copy results file '%s'\n",
                     text_results_file);
             return (UNDEF);
-        }
-        while (0 < (num_read = fread(trec_results_buf + size, 1,
-                                     capacity - 2 - size, stdin))) {
-            size += num_read;
-            if (size < capacity - 2)
-                continue;
-            if (NULL == (new_buf = realloc(trec_results_buf, 2 * capacity))) {
-                fprintf(stderr,
-                        "trec_eval.get_results: Cannot copy results file '%s'\n",
-                        text_results_file);
-                return (UNDEF);
-            }
-            trec_results_buf = new_buf;
-            capacity *= 2;
         }
         if (ferror(stdin)) {
             fprintf(stderr,
@@ -136,19 +131,10 @@ te_get_trec_results(EPI * epi, char *text_results_file,
         }
     }
 
-    size = te_skip_bom(trec_results_buf, size);
-
-    /* Append ending newline if not present, Append NULL terminator */
-    if (size == 0 || trec_results_buf[size - 1] != '\n') {
-        trec_results_buf[size] = '\n';
-        size++;
-    }
-    trec_results_buf[size] = '\0';
-
     /* Count number of lines in file */
-    if (UNDEF == (num_lines = te_count_lines(trec_results_buf, size,
-                                             "get_results", "results",
-                                             text_results_file)))
+    if (UNDEF == (num_lines = te_prepare_lines(trec_results_buf, size,
+                                               "get_results", "results",
+                                               text_results_file)))
         return (UNDEF);
 
     /* Get all lines */
@@ -159,16 +145,8 @@ te_get_trec_results(EPI * epi, char *text_results_file,
     while (*ptr) {
         /* Get current line */
         /* Ignore blank lines (people seem to insist on them!) */
-        while (*ptr && *ptr != '\n' && isspace(*ptr))
-            ptr++;
-        if (*ptr == '\n') {
-            ptr++;
-            line_num++;
+        if (te_skip_line(&ptr, &line_num, NULL, text_results_file))
             continue;
-        } else if (*ptr == '#') {
-            ptr = index(ptr, '\n');
-            continue;
-        }
         if (UNDEF == parse_results_line(&ptr, &line_ptr->qid, &line_ptr->docno,
                                         &sim_ptr, &run_id_ptr)) {
             fprintf(stderr, "trec_eval.get_results: Malformed line %ld\n",

@@ -138,9 +138,6 @@ typedef struct {
 
 int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
 {
-    FILE* fd;
-    long long file_size;
-    size_t size = 0;
     char *ptr;
     char *current_qid;
     char *rel_ptr;
@@ -156,33 +153,9 @@ int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
     TEXT_PREFS_INFO *text_info_ptr;
     TEXT_PREFS *text_prefs_ptr;
 
-    /* Read entire file into memory */
-    if (! (fd = fopen (text_prefs_file, "rb")) ||
-        fseek (fd, 0L, SEEK_END) != 0 || 0 >= (file_size = ftell(fd)) ||
-        (size = file_size) != file_size || size > (size_t) -1 - 2 ||
-        NULL == (trec_prefs_buf = malloc (size + 2)) ||
-        -1 == fseek (fd, 0L, SEEK_SET) ||
-        size != fread (trec_prefs_buf, 1, size, fd) ||
-        -1 == fclose (fd)) {
-        fprintf (stderr,
-		 "trec_eval.get_prefs: Cannot read prefs file '%s'\n",
-		 text_prefs_file);
-        return (UNDEF);
-    }
-
-    size = te_skip_bom(trec_prefs_buf, size);
-
-    /* Append ending newline if not present, Append NULL terminator */
-    if (trec_prefs_buf[size - 1] != '\n') {
-        trec_prefs_buf[size] = '\n';
-        size++;
-    }
-    trec_prefs_buf[size] = '\0';
-
-    /* Count number of lines in file */
-    if (UNDEF == (num_lines = te_count_lines(trec_prefs_buf, size,
-                                             "get_prefs", "prefs",
-                                             text_prefs_file)))
+    /* Read entire file into memory, and count its lines */
+    if (UNDEF == (num_lines = te_read_lines(text_prefs_file, &trec_prefs_buf,
+                                            "get_prefs", "prefs")))
         return (UNDEF);
 
     /* Get all lines */
@@ -191,18 +164,8 @@ int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
     line_ptr = lines;
     ptr = trec_prefs_buf;
     while (*ptr) {
-        /* Skip comment lines, and blank lines with a warning */
-        while (*ptr != '\n' && isspace(*ptr))
-            ptr++;
-        if (*ptr == '\n' || *ptr == '#') {
-            if (*ptr == '\n')
-                fprintf(stderr, "Warning, blank line skipped "
-                        "(line %ld of prefs file '%s').\n",
-                        line_num + 1, text_prefs_file);
-            ptr = index(ptr, '\n') + 1;
-            line_num++;
+        if (te_skip_line(&ptr, &line_num, "prefs", text_prefs_file))
             continue;
-        }
         if (UNDEF == parse_prefs_line(&ptr, &line_ptr->qid, &line_ptr->jg,
                                       &line_ptr->jsg, &line_ptr->docno,
                                       &rel_ptr)) {

@@ -51,7 +51,7 @@ void *te_chk_and_malloc(void *ptr, long *current_bound,
     /* Allocate at least one element, so that a first request for
        nothing, such as an empty ranking, gets a buffer */
     *current_bound += needed > 0 ? needed : 1;
-    return ((void *) malloc(*current_bound * size));
+    return (te_malloc_array(*current_bound, size));
 }
 
 void *te_chk_and_realloc(void *ptr, long *current_bound,
@@ -63,33 +63,30 @@ void *te_chk_and_realloc(void *ptr, long *current_bound,
         return (ptr);
     if (*current_bound == 0) {
         *current_bound += needed > 0 ? needed : 1;
-        return ((void *) malloc(*current_bound * size));
+        return (te_malloc_array(*current_bound, size));
     }
     *current_bound += needed;
-    return ((void *) realloc(ptr, *current_bound * size));
+    return (te_realloc_array(ptr, *current_bound, size));
 }
 
-/* Remove a UTF-8 byte-order mark before line termination is appended.
-   At least one byte stays, since the judgments and zscores readers test
-   buf[size - 1]. */
-size_t te_skip_bom(char *buf, size_t size)
-{
-    if (size > 3 && 0 == memcmp(buf, "\357\273\277", 3)) {
-        size -= 3;
-        memmove(buf, buf + 3, size);
-    }
-    return (size);
-}
-
-/* Count the lines of an input file read into buf: size bytes that end in
-   a newline, followed by a NUL. A NUL byte, or a CR that does not end a
-   CRLF line ending, is an error: print a message naming the reader, the
-   kind of file and the file, and return UNDEF. */
-long te_count_lines(const char *buf, const size_t size, const char *reader,
-                    const char *kind, const char *file)
+/* Prepare the size bytes of an input file, read into buf with room for
+   two more: blank a UTF-8 byte-order mark, which the readers then skip as
+   leading white space, end the last line with a newline, add a NUL, and
+   return the number of lines. A NUL byte, or a CR that does not end a
+   line, is an error: print a message naming the reader, the kind of file
+   and the file, and return UNDEF. A CR that ends the file ends its last
+   line. */
+long te_prepare_lines(char *buf, size_t size, const char *reader,
+                      const char *kind, const char *file)
 {
     size_t i;
     long num_lines = 0;
+
+    if (size >= 3 && 0 == memcmp(buf, "\357\273\277", 3))
+        memset(buf, ' ', 3);
+    if (size == 0 || buf[size - 1] != '\n')
+        buf[size++] = '\n';
+    buf[size] = '\0';
 
     for (i = 0; i < size; i++) {
         if (buf[i] == '\n')
@@ -107,4 +104,48 @@ long te_count_lines(const char *buf, const size_t size, const char *reader,
         }
     }
     return (num_lines);
+}
+
+/* Read file into a new buffer *buf, prepared by te_prepare_lines, and
+   return its number of lines, or print a message and return UNDEF */
+long te_read_lines(const char *file, char **buf, const char *reader,
+                   const char *kind)
+{
+    FILE *fd;
+    long long file_size;
+    size_t size;
+
+    if (!(fd = fopen(file, "rb")) ||
+        fseek(fd, 0L, SEEK_END) != 0 || 0 >= (file_size = ftell(fd)) ||
+        (size = file_size) != file_size || size > (size_t) -1 - 2 ||
+        NULL == (*buf = malloc(size + 2)) ||
+        -1 == fseek(fd, 0L, SEEK_SET) ||
+        size != fread(*buf, 1, size, fd) ||
+        -1 == fclose(fd)) {
+        fprintf(stderr, "trec_eval.%s: Cannot read %s file '%s'\n",
+                reader, kind, file);
+        return (UNDEF);
+    }
+    return (te_prepare_lines(*buf, size, reader, kind, file));
+}
+
+/* Skip the white space at *ptr. If the line is then a comment or blank,
+   move *ptr to the next line, count the line in *line_num and return 1,
+   warning of a blank line unless kind is NULL. Otherwise return 0. */
+int te_skip_line(char **ptr, long *line_num, const char *kind,
+                 const char *file)
+{
+    char *p = *ptr;
+
+    while (*p != '\n' && isspace(*p))
+        p++;
+    *ptr = p;
+    if (*p != '\n' && *p != '#')
+        return (0);
+    if (*p == '\n' && kind != NULL)
+        fprintf(stderr, "Warning, blank line skipped "
+                "(line %ld of %s file '%s').\n", *line_num + 1, kind, file);
+    *ptr = index(p, '\n') + 1;
+    (*line_num)++;
+    return (1);
 }
