@@ -37,14 +37,17 @@ where $\text{rel}(k)$ is the gain for the document's relevance level. The gains 
 
 ### RBP Residual (`rbp_resid`)
 
-For a ranking of $N$ retrieved documents that holds an unjudged document, the amount by which RBP could still rise if every unjudged retrieved document, and every rank after $N$, were fully relevant. With $U$ the set of ranks that hold an unjudged document:
+For a ranking of $N$ retrieved documents, let $U$ be the set of ranks that hold an unjudged document:
 
 $$\text{RBP}_{\text{resid}} = (1 - p) \sum_{k \in U} p^{k-1} + p^N \quad \text{for } U \neq \emptyset, \text{ and } 0 \text{ otherwise}$$
 
-The first term is the RBP that the unjudged documents would add, and $p^N$ is the weight of the ranks after $N$. This is the formula of `trec_eval`'s `m_rbp_resid.c`. Moffat and Zobel include $p^N$ for every ranking, also one without an unjudged document.
+This is the formula of `trec_eval`'s `m_rbp_resid.c`. Moffat and Zobel include $p^N$ for every ranking, also one without an unjudged document.
+
+The first term is the weight of unjudged retrieved documents, and $p^N$ is the weight of the ranks after $N$. The interpretation as a possible increase in RBP assumes that unjudged retrieved documents have gain 0 in RBP. `rbp_resid` ignores gain maps and can overestimate that increase otherwise. For judgments `a=1,b=0` and run order `x,a`, both `rbp.p=0,-1=1` and `rbp_resid.p=0,-1=1` give `1.0000`, although RBP is already at its maximum.
 
 - Parameter: `p` (persistence parameter, default `0.9`). A gain map is checked as for `rbp` and not used.
 - Usage: `-m rbp_resid` or `-m rbp_resid.p=0.8`.
+- With `-c`, parameterized `rbp_resid` can differ from `trec_eval` 10.0 on missing topics; see [Complete set averaging](../cli.md#complete-set-averaging--c).
 - Reference: Moffat, A., & Zobel, J. (2008). "Rank-biased precision for measurement of retrieval effectiveness." *ACM Transactions on Information Systems (TOIS)*, 27(1): Article 2.
 
 ---
@@ -72,18 +75,22 @@ Assigns explicit utility weights $a, b, c, d$ to the four cells of the $2 \times
 $$\text{Utility} = a \cdot \text{num\_rel\_ret} + b \cdot \text{num\_nonrel\_ret} + c \cdot \text{num\_rel\_nonret} + d \cdot \text{num\_nonrel\_nonret}$$
 
 - Parameters: `utility.<a,b,c,d>` (default: `1.0, -1.0, 0.0, 0.0`).
-- Requires `-N <num_docs_in_coll>` when $d \ne 0$.
+- The fourth coefficient uses `-N <num_docs_in_coll>`, which defaults to 0. A collection size smaller than the counted documents gives a negative fourth cell. With five retrieved, judged documents, `-m utility.0,0,0,1` gives `-5.0000` without `-N` in both tools; `-N10` gives `5.0000`.
 - Usage: `-m utility.1,-1,0,0`
+- Parameterized `utility` can differ from `trec_eval` 10.0 on topics missing from the run with `-c`; see [Complete set averaging](../cli.md#complete-set-averaging--c).
 
 ---
 
 ## Diagnostic Measures
 
 ### Relevance String (`relstring`)
-Constructs a string representation of relevance judgments for the top $k$ retrieved documents (e.g. `'1-0-1-0-2'`).
+Constructs a string representation of relevance judgments for the top $k$ retrieved documents. Retrieved grades `1,0,1,0,2` give `'10102'` in both tools. `-` denotes a retrieved document absent from the qrels; `.` denotes a retrieved document present in the qrels with a negative grade.
+
 - Parameter: cutoff length $k$ (default `10`).
-- Usage: `-m relstring` or `-m relstring.20`
+- Usage: `-q -m relstring` or `-q -m relstring.20`. The string is printed only for individual topics.
+- With `-c`, parameterized lengths can differ from `trec_eval` 10.0 on missing topics; see [Complete set averaging](../cli.md#complete-set-averaging--c).
 
 ### Run Identifier (`runid`)
 Reports the system run label recorded in column 6 of the run results file.
+
 - Usage: `-m runid`

@@ -41,7 +41,7 @@ Implement the `Measure` trait and the following core metrics (the standard `all_
 *   **R-Precision (`Rprec`)**.
 *   **Reciprocal Rank (`recip_rank`)**.
 *   **Binary Preference (`bpref`)**: Binary preference computation using bounds-checked counts.
-*   **nDCG at cutoffs (`ndcg_cut`)**: Discounted Cumulative Gain utilizing `f64::total_cmp` for deterministic ranking and division-by-zero guards.
+*   **nDCG at cutoffs (`ndcg_cut`)**: Use `f64::total_cmp` to sort gain-table entries by gain value and guard division by zero. Sort document scores with `partial_cmp` after rejecting NaN, breaking ties by descending docno.
 
 ### 1.5 CLI Driver & Averages Accumulator (`src/main.rs`)
 *   Load files, invoke alignment, and execute metrics.
@@ -65,7 +65,7 @@ Stage 2 extends the core pipeline to support dynamic user assistance, standard s
     *   Implement `--help-measures` which lists only available measure names alongside their short descriptions and exits immediately.
     *   Implement `--help-measure <name>` which retrieves the requested measure and prints its full description via `explanation()` and exits immediately.
 *   **Sane CLI Defaults [Completed]**:
-    *   If no `-m` flag is supplied on the command line, `te-rust` defaults to executing and reporting the `"official"` stock group of measures.
+    *   If no `-m` flag is supplied, `te-rust` selects `official` for `-R qrels` and `qrels_jg` for `-R qrels_jg`.
 *   **CLI flag parity [Completed]**: Complete support for `-N <num>` (collection size) and map its value appropriately.
 
 ### 2.2 Predefined Groups & Dynamic Parameter Parsing [Completed]
@@ -78,7 +78,7 @@ Stage 2 extends the core pipeline to support dynamic user assistance, standard s
 
 ### 2.3 Specialized Standard Metrics and Non-Standard Formats [Completed]
 *   **Additional measures [Completed]**: Implement `success`, 11-point average precision (`11pt_avg`), parametric standard `recall`, cost-weighted `utility`, and relevance string visualizer `relstring`.
-*   Ensure that any incompatibilities between requested metrics (such as pairwise metrics when standard qrels are used) are checked and aborted during metadata evaluation.
+*   Standard and judgment-group measures are accepted with either implemented judgment format. Standard measures use the first judgment group; judgment-group measures treat a standard topic as one group. Preference measures are not implemented.
 
 ### 2.4 Verification and Regression Suite Expansion [Completed]
 *   Extend regression tests in `tests/regression.rs` to run and verify dynamic parametric quicktests (`test_meas_params`, `test_relstring_relevance_level`).
@@ -92,12 +92,12 @@ Stage 2 extends the core pipeline to support dynamic user assistance, standard s
 
 ---
 
-## Stage 3: Preference-Based Evaluation & Comparative Verification
+## Stage 3: Proposed Preference-Based Evaluation & Comparative Verification
 
-Stage 3 implements the complete preference-based evaluation architecture (`trec_prefs`), verifying partial-order zones and transitive relations.
+Preference evaluation is not implemented. Stage 3 proposes the complete preference-based evaluation architecture (`trec_prefs`), verifying partial-order zones and transitive relations.
 
 ### 3.1 Preference Input Parsers
-*   **Prefs Parser**: Parses explicit pairwise preferences (`qid  docno_A  docno_B  JSG_id`).
+*   **Prefs Parser**: Proposed parser for `qid  ujg  ujsubg  docno  rel_level`.
 *   **Qrels-Prefs/Qrels-JG Parsers**: Map qrels records to preference counts.
 
 ### 3.2 Preference Alignment & Dual Transitive Closures

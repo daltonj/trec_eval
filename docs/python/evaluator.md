@@ -27,12 +27,12 @@ class Evaluator(
 - `complete_set_average` (`bool`, default `False`): When `True`, averages over all queries in `qrels` rather than only queries present in the run (`-c`).
 - `judged_docs_only` (`bool`, default `False`): When `True`, drops all unjudged documents from the ranking before evaluation (`-J`).
 - `max_docs_per_topic` (`int`, optional): Truncates the ranking to at most this many documents per topic (`-M`).
-- `num_docs_in_coll` (`int`, default `0`): Total collection size (`-N`). `utility` uses $2^{63} - 1$ for a larger value.
+- `num_docs_in_coll` (`int`, default `0`): Total collection size (`-N`).
 - `global_gains` (`str`, optional): Global gain mapping string (e.g. `'1=3.5,2=9.0'`).
 - `qid`, `docno`, `rel` (`str`, optional): Explicit column names when `qrels` is a DataFrame.
 - `all_query_values` (`bool`, default `False`): When `True`, the per-query results also hold the measures that the CLI prints only in the summary: `gm_map` and `gm_bpref` as log(max(v, 0.00001)) of the topic's `map` or `bpref` value v, `num_q` as 1, and `runid`. The pytrec_eval wrapper sets it, as pytrec_eval returns these values.
 
-Problems that do not stop the evaluation are raised as `UserWarning`, with the messages that the CLI prints on stderr. The constructor warns when a cutoff is read only in part, as `'P.5x'` is read as `P_5`, and when a later request gives other parameters for a measure, as in `['P_5', 'P_10']`: the first list is used and the other is ignored. Reading a qrels or run file warns about a grade or score read only in part, such as `1.5x`, a score outside the range of a double, and a blank line in a qrels file.
+The Python API issues `UserWarning` for problems that do not stop evaluation, with the messages that the CLI prints on stderr. The constructor warns when a cutoff is read only in part, as `'P.5x'` is read as `P_5`, and when a later request gives other parameters for a measure, as in `['P_5', 'P_10']`: the first list is used and the other is ignored. Reading a qrels or run file warns about a grade or score read only in part, such as `1.5x`, a score outside the range of a double, and a blank line in a qrels file.
 
 ---
 
@@ -49,7 +49,7 @@ Evaluates a system run against the pre-indexed judgments. The Python GIL is rele
 - `run` (`str`, `PathLike`, `dict`, `DataFrame`, or `Iterable`): System run results.
 - `qid`, `docno`, `score` (`str`, optional): Column name overrides for DataFrame inputs.
 
-Raises `ValueError` when the run shares no topic with `qrels`, as the CLI fails, unless `complete_set_average` is `True`. `evaluate_arrays` does the same.
+Raises `trec_eval._trec_eval.NoSharedTopicError`, a subclass of `ValueError`, when the run shares no topic with `qrels`, unless `complete_set_average` is `True`. `evaluate_arrays` does the same.
 
 #### `evaluate_arrays`
 
@@ -58,6 +58,12 @@ evaluate_arrays(query_ids, doc_ids, scores) -> EvalResult
 ```
 
 Evaluates 1D arrays or contiguous buffer slices directly without creating intermediate Python objects.
+
+---
+
+## `trec_eval.evaluate`
+
+`evaluate(qrels, run, ...)` constructs an `Evaluator` and evaluates the run. It raises `ValueError` for a negative `relevance_level`, and `trec_eval._trec_eval.NoSharedTopicError` (a subclass of `ValueError`) when the run shares no topic with `qrels` unless `complete_set_average=True`. A negative level is rejected by the `Evaluator` constructor before `Evaluator.evaluate` can be called.
 
 ---
 

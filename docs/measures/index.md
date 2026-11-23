@@ -1,6 +1,6 @@
 # Measure Catalog Overview
 
-`trec_eval` implements all 33 standard evaluation measures from reference `trec_eval 9.x/10.x`. Each measure is implemented according to its standard definition with explicit edge-case handling (empty rankings, zero relevant documents, unjudged documents).
+`te-rust` implements 44 measures for standard relevance judgments and judgment groups. `--help-measures` lists the measures and their status. Preference measures are not implemented.
 
 All measures include unit tests as well as the `trec_eval` regression tests. Please let us know if you find an error or a discrepancy against the original codebase.
 
@@ -12,20 +12,23 @@ Measures can be requested on the CLI (`-m <name>`) or in Python (`measures=[...]
 
 ### 1. Default Metric Names
 Requesting a measure by its root name calculates standard default parameters:
+
 - `-m map`
 - `-m Rprec`
 - `-m recip_rank`
 
 ### 2. Parameterized Cutoffs (`.params`)
 Cutoffs and parameters are specified following a period:
+
 - `-m P.5,10,20` (Precision at ranks 5, 10, and 20)
 - `-m ndcg_cut.10,20,100` (nDCG at cutoffs 10, 20, 100)
 - `-m map_cut.1000` (MAP computed up to rank 1000)
 - `-m rbp.p=0.85` (Rank-Biased Precision with persistence $p = 0.85$)
 - `-m set_F.0.25` ($F_\beta$-measure with $\beta = 0.5$; the parameter is $\beta^2$)
 
-### 3. Cutoff Aliases (`@cutoff`)
-For cutoff measures, `@` syntax is supported as an alias:
+### 3. Parameter Aliases (`@params`)
+`@` can replace the period before any parameter list, as in `rbp@p=0.5` for `rbp.p=0.5`. Cutoff aliases include:
+
 - `ndcg@10` $\rightarrow$ `ndcg_cut.10`
 - `P@5,10` $\rightarrow$ `P.5,10`
 - `map@100` $\rightarrow$ `map_cut.100`
@@ -33,7 +36,8 @@ For cutoff measures, `@` syntax is supported as an alias:
 - `mrr` $\rightarrow$ `recip_rank`
 
 ### 4. Parameter Checks
-`te-rust` refuses a parameter that its measure cannot use, with a message that names the measure. `trec_eval` 10.0 accepts all the examples below, clamping the overflowing integer cutoff to 9223372036854775807. `trec_eval` main rejects that cutoff but accepts the other examples:
+`te-rust` refuses a parameter that its measure cannot use, with a message that names the measure. `trec_eval` 10.0 accepts all the examples below, clamping the overflowing integer cutoff to 9223372036854775807:
+
 - a float parameter that is not a finite number, such as `set_F.nan`, `rbp.p=inf` or `iprec_at_recall.1e400`
 - an integer cutoff above 9223372036854775807, the largest `i64`, such as `P.9223372036854775808`
 - a recall level outside $[0, 1]$ for `iprec_at_recall` and `11pt_avg`, and a multiple of R of 0 or less for `Rprec_mult` and `Rprec_mult_avgjg`
@@ -47,7 +51,7 @@ For cutoff measures, `@` syntax is supported as an alias:
 
 Groups expand into lists of standard measures:
 
-### `official` (Default)
+### `official` (Default for `-R qrels`)
 Standard TREC track summary report:
 `runid`, `num_q`, `num_ret`, `num_rel`, `num_rel_ret`, `map`, `gm_map`, `Rprec`, `bpref`, `recip_rank`, `iprec_at_recall`, `P` (cutoffs 5, 10, 15, 20, 30, 100, 200, 500, 1000).
 
@@ -58,6 +62,6 @@ Standard TREC track summary report:
 Set-based evaluation (unranked sets):
 `runid`, `num_q`, `num_ret`, `num_rel`, `num_rel_ret`, `utility`, `set_P`, `set_relative_P`, `set_recall`, `set_map`, `set_F`.
 
-### `qrels_jg`
+### `qrels_jg` (Default for `-R qrels_jg`)
 Multiple judgment groups:
 `runid`, `num_q`, `map_avgjg`, `P_avgjg`, `Rprec_mult_avgjg`.

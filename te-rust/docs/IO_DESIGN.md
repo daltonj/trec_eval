@@ -7,6 +7,7 @@ This document outlines the detailed design of the Input/Output (I/O) and parsing
 ## 1. File Formats and Strictness Specifications
 
 ### 1.1 Qrels (Standard Relevance Judgments) File Format
+
 *   **Format**: Space or tab-separated lines containing exactly 4 fields:
     ```text
     qid  iter  docno  rel
@@ -14,11 +15,12 @@ This document outlines the detailed design of the Input/Output (I/O) and parsing
     *   `qid`: Query/topic ID (`String`).
     *   `iter`: Query iteration/context (`String`, ignored).
     *   `docno`: Document ID (`String`).
-    *   `rel`: Relevance judgment (`i64` between -127 and 127, the range of `REL_LEVELS`). As in `trec_eval`, the leading integer is read, with a warning when characters follow it: `1.5` reads as 1 and `0.9` as 0.
-*   **Comments & Blank Lines**: Skipped. Comments start with `#` in the first column.
+    *   `rel`: Relevance judgment (`i64` between -127 and 127, the range of `REL_LEVELS`). Both tools read the leading integer: `1.5` reads as 1 and `0.9` as 0. `te-rust` warns when characters follow it; `trec_eval` 10.0 reads it silently.
+*   **Comments & Blank Lines**: Skipped. Comments may have leading ASCII whitespace; blank lines produce warnings.
 *   **Strictness**: Must have exactly 4 fields. Extra non-whitespace trailing characters are rejected as malformed.
 
 ### 1.2 QrelsJG (Judgment Group Relevance) File Format
+
 *   **Format**: Space or tab-separated lines containing exactly 4 fields:
     ```text
     qid  ujg  docno  rel
@@ -26,11 +28,14 @@ This document outlines the detailed design of the Input/Output (I/O) and parsing
     *   `qid`: Query/topic ID (`String`).
     *   `ujg`: User judgment group (`String`).
     *   `docno`: Document ID (`String`).
-    *   `rel`: Relevance judgment (`i64` between -127 and 127, the range of `REL_LEVELS`). As in `trec_eval`, the leading integer is read, with a warning when characters follow it: `1.5` reads as 1 and `0.9` as 0.
-*   **Comments & Blank Lines**: Skipped. Comments start with `#` in the first column.
+    *   `rel`: Relevance judgment (`i64` between -127 and 127, the range of `REL_LEVELS`). Both tools read the leading integer: `1.5` reads as 1 and `0.9` as 0. `te-rust` warns when characters follow it; `trec_eval` 10.0 reads it silently.
+*   **Comments & Blank Lines**: Skipped. Comments may have leading ASCII whitespace; blank lines produce warnings.
 *   **Strictness**: Must have exactly 4 fields. Extra non-whitespace trailing characters are rejected as malformed.
 
-### 1.3 Prefs (User Preferences) File Format
+### 1.3 Proposed Prefs (User Preferences) File Format
+
+This format and its parser are not implemented.
+
 *   **Format**: Space or tab-separated lines containing exactly 5 fields:
     ```text
     qid  ujg  ujsubg  docno  rel_level
@@ -43,7 +48,10 @@ This document outlines the detailed design of the Input/Output (I/O) and parsing
 *   **Comments & Blank Lines**: Skipped. Comments start with `#` in the first column.
 *   **Strictness**: Must have exactly 5 fields. Extra non-whitespace trailing characters are rejected as malformed. `rel_level` must be a valid finite float (no `NaN` or `Infinity`).
 
-### 1.4 QrelsPrefs (Preference-style Qrels) File Format
+### 1.4 Proposed QrelsPrefs (Preference-style Qrels) File Format
+
+This format and its parser are not implemented.
+
 *   **Format**: Space or tab-separated lines containing exactly 4 fields:
     ```text
     qid  ujg  docno  rel_level
@@ -104,7 +112,7 @@ pub struct QrelsData {
 // ==================== 2. QrelsJG Format ====================
 
 /// Relevance judgments grouped under a User Judgment Group (ujg).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QrelsJGGroup {
     pub jg: String,
     pub records: Vec<QrelsRecord>,
@@ -114,7 +122,7 @@ pub struct QrelsJGGroup {
 #[derive(Debug, Clone)]
 pub struct QrelsJGQuery {
     pub qid: String,
-    pub jgs: Vec<QrelsJGGroup>,
+    pub groups: Vec<QrelsJGGroup>,
 }
 
 /// Structured QrelsJG data.
@@ -125,6 +133,11 @@ pub struct QrelsJGData {
     pub warnings: Vec<String>, // Non-fatal parse problems, such as a partially read grade
 }
 
+```
+
+The following preference structures are proposed and are not present in the implementation:
+
+```rust
 // ==================== 3. Prefs Format ====================
 
 /// A single preference record containing a document and its relevance level.
@@ -185,6 +198,11 @@ pub struct QrelsPrefsData {
     pub comments: Vec<String>, // Stores parsed file comment lines
 }
 
+```
+
+The run structures are implemented:
+
+```rust
 // ==================== 5. Run Results Format ====================
 
 /// Represents a single run result record for a document.
@@ -274,7 +292,7 @@ pub enum IOError {
 7. Validate field count:
     * For Qrels: Must be exactly 4 tokens.
     * For Run/Results: Must be at least 6 tokens.
-8. Parse `rel` with `parse_grade`, which reads the leading integer as `trec_eval`'s `str_to_long` does and warns when characters follow it. Parse `sim` with `parse_score`, which reads the leading number as `trec_eval`'s `strtod` does and warns when characters follow it. For relevance values (`rel`), validate that they fall within `REL_LEVELS`, -127 to 127, the range that `trec_eval`'s `get_qrels` documents. The bound also prevents excessive vector allocations.
+8. Parse `rel` with `parse_grade`, which reads the leading integer as `trec_eval` 10.0 does. `te-rust` warns when characters follow it; `trec_eval` 10.0 reads it silently. Parse `sim` with `parse_score`, which reads the leading number as `trec_eval`'s `strtod` does and warns when characters follow it. For relevance values (`rel`), validate that they fall within `REL_LEVELS`, -127 to 127, the range that `trec_eval`'s `get_qrels` documents. The bound also prevents excessive vector allocations.
 9. Store records sequentially.
 10. Populate the `QrelsData` or `RunData` structures, sorting internal lists if necessary or leaving sorting as an explicit post-processing step before metric calculations. Keep all comments preserved in the `comments` field. Retain repeated documents in standard qrels and run files. Evaluation rejects duplicates in scored topics only when a requested measure reads the ranking; run duplicates are checked after `-M` truncation. The qrels_jg parser rejects duplicates within a topic and judgment group while reading the file.
 
