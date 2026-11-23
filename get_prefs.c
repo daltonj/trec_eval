@@ -159,7 +159,8 @@ int te_get_prefs(EPI * epi, char *text_prefs_file, ALL_REL_INFO * all_rel_info)
     /* Read entire file into memory */
     if (! (fd = fopen (text_prefs_file, "rb")) ||
         fseek (fd, 0L, SEEK_END) != 0 || 0 >= (file_size = ftell(fd)) ||
-        NULL == (trec_prefs_buf = malloc ((size = file_size) + 2)) ||
+        (size = file_size) != file_size ||
+        NULL == (trec_prefs_buf = malloc (size + 2)) ||
         -1 == fseek (fd, 0L, SEEK_SET) ||
         size != fread (trec_prefs_buf, 1, size, fd) ||
         -1 == fclose (fd)) {

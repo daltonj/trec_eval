@@ -88,7 +88,8 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
     /* Read entire file into memory */
     if (!(fd = fopen (zscores_file, "rb")) ||
         fseek (fd, 0L, SEEK_END) != 0 || 0 >= (file_size = ftell(fd)) ||
-        NULL == (trec_zscores_buf = malloc ((size = file_size) + 2)) ||
+        (size = file_size) != file_size ||
+        NULL == (trec_zscores_buf = malloc (size + 2)) ||
         -1 == fseek (fd, 0L, SEEK_SET) ||
         size != fread (trec_zscores_buf, 1, size, fd) ||
         -1 == fclose (fd)) {
