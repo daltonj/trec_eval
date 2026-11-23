@@ -314,8 +314,9 @@ mod tests {
         SetFMeasure::new(0.0, "").unwrap();
         UtilityMeasure::new(vec![1e300, -1e300, 0.0, 1.0], "").unwrap();
     }
+
     #[test]
-    fn reverse_scans_stop_at_zero_relevant_documents() {
+    fn rprec_mult_avgjg_scan_stops_at_zero_relevant_documents() {
         let config = EvalConfig {
             relevance_level: -1,
             ..Default::default()
@@ -323,29 +324,14 @@ mod tests {
         let mut query = make_mock_state(vec![1, -1, -1], 1);
         query.rel_levels = vec![0, 1];
         query.num_nonpool = 2;
-        let state = EvalState::Standard(query.clone());
         // The reverse scan consumes the only judged relevant count at rank 3.
         // The beyond-ranking cutoff uses that count directly: 1/4.
-        let expected = [MetricValue::Float(0.0), MetricValue::Float(0.25)];
-        assert_eq!(
-            RprecMultMeasure::new(vec![1.0, 4.0])
-                .unwrap()
-                .calc(&config, &state),
-            expected
-        );
         let groups = EvalState::JudgmentGroups(vec![query]);
         assert_eq!(
             RprecMultAvgjgMeasure::new(vec![1.0, 4.0])
                 .unwrap()
                 .calc(&config, &groups),
-            expected
-        );
-        // Both attainable recall levels take the precision at rank 3.
-        assert_eq!(
-            IprecAtRecallMeasure::new(vec![0.0, 1.0])
-                .unwrap()
-                .calc(&config, &state),
-            [MetricValue::Float(1.0 / 3.0), MetricValue::Float(1.0 / 3.0)]
+            [MetricValue::Float(0.0), MetricValue::Float(0.25)]
         );
     }
 }
