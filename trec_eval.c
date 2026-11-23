@@ -37,8 +37,8 @@ normally ever used.   \n\
     'measure' can also be a nickname for a set of measures. Current \n\
     nicknames include \n\
        'official': the main measures often used by TREC\n\
-       'all_trec': the standard TREC measures, calculated with the\n\
-                   standard TREC results and rel_info format files.\n\
+       'all_trec': all measures calculated with the standard TREC\n\
+                   results and rel_info format files.\n\
        'set': subset of all_trec that calculates unranked values.\n\
        'prefs': Measures not in all_trec that calculate preference measures.\n\
        'qrels_jg': Measures that average over the judgment groups of\n\
