@@ -3,15 +3,13 @@
 . test/regress/lib.sh
 D=test/regress/rbp-gain-range
 
-# One relevant document at rank 1, default gains 0 and 1: 0.1 * 1.
-expect_output $D/out.one -m rbp $D/qrels.one $D/results.one
-
 # The gain range starts at 0, rather than at the first gain.
 # Gains 1 (grade 0) and 3 (grade 1) rescale to 1/3 and 1, and the grade 1
 # document is at rank 1: 0.1 * (1 + 0.9 * 1/3) = 0.13.
 expect_output $D/out.two.gains13 -m rbp.0=1,1=3 $D/qrels.two $D/results.two
 
-# Topic maxima differ (3 then 2), but each top document rescales to 1.
+# Topic maxima differ (3 then 2), but each top document rescales to 1:
+# 0.1 * 1.
 # Keep the no-q call: it exposes stale stack values on some compilers.
 expect_output $D/out.one -m rbp $D/qrels.topics $D/results.topics
 

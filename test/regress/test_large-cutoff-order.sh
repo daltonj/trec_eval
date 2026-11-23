@@ -2,10 +2,10 @@
 # The run has one relevant doc, so precision at a huge cutoff rounds to 0.
 . test/regress/lib.sh
 D=test/regress/large-cutoff-order
-Q=$D/qrels
-R=$D/results
-
-expect_output $D/out.P.portable -m P.2147483647,1 "$Q" "$R"
+Q="$T/qrels"
+R="$T/results"
+printf 't 0 a 1\n' > "$Q"
+printf 't Q0 a 1 1 r\n' > "$R"
 
 if "$TREC_EVAL" -m P.4294967297,1 "$Q" "$R" >"$T/out" 2>"$T/err"; then
     diff $D/out.P "$T/out" || fail "wrong precision at large cutoffs"

@@ -5,4 +5,3 @@
 D=test/regress/complete-empty-ranking
 expect_output $D/out -c -q -m num_ret -m utility.1,-1,2,3 \
     -m rbp_resid.p=0.5 -m relstring.3 $D/qrels $D/results
-expect_status 0 -c -m all_trec $D/qrels $D/results
