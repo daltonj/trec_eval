@@ -1,6 +1,35 @@
 ------------------------------------------------------------------------------
 Change Log  (only recent)
 ------------------------------------------------------------------------------
+Unreleased
+	Fixes for issues #94 to #99, #102, #107, #141 to #144 and #195.
+	Results change in these cases:
+	  rbp no longer depends on the build or on -q (#94).
+	  Under -c, num_rel on the all row counts the grades that -l makes
+	  relevant (#95), and utility, rbp_resid and relstring with
+	  parameters score a missing topic as an empty ranking (#96).
+	  A topic whose grades are all negative is scored with its own
+	  grade counts (#97).
+	  ndcg, ideal_dcg, Rndcg, ndcg_rel and G with gains less than 1
+	  apart, and ndcg_rel, which is 0 when no judged level has a
+	  positive gain (#98).
+	  dcg, ideal_dcg and ndcg each use their own gain map (#195).
+	  -Z with a zscores file that lacks a topic or a measure (#144).
+	Inputs now refused with exit status 2: run scores that are not
+	numbers or are NaN (#107); relevance levels that are not numbers or
+	are outside -127 to 127, and files with a NUL byte or a CR that does
+	not end a line (#143); measure parameters that give no usable value,
+	and cutoffs that repeat or print the same row name (#142). A negative
+	-l, -M or -N exits with status 1 (#142).
+	A run score with trailing characters, such as 1.5x, is read with a
+	warning (#107). Blank lines in judgments files are skipped with a
+	warning, and a UTF-8 byte-order mark is skipped (#143).
+	A run without data lines, or empty standard input, gives a message
+	instead of a crash (#99). Judgments and zscores files of 2 GiB or
+	more are read (#143). With no -m, -R qrels_jg, prefs and qrels_prefs
+	print measures that they can compute (#141).
+	Other messages, exit statuses and help text (#141); reads past
+	tables and leaks (#102, #144).
 6/18/26 Version 10.0
 	Breaking fix: change uses of int truncation to round/floor.
 	-c mode now prints out skipped queries in -q mode.
