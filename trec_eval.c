@@ -174,6 +174,14 @@ int main(int argc, char * argv[])
     mtrace();
 #endif                          /* MDEBUG */
 
+#ifndef _WIN32
+    /* A message about a value is written in several parts. Line buffering
+       writes each message at once, instead of a write per part when every
+       line of a large file has a message. The Microsoft C runtime treats
+       line buffering as full buffering, which would hold messages back. */
+    setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
+#endif
+
     /* Initialize static info before getting program optional args */
     epi.query_flag = 0;
     epi.average_complete_flag = 0;
