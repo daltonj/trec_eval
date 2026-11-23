@@ -266,7 +266,7 @@ def test_first_explicit_parameter_list_wins():
 
 @pytest.mark.parametrize("representation", ["dict", "frame", "tuples"])
 def test_in_memory_qrels_refuse_out_of_range_grades(representation, qrels_as):
-    for grade in [-128, 128]:
+    for grade in [-128, 128, 2**63, -(2**63) - 1]:
         with pytest.raises(
             ValueError, match=f"relevance level {grade}.*outside -127 to 127"
         ):

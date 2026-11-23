@@ -197,8 +197,8 @@ def evaluate(
         complete_set_average is False and the run shares no topic with qrels
         (NoSharedTopicError, a subclass of ValueError).
     TypeError, OverflowError
-        If a value in qrels or run cannot be converted, such as a grade that is not an
-        integer or does not fit in 64 bits.
+        If a value in qrels or run cannot be converted: a value of the wrong type, such
+        as a grade that is not an integer, or a score too large for a float.
     """
     evaluator = Evaluator(
         qrels=qrels,

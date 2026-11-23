@@ -2,8 +2,9 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use pyo3::exceptions::{PyFileNotFoundError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyIterator, PySequence, PyString};
+use pyo3::types::{PyDict, PyIterator, PyLong, PySequence, PyString};
 use te_rust::eval::check_rel_level;
+use te_rust::io::parsers::REL_LEVELS;
 use te_rust::io::{parse_trec_qrels, parse_trec_run, QrelsData, QrelsQuery, QrelsRecord, RunData, RunQuery, RunRecord};
 use crate::errors::{evaluation_error, warn_all};
 
@@ -96,8 +97,12 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
                 let docno = doc_obj.extract::<String>().map_err(|_| {
                     PyTypeError::new_err("Expected doc_id to be a string in qrels dict")
                 })?;
-                let rel = rel_obj.extract::<i64>().map_err(|_| {
-                    PyTypeError::new_err("Expected relevance judgment to be an integer in qrels dict")
+                let rel = extract_grade(&rel_obj, &qid, &docno).map_err(|e| {
+                    if rel_obj.is_instance_of::<PyLong>() {
+                        e
+                    } else {
+                        PyTypeError::new_err("Expected relevance judgment to be an integer in qrels dict")
+                    }
                 })?;
                 check_rel_level(&qid, &docno, rel).map_err(evaluation_error)?;
                 query_map.insert(docno, rel);
@@ -152,7 +157,11 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
 
         let triples = qid_series.iter()?.zip(doc_series.iter()?).zip(rel_series.iter()?);
         return qrels_from_triples(
-            triples.map(|((qid, docno), rel)| Ok((qid?.extract()?, docno?.extract()?, rel?.extract()?))),
+            triples.map(|((qid, docno), rel)| {
+                let (qid, docno): (String, String) = (qid?.extract()?, docno?.extract()?);
+                let rel = extract_grade(&rel?, &qid, &docno)?;
+                Ok((qid, docno, rel))
+            }),
         );
     }
 
@@ -166,6 +175,24 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
     ))
 }
 
+
+/// Reads a grade as an `i64`, refusing an integer too large for one with the `ValueError` that
+/// `check_rel_level` gives for a grade outside the range that te-rust reads.
+fn extract_grade(obj: &Bound<'_, PyAny>, qid: &str, docno: &str) -> PyResult<i64> {
+    obj.extract::<i64>().map_err(|e| {
+        if !obj.is_instance_of::<PyLong>() {
+            return e;
+        }
+        PyValueError::new_err(format!(
+            "relevance level {} for document '{}' in query '{}' is outside {} to {}",
+            obj,
+            docno,
+            qid,
+            REL_LEVELS.start(),
+            REL_LEVELS.end()
+        ))
+    })
+}
 
 /// Groups `(qid, docno, rel)` triples by topic, keeping repeated documents for evaluation to
 /// refuse, and refuses a grade outside the range that te-rust reads.
@@ -200,7 +227,7 @@ fn extract_qrel_item(item: &Bound<'_, PyAny>) -> PyResult<(String, String, i64)>
         if len >= 3 {
             let qid = seq.get_item(0)?.extract::<String>()?;
             let docno = seq.get_item(1)?.extract::<String>()?;
-            let rel = seq.get_item(2)?.extract::<i64>()?;
+            let rel = extract_grade(&seq.get_item(2)?, &qid, &docno)?;
             return Ok((qid, docno, rel));
         }
     }
@@ -227,9 +254,9 @@ fn extract_qrel_item(item: &Bound<'_, PyAny>) -> PyResult<(String, String, i64)>
     };
 
     let rel = if let Ok(v) = item.getattr("relevance") {
-        v.extract::<i64>()?
+        extract_grade(&v, &qid, &docno)?
     } else if let Ok(v) = item.getattr("rel") {
-        v.extract::<i64>()?
+        extract_grade(&v, &qid, &docno)?
     } else {
         return Err(PyTypeError::new_err(
             "Could not extract relevance from qrel item (must be 3-tuple or have .relevance / .rel attribute)"
