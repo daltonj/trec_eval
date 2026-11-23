@@ -69,12 +69,8 @@ impl Measure for RprecMultMeasure {
 
         // 2. Pre-fill any cutoffs that exceed the retrieved length
         while current_cut >= 0 && cutoffs[current_cut as usize] > (q_state.num_ret as f64) {
-            let cutoff = cutoffs[current_cut as usize];
-            results[current_cut as usize] = if cutoff > 0.0 {
-                (q_state.num_rel_ret as f64) / cutoff
-            } else {
-                0.0
-            };
+            results[current_cut as usize] =
+                (q_state.num_rel_ret as f64) / cutoffs[current_cut as usize];
             current_cut -= 1;
         }
 
