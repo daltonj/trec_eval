@@ -5,7 +5,7 @@ from pathlib import Path
 import trec_eval
 from trec_eval import Evaluator, EvalResult, ScoredDoc, Qrel, evaluate
 
-from conftest import One
+from helpers import One
 
 TEST_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "te-rust" / "tests" / "test-data"
 QRELS_FILE = str(TEST_DATA_DIR / "qrels.test")
