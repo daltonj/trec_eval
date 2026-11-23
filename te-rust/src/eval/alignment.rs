@@ -78,7 +78,7 @@ pub fn align_query(
     max_docs_per_topic: usize,
     judged_docs_only_flag: bool,
 ) -> Result<QueryEvalState, EvaluationError> {
-    align_query_with_duplicate_check(
+    align_query_impl(
         run_query,
         qrels_query,
         run_id,
@@ -89,7 +89,8 @@ pub fn align_query(
     )
 }
 
-pub(crate) fn align_query_with_duplicate_check(
+/// As [`align_query`], refusing repeated documents only when `check_duplicates` is set.
+pub(crate) fn align_query_impl(
     run_query: Option<&RunQuery>,
     qrels_query: &QrelsQuery,
     run_id: &str,
@@ -274,7 +275,7 @@ pub fn align_query_jg(
     max_docs_per_topic: usize,
     judged_docs_only_flag: bool,
 ) -> Result<Vec<QueryEvalState>, EvaluationError> {
-    align_query_jg_with_duplicate_check(
+    align_query_jg_impl(
         run_query,
         qrels_jg_query,
         run_id,
@@ -285,7 +286,8 @@ pub fn align_query_jg(
     )
 }
 
-pub(crate) fn align_query_jg_with_duplicate_check(
+/// As [`align_query_jg`], refusing repeated documents only when `check_duplicates` is set.
+pub(crate) fn align_query_jg_impl(
     run_query: Option<&RunQuery>,
     qrels_jg_query: &QrelsJGQuery,
     run_id: &str,
