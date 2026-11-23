@@ -119,12 +119,18 @@ fn refuse_evaluation_error(
     run_file: &str,
 ) -> ! {
     match error {
-        EvaluationError::DuplicateDocument { source, .. } => {
+        EvaluationError::DuplicateDocument { source, ref qid, ref docno } => {
             let (kind, file) = match source {
                 DuplicateSource::Qrels => (qrels_kind, qrels_file),
                 DuplicateSource::Run => ("run", run_file),
             };
-            eprintln!("Error in {} file '{}': {}", kind, file, error);
+            match te_rust::io::parsers::repeated_document_lines(file, qid, docno) {
+                Some((first, second)) => eprintln!(
+                    "Error in {} file '{}': Line {}: {}, first at line {}",
+                    kind, file, second, error, first
+                ),
+                None => eprintln!("Error in {} file '{}': {}", kind, file, error),
+            }
         }
         EvaluationError::NoSharedTopic => eprintln!(
             "te-rust: {}; -c evaluates each qrels topic missing from the run as an empty ranking",

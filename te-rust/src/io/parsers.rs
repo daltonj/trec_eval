@@ -657,6 +657,23 @@ fn parse_trec_qrels_jg_from(reader: impl BufRead) -> Result<QrelsJGData, IOError
     Ok(QrelsJGData { queries, comments, warnings })
 }
 
+/// Finds the first two data lines of the qrels or run file at `path` whose first and third
+/// fields are `qid` and `docno`, numbered as parse errors number lines, so that a message about
+/// a repeated document can name them. Returns None for a file that is not a regular file, which
+/// cannot be read a second time.
+pub fn repeated_document_lines<P: AsRef<Path>>(path: P, qid: &str, docno: &str) -> Option<(usize, usize)> {
+    let file = File::open(path).ok()?;
+    if !file.metadata().ok()?.is_file() {
+        return None;
+    }
+    let mut lines = read_lines(BufReader::new(file)).filter_map(|line| {
+        let (line_num, line) = line.ok()?;
+        let fields = split_fields(&line);
+        (fields.len() > 2 && fields[0] == qid && fields[2] == docno).then_some(line_num)
+    });
+    Some((lines.next()?, lines.next()?))
+}
+
 /// Parses standard results (run) file format. A document retrieved twice for a topic is kept:
 /// evaluation refuses it only among the first `max_num_docs_per_topic` documents of a scored
 /// topic, and only when a measure reads the ranking

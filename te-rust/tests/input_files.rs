@@ -36,7 +36,8 @@ fn repeated_documents_name_the_source_and_exit_4() {
             &eval(&["-R", kind, "-m", measure], &good_qrels, &repeated_run),
             4,
             &format!(
-                "Error in run file '{}': duplicate document 'a' for query '1'",
+                "Error in run file '{}': Line 2: duplicate document 'a' for query '1', \
+                 first at line 1",
                 repeated_run.display()
             ),
         );
@@ -57,7 +58,8 @@ fn repeated_documents_name_the_source_and_exit_4() {
         &eval(&["-m", "map"], &repeated_qrels, &good_run),
         4,
         &format!(
-            "Error in qrels file '{}': duplicate document 'a' for query '1'",
+            "Error in qrels file '{}': Line 2: duplicate document 'a' for query '1', \
+             first at line 1",
             repeated_qrels.display()
         ),
     );
