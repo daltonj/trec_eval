@@ -69,7 +69,7 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
                ALL_ZSCORES * all_zscores)
 {
     FILE* fd;
-    long file_size;
+    long long file_size;
     size_t size = 0;
     char *ptr;
     char *mean_ptr, *stddev_ptr, *end_ptr;

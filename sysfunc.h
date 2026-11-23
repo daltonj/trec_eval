@@ -19,6 +19,9 @@
 #include "mman-win32/mman.h"
 #include "ya_getopt/ya_getopt.h"
 #include "strings_h/strings.h"
+/* long has 32 bits on Windows, so take file sizes as 64-bit offsets */
+#define fseek _fseeki64
+#define ftell _ftelli64
 #else
 #include <unistd.h>
 #include <sys/mman.h>

@@ -85,7 +85,7 @@ int
 te_get_qrels_jg(EPI * epi, char *text_qrels_file, ALL_REL_INFO * all_rel_info)
 {
     FILE* fd;
-    long file_size;
+    long long file_size;
     size_t size = 0;
     char *ptr;
     char *current_qid, *current_jg;
