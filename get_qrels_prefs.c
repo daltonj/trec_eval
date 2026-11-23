@@ -167,15 +167,15 @@ te_get_qrels_prefs(EPI * epi, char *text_prefs_file,
         /* Skip comment lines, and blank lines with a warning */
         while (*ptr != '\n' && isspace(*ptr))
             ptr++;
-		if (*ptr == '\n' || *ptr == '#') {
-			if (*ptr == '\n')
-				fprintf(stderr, "Warning, blank line skipped "
-						"(line %ld of qrels file '%s').\n",
-						line_num + 1, text_prefs_file);
-			ptr = index(ptr, '\n') + 1;
-			line_num++;
-			continue;
-		}
+        if (*ptr == '\n' || *ptr == '#') {
+            if (*ptr == '\n')
+                fprintf(stderr, "Warning, blank line skipped "
+                        "(line %ld of qrels file '%s').\n",
+                        line_num + 1, text_prefs_file);
+            ptr = index(ptr, '\n') + 1;
+            line_num++;
+            continue;
+        }
 
         if (UNDEF == parse_qrels_prefs_line(&ptr, &line_ptr->qid, &line_ptr->jg,
                                             &line_ptr->docno, &rel_ptr)) {
@@ -183,11 +183,16 @@ te_get_qrels_prefs(EPI * epi, char *text_prefs_file,
                     line_num + 1);
             return (UNDEF);
         }
-        line_ptr->rel = str_to_double_ctx(rel_ptr, NULL, &error,
+        line_ptr->rel = str_to_double_ctx(rel_ptr, &error,
+                                          "document '%s' of topic '%s' in "
                                           "line %ld of qrels file '%s'",
+                                          line_ptr->docno, line_ptr->qid,
                                           line_num + 1, text_prefs_file);
-        if (error)
+        if (error) {
+            fprintf(stderr, "trec_eval: Unusable relevance level '%s'\n",
+                    rel_ptr);
             return (UNDEF);
+        }
         line_ptr++;
         line_num++;
     }

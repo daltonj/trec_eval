@@ -58,9 +58,9 @@ te_init_utility(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
     if (UNDEF == te_init_meas_s_double_p_double(epi, tm, eval))
         return (UNDEF);
     if (tm->meas_params->num_params != 4) {
-        fprintf(stderr, "trec_eval: improper number of "
-                "coefficients: %ld given, 4 needed\n",
-                tm->meas_params->num_params);
+        fprintf(stderr, "trec_eval: improper number of coefficients of "
+                "measure '%s': %ld given, 4 needed\n",
+                tm->name, tm->meas_params->num_params);
         return (UNDEF);
     }
     return (1);

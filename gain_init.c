@@ -50,12 +50,15 @@ static int check_gain_params(const TREC_MEAS * tm,
         return (UNDEF);
     for (i = 0; i < num_pairs; i++) {
         if (valid_int(pairs[i].name))
-            levels[i] = str_to_long(pairs[i].name, &error);
+            levels[i] = str_to_long_ctx(pairs[i].name, &error,
+                                        "relevance level of measure '%s'",
+                                        tm->name);
         else
             error = 1;
         if (error) {
-            fprintf(stderr, "trec_eval: Unusable relevance level '%s'\n",
-                    pairs[i].name);
+            fprintf(stderr,
+                    "trec_eval: Unusable relevance level '%s' of measure '%s'\n",
+                    pairs[i].name, tm->name);
             Free(levels);
             return (UNDEF);
         }

@@ -364,7 +364,7 @@ static int get_double_cutoffs(PARAMS * params, char *param_string,
         if (*ptr == ',') {
             *ptr = '\0';
             cutoffs[num_cutoffs++] =
-                str_to_double_ctx(start_ptr, NULL, &error,
+                str_to_double_ctx(start_ptr, &error,
                                   "cutoff of measure '%s'", measure);
             if (error)
                 return (UNDEF);
@@ -372,7 +372,7 @@ static int get_double_cutoffs(PARAMS * params, char *param_string,
         }
     }
     cutoffs[num_cutoffs++] =
-        str_to_double_ctx(start_ptr, NULL, &error, "cutoff of measure '%s'",
+        str_to_double_ctx(start_ptr, &error, "cutoff of measure '%s'",
                           measure);
     if (error)
         return (UNDEF);
@@ -430,7 +430,7 @@ static int get_double_params(PARAMS * params, char *param_string,
         if (*ptr == ',') {
             *ptr = '\0';
             values[num_params++] =
-                str_to_double_ctx(start_ptr, NULL, &error,
+                str_to_double_ctx(start_ptr, &error,
                                   "parameter of measure '%s'", measure);
             if (error)
                 return (UNDEF);
@@ -438,7 +438,7 @@ static int get_double_params(PARAMS * params, char *param_string,
         }
     }
     values[num_params++] =
-        str_to_double_ctx(start_ptr, NULL, &error,
+        str_to_double_ctx(start_ptr, &error,
                           "parameter of measure '%s'", measure);
     if (error)
         return (UNDEF);
@@ -509,7 +509,7 @@ static int get_param_pairs(PARAMS * params, char *param_string,
         } else if (*ptr == ',') {
             *ptr = '\0';
             values[num_params].value =
-                str_to_double_ctx(start_ptr, NULL, &error,
+                str_to_double_ctx(start_ptr, &error,
                                   "parameter '%s' of measure '%s'",
                                   values[num_params].name, measure);
             num_params++;
@@ -519,7 +519,7 @@ static int get_param_pairs(PARAMS * params, char *param_string,
         }
     }
     values[num_params].value =
-        str_to_double_ctx(start_ptr, NULL, &error,
+        str_to_double_ctx(start_ptr, &error,
                           "parameter '%s' of measure '%s'",
                           values[num_params].name, measure);
     num_params++;

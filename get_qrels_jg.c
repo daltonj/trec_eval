@@ -141,15 +141,15 @@ te_get_qrels_jg(EPI * epi, char *text_qrels_file, ALL_REL_INFO * all_rel_info)
         /* Skip comment lines, and blank lines with a warning */
         while (*ptr != '\n' && isspace(*ptr))
             ptr++;
-		if (*ptr == '\n' || *ptr == '#') {
-			if (*ptr == '\n')
-				fprintf(stderr, "Warning, blank line skipped "
-						"(line %ld of qrels file '%s').\n",
-						line_num + 1, text_qrels_file);
-			ptr = index(ptr, '\n') + 1;
-			line_num++;
-			continue;
-		}
+        if (*ptr == '\n' || *ptr == '#') {
+            if (*ptr == '\n')
+                fprintf(stderr, "Warning, blank line skipped "
+                        "(line %ld of qrels file '%s').\n",
+                        line_num + 1, text_qrels_file);
+            ptr = index(ptr, '\n') + 1;
+            line_num++;
+            continue;
+        }
         if (UNDEF == parse_qrels_line(&ptr, &line_ptr->qid, &line_ptr->jg,
                                       &line_ptr->docno, &rel_ptr)) {
             fprintf(stderr, "trec_eval.get_qrels_jg: Malformed line %ld\n",
@@ -161,8 +161,11 @@ te_get_qrels_jg(EPI * epi, char *text_qrels_file, ALL_REL_INFO * all_rel_info)
                                         "line %ld of qrels file '%s'",
                                         line_ptr->docno, line_ptr->qid,
                                         line_num + 1, text_qrels_file);
-        if (error)
+        if (error) {
+            fprintf(stderr, "trec_eval: Unusable relevance level '%s'\n",
+                    rel_ptr);
             return (UNDEF);
+        }
         if (line_ptr->rel < MIN_REL_LEVEL || line_ptr->rel > MAX_REL_LEVEL) {
             fprintf(stderr, "trec_eval.get_qrels_jg: Relevance level '%s' "
                     "for document '%s' of topic '%s' in "

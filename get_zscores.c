@@ -79,7 +79,6 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
     LINES *line_ptr;
     long num_lines;
     long line_num;
-    int error = 0;
     long num_qid;
     /* current pointers into static pools above */
     ZSCORE_QID *text_zscores_ptr;
@@ -127,25 +126,15 @@ te_get_zscores(const EPI * epi, const char *zscores_file,
                     line_num);
             return (UNDEF);
         }
-        line_ptr->mean = str_to_double_ctx(mean_ptr, &end_ptr, &error,
-                                           "mean in line %ld of zscores "
-                                           "file '%s'",
-                                           line_num, zscores_file);
-        if (error)
-            return (UNDEF);
-        if (*end_ptr || !isfinite(line_ptr->mean)) {
+        line_ptr->mean = strtod(mean_ptr, &end_ptr);
+        if (end_ptr == mean_ptr || *end_ptr || !isfinite(line_ptr->mean)) {
             fprintf(stderr, "trec_eval.get_zscores: Unusable mean '%s' in "
                     "line %ld of zscores file '%s'\n",
                     mean_ptr, line_num, zscores_file);
             return (UNDEF);
         }
-        line_ptr->stddev = str_to_double_ctx(stddev_ptr, &end_ptr, &error,
-                                             "stddev in line %ld of zscores "
-                                             "file '%s'",
-                                             line_num, zscores_file);
-        if (error)
-            return (UNDEF);
-        if (*end_ptr || !isfinite(line_ptr->stddev) ||
+        line_ptr->stddev = strtod(stddev_ptr, &end_ptr);
+        if (end_ptr == stddev_ptr || *end_ptr || !isfinite(line_ptr->stddev) ||
             line_ptr->stddev < 0.0) {
             fprintf(stderr, "trec_eval.get_zscores: Unusable stddev '%s' in "
                     "line %ld of zscores file '%s'\n",

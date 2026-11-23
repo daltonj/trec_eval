@@ -61,11 +61,9 @@ long str_to_long_ctx(const char * str, int * error, const char * fmt, ...) {
  * Convert a string to a double, with the error checking of
  * str_to_long_ctx. NaN is an error. Overflow to infinity and underflow
  * to zero produce warnings; finite subnormal results are accepted
- * without a range warning. Characters
- * after the number give a warning when endptr is NULL; otherwise the end
- * of the number is stored in endptr, as by strtod, for the caller to check.
+ * without a range warning. Characters after the number give a warning.
  */
-double str_to_double_ctx(const char * str, char ** endptr, int * error,
+double str_to_double_ctx(const char * str, int * error,
                          const char * fmt, ...) {
     char *end = NULL;
     va_list ap;
@@ -73,8 +71,6 @@ double str_to_double_ctx(const char * str, char ** endptr, int * error,
 
     *error = 0;
     double value = strtod(str, &end);
-    if (endptr != NULL)
-        *endptr = end;
     if (end == str) {
         fprintf(stderr, "Error: value `%s' could not be parsed", str);
         *error = 1;
@@ -84,7 +80,7 @@ double str_to_double_ctx(const char * str, char ** endptr, int * error,
     } else if (errno == ERANGE && (isinf(value) || value == 0.0)) {
         fprintf(stderr, "Warning, value `%s' out of range, read as `%g'",
                 str, value);
-    } else if (endptr == NULL && *end != '\0') {
+    } else if (*end != '\0') {
         fprintf(stderr, "Warning, value `%s' partially read as `%.*s'",
                 str, (int) (end - str), str);
     } else {
@@ -239,8 +235,11 @@ int te_get_qrels(EPI *epi, char *text_qrels_file, ALL_REL_INFO *all_rel_info)
 										"line %ld of qrels file '%s'",
 										line_ptr->docno, line_ptr->qid,
 										line_num + 1, text_qrels_file);
-		if (error)
+		if (error) {
+			fprintf(stderr, "trec_eval: Unusable relevance level '%s'\n",
+					rel_ptr);
 			return (UNDEF);
+		}
 		if (line_ptr->rel < MIN_REL_LEVEL || line_ptr->rel > MAX_REL_LEVEL) {
 			fprintf(stderr, "trec_eval.get_qrels: Relevance level '%s' "
 					"for document '%s' of topic '%s' in "

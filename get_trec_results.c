@@ -175,7 +175,7 @@ te_get_trec_results(EPI * epi, char *text_results_file,
                     line_num + 1);
             return (UNDEF);
         }
-        line_ptr->sim = str_to_double_ctx(sim_ptr, NULL, &error,
+        line_ptr->sim = str_to_double_ctx(sim_ptr, &error,
                                           "line %ld of results file '%s'",
                                           line_num + 1, text_results_file);
         if (error)
