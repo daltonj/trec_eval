@@ -18,7 +18,10 @@ impl Avg11PtMeasure {
         } else {
             format!("11pt_avg_{}", params_str)
         };
-        Ok(Self { cutoffs, sub_metrics: vec![name] })
+        Ok(Self {
+            cutoffs,
+            sub_metrics: vec![name],
+        })
     }
 }
 
@@ -87,9 +90,6 @@ impl Measure for Avg11PtMeasure {
         let mut rel_so_far = num_rel_ret;
 
         for i in (1..=num_ret).rev() {
-            if rel_so_far == 0 {
-                break;
-            }
             let precis = (rel_so_far as f64) / (i as f64);
             if int_precis < precis {
                 int_precis = precis;

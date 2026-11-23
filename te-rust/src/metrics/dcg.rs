@@ -115,14 +115,7 @@ impl Measure for DcgMeasure {
             Some(q) => q,
             None => return self.initial_values(),
         };
-        let gains_config = if !self.gains_config.custom_gains.is_empty() {
-            &self.gains_config
-        } else if let Some(ref gg) = config.global_gains {
-            gg
-        } else {
-            &self.gains_config
-        };
-        let gains = Gains::setup(gains_config, &q_state.rel_levels);
+        let gains = Gains::setup(self.gains_config.or_global(config), &q_state.rel_levels);
         let value = match self.sum {
             Sum::Ranking => ranking_dcg(&gains, q_state),
             Sum::Ideal => ideal_dcg(&gains),

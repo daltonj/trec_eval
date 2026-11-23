@@ -62,14 +62,7 @@ impl Measure for RbpMeasure {
             None => return self.initial_values(),
         };
 
-        let gains_config = if !self.gains_config.custom_gains.is_empty() {
-            &self.gains_config
-        } else if let Some(ref gg) = config.global_gains {
-            gg
-        } else {
-            &self.gains_config
-        };
-        let mut gains = Gains::setup(gains_config, &q_state.rel_levels);
+        let mut gains = Gains::setup(self.gains_config.or_global(config), &q_state.rel_levels);
 
         // Find min and max gains to normalize if needed
         let mut min_gain = 0.0;

@@ -59,14 +59,7 @@ impl Measure for RndcgMeasure {
             return vec![MetricValue::Float(0.0)];
         }
 
-        let gains_config = if !self.gains_config.custom_gains.is_empty() {
-            &self.gains_config
-        } else if let Some(ref gg) = config.global_gains {
-            gg
-        } else {
-            &self.gains_config
-        };
-        let gains = Gains::setup(gains_config, &q_state.rel_levels);
+        let gains = Gains::setup(self.gains_config.or_global(config), &q_state.rel_levels);
 
 
                 let mut results_dcg = 0.0;

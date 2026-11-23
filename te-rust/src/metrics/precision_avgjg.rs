@@ -7,12 +7,14 @@ pub struct PrecisionAvgjgMeasure {
 }
 
 impl PrecisionAvgjgMeasure {
-    /// Sorts `cutoffs`, and refuses an empty list, a repeated cutoff, and a cutoff of 0 or
-    /// above `i64::MAX`.
+    /// Sorts `cutoffs`, and refuses an empty list, a repeated cutoff, and a cutoff of 0.
     pub fn new(cutoffs: Vec<usize>) -> Result<Self, MeasureParseError> {
         let cutoffs = checked_rank_cutoffs(cutoffs)?;
         let sub_metrics = cutoffs.iter().map(|c| format!("P_avgjg_{}", c)).collect();
-        Ok(Self { cutoffs, sub_metrics })
+        Ok(Self {
+            cutoffs,
+            sub_metrics,
+        })
     }
 }
 

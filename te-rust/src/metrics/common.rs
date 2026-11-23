@@ -12,11 +12,17 @@ pub struct MeasureParseError {
 
 impl MeasureParseError {
     pub fn new(message: impl Into<String>) -> Self {
-        Self { message: message.into(), illegal_name: false }
+        Self {
+            message: message.into(),
+            illegal_name: false,
+        }
     }
 
     pub fn illegal_name(message: impl Into<String>) -> Self {
-        Self { message: message.into(), illegal_name: true }
+        Self {
+            message: message.into(),
+            illegal_name: true,
+        }
     }
 }
 
@@ -126,6 +132,14 @@ impl GainsConfig {
         Self::from_pairs(parse_key_values(params_str)?)
     }
 
+    /// This gain map, or the global map (`--global-gains`) when this one is empty.
+    pub(crate) fn or_global<'a>(&'a self, config: &'a EvalConfig) -> &'a GainsConfig {
+        match &config.global_gains {
+            Some(global) if self.custom_gains.is_empty() => global,
+            _ => self,
+        }
+    }
+
     fn from_pairs(pairs: Vec<(String, String)>) -> Result<Self, MeasureParseError> {
         let mut custom_gains = HashMap::new();
         for (name, value) in pairs {
@@ -156,28 +170,29 @@ impl GainsConfig {
 /// Reads the parameters of `rbp` and `rbp_resid`: the persistence `p`, in [0, 1), given at most
 /// once and 0.9 by default, and a gain map from the other pairs.
 pub(crate) fn parse_rbp_params(params: &str) -> Result<(f64, GainsConfig), MeasureParseError> {
-    let mut persistence = None;
-    let mut gain_pairs = Vec::new();
-    for (name, value) in parse_key_values(params)? {
-        if name == "p" {
-            if persistence.is_some() {
-                return Err(MeasureParseError::new(
-                    "parameter 'p' is given more than once",
-                ));
+    let (p, gains): (Vec<_>, Vec<_>) = parse_key_values(params)?
+        .into_iter()
+        .partition(|(name, _)| name == "p");
+    let persistence = match &p[..] {
+        [] => 0.9,
+        [(_, value)] => match value.parse::<f64>() {
+            Ok(p) if (0.0..1.0).contains(&p) => p,
+            Ok(p) => {
+                let message = format!("persistence p {} is outside [0, 1)", p);
+                return Err(MeasureParseError::new(message));
             }
-            let p = value.parse::<f64>().map_err(|_| {
-                MeasureParseError::new(format!("invalid float parameter '{}'", value))
-            })?;
-            check_rbp_persistence(p)?;
-            persistence = Some(p);
-        } else {
-            gain_pairs.push((name, value));
+            Err(_) => {
+                let message = format!("invalid float parameter '{}'", value);
+                return Err(MeasureParseError::new(message));
+            }
+        },
+        _ => {
+            return Err(MeasureParseError::new(
+                "parameter 'p' is given more than once",
+            ))
         }
-    }
-    Ok((
-        persistence.unwrap_or(0.9),
-        GainsConfig::from_pairs(gain_pairs)?,
-    ))
+    };
+    Ok((persistence, GainsConfig::from_pairs(gains)?))
 }
 
 #[derive(Debug, Clone)]
@@ -213,7 +228,10 @@ impl Gains {
 
         // 2. Then add all other relevance levels that were NOT specified in custom_gains,
         // up to the highest level with a judged document. rel_levels can be padded past it.
-        let num_rel_levels = rel_levels.iter().rposition(|&n| n > 0).map_or(0, |top| top + 1);
+        let num_rel_levels = rel_levels
+            .iter()
+            .rposition(|&n| n > 0)
+            .map_or(0, |top| top + 1);
         for (i, &num_at_level) in rel_levels.iter().enumerate().take(num_rel_levels) {
             let rel_level = i as i64;
             if !config.custom_gains.contains_key(&rel_level) {
@@ -254,15 +272,14 @@ fn require_cutoffs<T>(cutoffs: &[T]) -> Result<(), MeasureParseError> {
 }
 
 /// Sorts rank cutoffs, which the single-pass measures rely on, and refuses an empty list, a
-/// repeated cutoff, and a cutoff of 0 or above `i64::MAX`.
-pub(crate) fn checked_rank_cutoffs(mut cutoffs: Vec<usize>) -> Result<Vec<usize>, MeasureParseError> {
+/// repeated cutoff, and a cutoff of 0.
+pub(crate) fn checked_rank_cutoffs(
+    mut cutoffs: Vec<usize>,
+) -> Result<Vec<usize>, MeasureParseError> {
     require_cutoffs(&cutoffs)?;
     cutoffs.sort_unstable();
     if cutoffs.first() == Some(&0) {
         return Err(MeasureParseError::new("rank cutoff must be at least 1"));
-    }
-    if cutoffs.iter().any(|&cutoff| i64::try_from(cutoff).is_err()) {
-        return Err(MeasureParseError::new("integer cutoff is out of range"));
     }
     if let Some(pair) = cutoffs.windows(2).find(|pair| pair[0] == pair[1]) {
         return Err(MeasureParseError::new(format!(
@@ -281,12 +298,6 @@ pub(crate) fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, Meas
         check_finite(value)?;
     }
     list.sort_by(f64::total_cmp);
-    if let Some(pair) = list.windows(2).find(|pair| pair[0] == pair[1]) {
-        return Err(MeasureParseError::new(format!(
-            "cutoff {} is given more than once",
-            pair[0]
-        )));
-    }
     // Each row is named with the cutoff to two decimals (`Rprec_mult_1.00`). Rounding is
     // monotone, so in the sorted list two cutoffs that print the same name are neighbours.
     let label = |cutoff: f64| format!("{:.2}", cutoff);
@@ -294,12 +305,17 @@ pub(crate) fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, Meas
         .windows(2)
         .find(|pair| label(pair[0]) == label(pair[1]))
     {
-        return Err(MeasureParseError::new(format!(
-            "cutoffs {} and {} both print as {}",
-            pair[0],
-            pair[1],
-            label(pair[0])
-        )));
+        let message = if pair[0] == pair[1] {
+            format!("cutoff {} is given more than once", pair[0])
+        } else {
+            format!(
+                "cutoffs {} and {} both print as {}",
+                pair[0],
+                pair[1],
+                label(pair[0])
+            )
+        };
+        return Err(MeasureParseError::new(message));
     }
     Ok(list)
 }
@@ -328,16 +344,6 @@ pub(crate) fn check_r_multiples(multiples: &[f64]) -> Result<(), MeasureParseErr
                 multiple
             )));
         }
-    }
-    Ok(())
-}
-
-fn check_rbp_persistence(p: f64) -> Result<(), MeasureParseError> {
-    if !(0.0..1.0).contains(&p) {
-        return Err(MeasureParseError::new(format!(
-            "persistence p {} is outside [0, 1)",
-            p
-        )));
     }
     Ok(())
 }
@@ -473,5 +479,4 @@ mod parser_tests {
         assert_eq!(gains, HashMap::from([(1, 3.0), (2, 9.5), (-1, 0.0)]));
         assert!(GainsConfig::parse("").unwrap().custom_gains.is_empty());
     }
-
 }

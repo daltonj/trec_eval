@@ -10,9 +10,13 @@ pub enum ParseError {
     /// The file has lines, but each is blank or a comment.
     NoDataLines,
     /// A line holds a NUL byte.
-    NulCharacter { line_num: usize },
+    NulCharacter {
+        line_num: usize,
+    },
     /// A line holds a CR that is not followed by LF, as in a file with CR line endings.
-    CarriageReturn { line_num: usize },
+    CarriageReturn {
+        line_num: usize,
+    },
     /// A data line is not UTF-8; `column` is the 1-based offset of the first bad byte.
     InvalidUtf8 { line_num: usize, column: usize },
     InvalidFieldCount { line_num: usize, expected: FieldCount, found: usize },
@@ -28,7 +32,9 @@ impl std::fmt::Display for ParseError {
             ParseError::EmptyFile => write!(f, "File is empty"),
             ParseError::NoDataLines => write!(f, "No data lines"),
             ParseError::NulCharacter { line_num } => write!(f, "Line {}: NUL character", line_num),
-            ParseError::CarriageReturn { line_num } => write!(f, "Line {}: CR character without LF", line_num),
+            ParseError::CarriageReturn { line_num } => {
+                write!(f, "Line {}: CR character without LF", line_num)
+            }
             ParseError::InvalidUtf8 { line_num, column } => {
                 write!(f, "Line {}: invalid UTF-8 at byte {}", line_num, column)
             }
@@ -124,7 +130,7 @@ pub const REL_LEVELS: std::ops::RangeInclusive<i64> = -127..=127;
 
 /// Reads a grade as `trec_eval`'s `str_to_long` does: the leading integer, with a warning when
 /// characters follow it, so `1.5` reads as 1 and `0.9` as 0. A value with no leading integer, or
-/// one that does not fit in an `i64`, is an error.
+/// one outside [`REL_LEVELS`], is an error.
 fn parse_grade(value: &str, line_num: usize, warnings: &mut Vec<String>) -> Result<i64, IOError> {
     let (rel, partial) = read_leading_integer(value).map_err(|_| {
         IOError::FormatError(ParseError::InvalidInteger {
@@ -134,7 +140,16 @@ fn parse_grade(value: &str, line_num: usize, warnings: &mut Vec<String>) -> Resu
         })
     })?;
     if partial {
-        warnings.push(format!("Line {}: value '{}' partially read as '{}'", line_num, value, rel));
+        warnings.push(format!(
+            "Line {}: value '{}' partially read as '{}'",
+            line_num, value, rel
+        ));
+    }
+    if !REL_LEVELS.contains(&rel) {
+        return Err(IOError::FormatError(ParseError::RelevanceOutOfBounds {
+            line_num,
+            value: rel,
+        }));
     }
     Ok(rel)
 }
@@ -153,10 +168,18 @@ fn parse_score(value: &str, line_num: usize, warnings: &mut Vec<String>) -> Resu
         })
     })?;
     if out_of_range(&value[..len], sim) {
-        warnings.push(format!("Line {}: score '{}' out of range, read as {}", line_num, value, sim));
+        warnings.push(format!(
+            "Line {}: score '{}' out of range, read as {}",
+            line_num, value, sim
+        ));
     }
     if len < value.len() {
-        warnings.push(format!("Line {}: score '{}' partially read as '{}'", line_num, value, &value[..len]));
+        warnings.push(format!(
+            "Line {}: score '{}' partially read as '{}'",
+            line_num,
+            value,
+            &value[..len]
+        ));
     }
     Ok(sim)
 }
@@ -172,12 +195,17 @@ fn out_of_range(prefix: &str, value: f64) -> bool {
     if value != 0.0 {
         return false;
     }
-    let (significand, exponent_marks) = match unsigned.strip_prefix("0x").or_else(|| unsigned.strip_prefix("0X")) {
+    let (significand, exponent_marks) = match unsigned
+        .strip_prefix("0x")
+        .or_else(|| unsigned.strip_prefix("0X"))
+    {
         Some(hex) => (hex, ['p', 'P']),
         None => (unsigned, ['e', 'E']),
     };
     let significand = significand.split(exponent_marks).next().unwrap_or_default();
-    significand.bytes().any(|b| b.is_ascii_hexdigit() && b != b'0')
+    significand
+        .bytes()
+        .any(|b| b.is_ascii_hexdigit() && b != b'0')
 }
 
 /// The value and length of the longest prefix of `s` that C's `strtod` reads in the C locale as a
@@ -187,7 +215,8 @@ fn strtod_prefix(s: &str) -> Option<(f64, usize)> {
     let sign = usize::from(matches!(bytes.first(), Some(b'+' | b'-')));
     let negative = bytes.first() == Some(&b'-');
     let rest = &bytes[sign..];
-    let has_word = |word: &[u8]| rest.len() >= word.len() && rest[..word.len()].eq_ignore_ascii_case(word);
+    let has_word =
+        |word: &[u8]| rest.len() >= word.len() && rest[..word.len()].eq_ignore_ascii_case(word);
     let signed = |x: f64| if negative { -x } else { x };
     if has_word(b"infinity") {
         return Some((signed(f64::INFINITY), sign + 8));
@@ -195,15 +224,18 @@ fn strtod_prefix(s: &str) -> Option<(f64, usize)> {
     if has_word(b"inf") {
         return Some((signed(f64::INFINITY), sign + 3));
     }
-    if rest.len() > 2 && rest[0] == b'0' && (rest[1] == b'x' || rest[1] == b'X') {
-        if let Some((value, len)) = hex_prefix(&rest[2..]) {
+    if let Some(hex) = rest
+        .strip_prefix(b"0x")
+        .or_else(|| rest.strip_prefix(b"0X"))
+    {
+        if let Some((value, len)) = hex_prefix(hex) {
             return Some((signed(value), sign + 2 + len));
         }
     }
-    let int_digits = rest.iter().take_while(|c| c.is_ascii_digit()).count();
+    let int_digits = count_digits(rest);
     let mut len = int_digits;
     if rest.get(len) == Some(&b'.') {
-        let frac_digits = rest[len + 1..].iter().take_while(|c| c.is_ascii_digit()).count();
+        let frac_digits = count_digits(&rest[len + 1..]);
         if int_digits + frac_digits > 0 {
             len += 1 + frac_digits;
         }
@@ -211,13 +243,7 @@ fn strtod_prefix(s: &str) -> Option<(f64, usize)> {
     if len == 0 {
         return None;
     }
-    if let Some(b'e' | b'E') = rest.get(len) {
-        let exp_sign = usize::from(matches!(rest.get(len + 1), Some(b'+' | b'-')));
-        let exp_digits = rest[len + 1 + exp_sign..].iter().take_while(|c| c.is_ascii_digit()).count();
-        if exp_digits > 0 {
-            len += 1 + exp_sign + exp_digits;
-        }
-    }
+    len += exponent_len(&rest[len..], b"eE");
     // Rust's parser rounds as strtod does, and gives an infinity or zero out of range.
     let value = s[..sign + len].parse::<f64>().ok()?;
     Some((value, sign + len))
@@ -239,10 +265,14 @@ fn hex_prefix(rest: &[u8]) -> Option<(f64, usize)> {
             digits += 1;
             if mantissa >> 60 == 0 {
                 mantissa = mantissa << 4 | u64::from(d);
-                exponent -= if point { 4 } else { 0 };
+                if point {
+                    exponent -= 4;
+                }
             } else {
                 sticky |= d != 0;
-                exponent += if point { 0 } else { 4 };
+                if !point {
+                    exponent += 4;
+                }
             }
         } else {
             break;
@@ -252,19 +282,38 @@ fn hex_prefix(rest: &[u8]) -> Option<(f64, usize)> {
     if digits == 0 {
         return None;
     }
-    if let Some(b'p' | b'P') = rest.get(len) {
-        let exp_sign = usize::from(matches!(rest.get(len + 1), Some(b'+' | b'-')));
-        let start = len + 1 + exp_sign;
-        let exp_digits = rest[start..].iter().take_while(|c| c.is_ascii_digit()).count();
-        if exp_digits > 0 {
-            let value = rest[start..start + exp_digits].iter().fold(0i64, |e, &c| {
-                e.saturating_mul(10).saturating_add(i64::from(c - b'0'))
-            });
-            exponent = exponent.saturating_add(if rest[len + 1] == b'-' { -value } else { value });
-            len = start + exp_digits;
-        }
+    let exp_len = exponent_len(&rest[len..], b"pP");
+    if exp_len > 0 {
+        let (negative, digits) = match &rest[len + 1..len + exp_len] {
+            [b'-', digits @ ..] => (true, digits),
+            [b'+', digits @ ..] => (false, digits),
+            digits => (false, digits),
+        };
+        let value = digits.iter().fold(0i64, |e, &c| {
+            e.saturating_mul(10).saturating_add(i64::from(c - b'0'))
+        });
+        exponent = exponent.saturating_add(if negative { -value } else { value });
+        len += exp_len;
     }
     Some((round_binary(mantissa, sticky, exponent), len))
+}
+
+/// The number of ASCII digits at the start of `bytes`.
+fn count_digits(bytes: &[u8]) -> usize {
+    bytes.iter().take_while(|c| c.is_ascii_digit()).count()
+}
+
+/// The length of the exponent at the start of `bytes`, as `strtod` reads it: a letter in `marks`,
+/// an optional sign and at least one digit. 0 when there is none.
+fn exponent_len(bytes: &[u8], marks: &[u8; 2]) -> usize {
+    if !bytes.first().is_some_and(|b| marks.contains(b)) {
+        return 0;
+    }
+    let sign = usize::from(matches!(bytes.get(1), Some(b'+' | b'-')));
+    match count_digits(&bytes[1 + sign..]) {
+        0 => 0,
+        digits => 1 + sign + digits,
+    }
 }
 
 /// `mantissa * 2^exponent` rounded to the nearest `f64`, ties to even, where `sticky` means that
@@ -294,7 +343,11 @@ fn round_binary(mantissa: u64, sticky: bool, exponent: i64) -> f64 {
         return f64::from_bits(q); // subnormal; a carry into bit 52 gives the smallest normal
     }
     // Rounding up can carry into a 54th bit.
-    let (q, top) = if q >> 53 == 1 { (q >> 1, top + 1) } else { (q, top) };
+    let (q, top) = if q >> 53 == 1 {
+        (q >> 1, top + 1)
+    } else {
+        (q, top)
+    };
     if top > 1023 {
         return f64::INFINITY;
     }
@@ -384,7 +437,9 @@ fn is_field_sep(c: char) -> bool {
 }
 
 fn split_fields(line: &str) -> Vec<&str> {
-    line.split(is_field_sep).filter(|field| !field.is_empty()).collect()
+    line.split(is_field_sep)
+        .filter(|field| !field.is_empty())
+        .collect()
 }
 
 const UTF8_BOM: &[u8] = b"\xEF\xBB\xBF";
@@ -412,7 +467,10 @@ fn read_lines(mut reader: impl BufRead) -> impl Iterator<Item = Result<(usize, S
         }
     })
     .peekable();
-    let empty = lines.peek().is_none().then_some(Err(IOError::FormatError(ParseError::EmptyFile)));
+    let empty = lines
+        .peek()
+        .is_none()
+        .then_some(Err(IOError::FormatError(ParseError::EmptyFile)));
     empty.into_iter().chain(lines)
 }
 
@@ -431,9 +489,14 @@ fn decode_line(mut bytes: Vec<u8>, line_num: usize, byte_offset: usize) -> Resul
         return Err(IOError::FormatError(ParseError::NulCharacter { line_num }));
     }
     if bytes.contains(&b'\r') {
-        return Err(IOError::FormatError(ParseError::CarriageReturn { line_num }));
+        return Err(IOError::FormatError(ParseError::CarriageReturn {
+            line_num,
+        }));
     }
-    let start = bytes.iter().position(|&b| !is_field_sep(char::from(b))).unwrap_or(bytes.len());
+    let start = bytes
+        .iter()
+        .position(|&b| !is_field_sep(char::from(b)))
+        .unwrap_or(bytes.len());
     if bytes[start..].starts_with(b"#") {
         return Ok(String::from_utf8_lossy(&bytes).into_owned());
     }
@@ -441,6 +504,44 @@ fn decode_line(mut bytes: Vec<u8>, line_num: usize, byte_offset: usize) -> Resul
         let column = byte_offset + e.utf8_error().valid_up_to() + 1;
         IOError::FormatError(ParseError::InvalidUtf8 { line_num, column })
     })
+}
+
+/// Reads the data lines of a qrels or qrels_jg file, `qid  iter_or_jg  docno  rel`, into records
+/// made by `record` from the line number, the first three fields and the grade. Comments are added
+/// to `comments`, and each blank line adds a warning. A file without data lines is an error.
+fn read_judgments<T>(
+    reader: impl BufRead,
+    comments: &mut Vec<String>,
+    warnings: &mut Vec<String>,
+    mut record: impl FnMut(usize, [&str; 3], i64) -> T,
+) -> Result<Vec<T>, IOError> {
+    let mut records = Vec::new();
+    for line in read_lines(reader) {
+        let (line_num, line) = line?;
+        let trimmed = line.trim_matches(is_field_sep);
+        if trimmed.is_empty() {
+            warnings.push(format!("Line {}: blank line skipped", line_num));
+            continue;
+        }
+        if let Some(comment) = trimmed.strip_prefix('#') {
+            comments.push(comment.to_string());
+            continue;
+        }
+        let parts = split_fields(trimmed);
+        let [qid, group, docno, rel] = parts[..] else {
+            return Err(IOError::FormatError(ParseError::InvalidFieldCount {
+                line_num,
+                expected: FieldCount::Exactly(4),
+                found: parts.len(),
+            }));
+        };
+        let rel = parse_grade(rel, line_num, warnings)?;
+        records.push(record(line_num, [qid, group, docno], rel));
+    }
+    if records.is_empty() {
+        return Err(IOError::FormatError(ParseError::NoDataLines));
+    }
+    Ok(records)
 }
 
 /// Parses standard qrels relevance judgments file format. A document judged twice in a topic
@@ -452,52 +553,18 @@ pub fn parse_trec_qrels<P: AsRef<Path>>(path: P) -> Result<QrelsData, IOError> {
 }
 
 fn parse_trec_qrels_from(reader: impl BufRead) -> Result<QrelsData, IOError> {
-    let mut raw_records = Vec::new();
     let mut comments = Vec::new();
     let mut warnings = Vec::new();
-
-    for line in read_lines(reader) {
-        let (line_num, line) = line?;
-        let trimmed = line.trim_matches(is_field_sep);
-
-        if trimmed.is_empty() {
-            warnings.push(format!("Line {}: blank line skipped", line_num));
-            continue;
-        }
-
-        if trimmed.starts_with('#') {
-            comments.push(trimmed[1..].to_string());
-            continue;
-        }
-
-        let parts = split_fields(trimmed);
-        if parts.len() != 4 {
-            return Err(IOError::FormatError(ParseError::InvalidFieldCount {
-                line_num,
-                expected: FieldCount::Exactly(4),
-                found: parts.len(),
-            }));
-        }
-
-        let qid = parts[0].to_string();
-        let docno = parts[2].to_string();
-        let rel_str = parts[3];
-
-        let rel = parse_grade(rel_str, line_num, &mut warnings)?;
-
-        if !REL_LEVELS.contains(&rel) {
-            return Err(IOError::FormatError(ParseError::RelevanceOutOfBounds {
-                line_num,
-                value: rel,
-            }));
-        }
-
-        raw_records.push(RawQrels { qid, docno, rel });
-    }
-
-    if raw_records.is_empty() {
-        return Err(IOError::FormatError(ParseError::NoDataLines));
-    }
+    let mut raw_records = read_judgments(
+        reader,
+        &mut comments,
+        &mut warnings,
+        |_, [qid, _, docno], rel| RawQrels {
+            qid: qid.to_string(),
+            docno: docno.to_string(),
+            rel,
+        },
+    )?;
 
     // Sort by qid first, then docno lexicographically ascending
     raw_records.sort_by(|a, b| {
@@ -536,7 +603,11 @@ fn parse_trec_qrels_from(reader: impl BufRead) -> Result<QrelsData, IOError> {
     }
     queries.push(current_query);
 
-    Ok(QrelsData { queries, comments, warnings })
+    Ok(QrelsData {
+        queries,
+        comments,
+        warnings,
+    })
 }
 
 struct RawQrelsJG {
@@ -554,59 +625,20 @@ pub fn parse_trec_qrels_jg<P: AsRef<Path>>(path: P) -> Result<QrelsJGData, IOErr
 }
 
 fn parse_trec_qrels_jg_from(reader: impl BufRead) -> Result<QrelsJGData, IOError> {
-    let mut raw_records = Vec::new();
     let mut comments = Vec::new();
     let mut warnings = Vec::new();
-
-    for line in read_lines(reader) {
-        let (line_num, line) = line?;
-        let trimmed = line.trim_matches(is_field_sep);
-
-        if trimmed.is_empty() {
-            warnings.push(format!("Line {}: blank line skipped", line_num));
-            continue;
-        }
-
-        if trimmed.starts_with('#') {
-            comments.push(trimmed[1..].to_string());
-            continue;
-        }
-
-        let parts = split_fields(trimmed);
-        if parts.len() != 4 {
-            return Err(IOError::FormatError(ParseError::InvalidFieldCount {
-                line_num,
-                expected: FieldCount::Exactly(4),
-                found: parts.len(),
-            }));
-        }
-
-        let qid = parts[0].to_string();
-        let jg = parts[1].to_string();
-        let docno = parts[2].to_string();
-        let rel_str = parts[3];
-
-        let rel = parse_grade(rel_str, line_num, &mut warnings)?;
-
-        if !REL_LEVELS.contains(&rel) {
-            return Err(IOError::FormatError(ParseError::RelevanceOutOfBounds {
-                line_num,
-                value: rel,
-            }));
-        }
-
-        raw_records.push(RawQrelsJG {
-            qid,
-            jg,
-            docno,
+    let mut raw_records = read_judgments(
+        reader,
+        &mut comments,
+        &mut warnings,
+        |line_num, [qid, jg, docno], rel| RawQrelsJG {
+            qid: qid.to_string(),
+            jg: jg.to_string(),
+            docno: docno.to_string(),
             rel,
             line_num,
-        });
-    }
-
-    if raw_records.is_empty() {
-        return Err(IOError::FormatError(ParseError::NoDataLines));
-    }
+        },
+    )?;
 
     // Sort by qid first, then jg, then docno lexicographically ascending
     raw_records.sort_by(|a, b| {
@@ -666,7 +698,11 @@ fn parse_trec_qrels_jg_from(reader: impl BufRead) -> Result<QrelsJGData, IOError
         }
     }
 
-    Ok(QrelsJGData { queries, comments, warnings })
+    Ok(QrelsJGData {
+        queries,
+        comments,
+        warnings,
+    })
 }
 
 /// Parses standard results (run) file format. A document retrieved twice for a topic is kept:

@@ -219,7 +219,7 @@ pub trait Measure: Send + Sync {
 #[cfg(test)]
 mod tests {
     use super::avg_11pt::Avg11PtMeasure;
-    use super::common::{make_mock_state, MeasureParseError};
+    use super::common::MeasureParseError;
     use super::iprec_at_recall::IprecAtRecallMeasure;
     use super::map_cut::MapCutMeasure;
     use super::ndcg_cut::NdcgCutMeasure;
@@ -297,12 +297,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(target_pointer_width = "64")]
-    fn rank_cutoff_constructors_refuse_cutoffs_above_i64_max() {
-        assert!(PrecisionCutMeasure::new(vec![i64::MAX as usize + 1]).is_err());
-    }
-
-    #[test]
     fn parameter_constructors_refuse_values_outside_their_domain() {
         assert!(SetFMeasure::new(f64::NAN, "").is_err());
         assert!(UtilityMeasure::new(vec![f64::INFINITY, 0.0, 0.0, 0.0], "").is_err());
@@ -313,25 +307,5 @@ mod tests {
         }
         SetFMeasure::new(0.0, "").unwrap();
         UtilityMeasure::new(vec![1e300, -1e300, 0.0, 1.0], "").unwrap();
-    }
-
-    #[test]
-    fn rprec_mult_avgjg_scan_stops_at_zero_relevant_documents() {
-        let config = EvalConfig {
-            relevance_level: -1,
-            ..Default::default()
-        };
-        let mut query = make_mock_state(vec![1, -1, -1], 1);
-        query.rel_levels = vec![0, 1];
-        query.num_nonpool = 2;
-        // The reverse scan consumes the only judged relevant count at rank 3.
-        // The beyond-ranking cutoff uses that count directly: 1/4.
-        let groups = EvalState::JudgmentGroups(vec![query]);
-        assert_eq!(
-            RprecMultAvgjgMeasure::new(vec![1.0, 4.0])
-                .unwrap()
-                .calc(&config, &groups),
-            [MetricValue::Float(0.0), MetricValue::Float(0.25)]
-        );
     }
 }

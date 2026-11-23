@@ -90,16 +90,13 @@ impl Measure for RprecMultAvgjgMeasure {
             // Scan retrieved documents backwards
             let mut rel_so_far = q_state.num_rel_ret;
             for i in (1..=q_state.num_ret).rev() {
-                if rel_so_far == 0 {
-                    break;
-                }
                 let precis = (rel_so_far as f64) / (i as f64);
                 while current_cut >= 0 && i == cutoffs[current_cut as usize] as usize {
                     jg_results[current_cut as usize] = precis;
                     current_cut -= 1;
                 }
                 if q_state.results_rel_list[i - 1] >= config.relevance_level {
-                    rel_so_far -= 1;
+                    rel_so_far = rel_so_far.saturating_sub(1);
                 }
             }
 
@@ -155,6 +152,26 @@ mod tests {
         assert_eq!(
             measure.calc(&EvalConfig::default(), &state),
             [MetricValue::Float(1e-19)]
+        );
+    }
+
+    #[test]
+    fn relevant_count_stays_at_zero_in_the_reverse_scan() {
+        let config = EvalConfig {
+            relevance_level: -1,
+            ..Default::default()
+        };
+        let mut query = crate::metrics::common::make_mock_state(vec![1, -1, -1], 1);
+        query.rel_levels = vec![0, 1];
+        query.num_nonpool = 2;
+        // The reverse scan consumes the only judged relevant count at rank 3.
+        // The beyond-ranking cutoff uses that count directly: 1/4.
+        let groups = EvalState::JudgmentGroups(vec![query]);
+        assert_eq!(
+            RprecMultAvgjgMeasure::new(vec![1.0, 4.0])
+                .unwrap()
+                .calc(&config, &groups),
+            [MetricValue::Float(0.0), MetricValue::Float(0.25)]
         );
     }
 }

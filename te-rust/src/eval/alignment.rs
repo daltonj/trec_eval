@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::eval::{DuplicateSource, EvaluationError};
 use crate::io::parsers::REL_LEVELS;
-use crate::io::{QrelsJGQuery, QrelsQuery, RunQuery, RunRecord};
+use crate::io::{QrelsJGQuery, QrelsQuery, QrelsRecord, RunQuery, RunRecord};
 
 pub const RELVALUE_NONPOOL: i64 = -1;
 
@@ -107,7 +107,8 @@ pub(crate) fn align_query_impl(
     )?;
     align_ranked_query(
         &doc_infos,
-        qrels_query,
+        &qrels_query.qid,
+        &qrels_query.records,
         run_id,
         relevance_level_cutoff,
         judged_docs_only_flag,
@@ -165,20 +166,19 @@ fn rank_documents<'a>(
 
 fn align_ranked_query(
     doc_infos: &[&RunRecord],
-    qrels_query: &QrelsQuery,
+    qid: &str,
+    records: &[QrelsRecord],
     run_id: &str,
     relevance_level_cutoff: i64,
     judged_docs_only_flag: bool,
     check_duplicates: bool,
 ) -> Result<QueryEvalState, EvaluationError> {
-    let qid = qrels_query.qid.clone();
-
-    let mut qrels_map = HashMap::with_capacity(qrels_query.records.len());
-    for record in &qrels_query.records {
+    let mut qrels_map = HashMap::with_capacity(records.len());
+    for record in records {
         if qrels_map.insert(&record.docno, record.rel).is_some() && check_duplicates {
             return Err(EvaluationError::DuplicateDocument {
                 source: DuplicateSource::Qrels,
-                qid,
+                qid: qid.to_string(),
                 docno: record.docno.clone(),
             });
         }
@@ -186,18 +186,21 @@ fn align_ranked_query(
 
     // Calculate max relevance grade and populate rel_levels counts
     let mut max_rel_grade = 0;
-    for record in &qrels_query.records {
-        check_rel_level(&qid, &record.docno, record.rel)?;
+    for record in records {
+        check_rel_level(qid, &record.docno, record.rel)?;
         if record.rel > max_rel_grade {
             max_rel_grade = record.rel;
         }
     }
 
-    let rel_levels_size = std::cmp::max(max_rel_grade + 1, relevance_level_cutoff.min(*REL_LEVELS.end()) + 1) as usize;
+    let rel_levels_size = std::cmp::max(
+        max_rel_grade + 1,
+        relevance_level_cutoff.min(*REL_LEVELS.end()) + 1,
+    ) as usize;
     let mut rel_levels = vec![0; rel_levels_size];
     let mut num_rel = 0;
 
-    for record in &qrels_query.records {
+    for record in records {
         if record.rel >= 0 {
             rel_levels[record.rel as usize] += 1;
             if record.rel >= relevance_level_cutoff {
@@ -249,7 +252,7 @@ fn align_ranked_query(
     let num_ret = results_rel_list.len();
 
     Ok(QueryEvalState {
-        qid,
+        qid: qid.to_string(),
         run_id: run_id.to_string(),
         results_rel_list,
         num_ret,
@@ -306,13 +309,10 @@ pub(crate) fn align_query_jg_impl(
         .groups
         .iter()
         .map(|group| {
-            let single_q = QrelsQuery {
-                qid: qrels_jg_query.qid.clone(),
-                records: group.records.clone(),
-            };
             align_ranked_query(
                 &doc_infos,
-                &single_q,
+                &qrels_jg_query.qid,
+                &group.records,
                 run_id,
                 relevance_level_cutoff,
                 judged_docs_only_flag,

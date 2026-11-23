@@ -320,6 +320,13 @@ pub struct ResolvedMeasures {
 /// list given for it, or from its defaults if no request gives one. A later, different
 /// list is ignored with a warning. An error names the request whose parameters failed.
 pub fn resolve_measures(requested: &[String]) -> Result<ResolvedMeasures, MeasureParseError> {
+    /// A measure to build, with the parameters it uses and the request that gave them.
+    struct Selected<'a> {
+        spec: &'static MeasureSpec,
+        params: &'a str,
+        source: &'a str,
+    }
+
     // 1. Expand any groups into concrete measure argument strings.
     let mut expanded: Vec<String> = Vec::new();
     for req in requested {
@@ -334,17 +341,15 @@ pub fn resolve_measures(requested: &[String]) -> Result<ResolvedMeasures, Measur
         .map(|arg| named_spec(arg).map(|(spec, params)| (arg.as_str(), spec, params)))
         .collect::<Result<Vec<_>, _>>()?;
 
-    /// A measure to build, with the parameters it uses and the request that gave them.
-    struct Selected<'a> {
-        spec: &'static MeasureSpec,
-        params: &'a str,
-        source: &'a str,
-    }
     let mut selected: Vec<Selected> = Vec::new();
     let mut warnings = Vec::new();
     for (arg, spec, params) in &named {
         match selected.iter_mut().find(|s| s.spec.name == spec.name) {
-            None => selected.push(Selected { spec, params, source: arg }),
+            None => selected.push(Selected {
+                spec,
+                params,
+                source: arg,
+            }),
             Some(s) if params.is_empty() || params == s.params => {}
             Some(s) if s.params.is_empty() => {
                 s.params = params;
@@ -358,13 +363,20 @@ pub fn resolve_measures(requested: &[String]) -> Result<ResolvedMeasures, Measur
     }
 
     let mut measures: Vec<Box<dyn Measure>> = Vec::with_capacity(selected.len());
-    for Selected { spec, params, source } in selected {
-        let warning_count = warnings.len();
-        let measure = (spec.factory)(params, &mut warnings)
+    for Selected {
+        spec,
+        params,
+        source,
+    } in selected
+    {
+        let mut measure_warnings = Vec::new();
+        let measure = (spec.factory)(params, &mut measure_warnings)
             .map_err(|e| MeasureParseError::new(format!("measure '{}': {}", source, e)))?;
-        for warning in &mut warnings[warning_count..] {
-            *warning = format!("measure '{}': {}", source, warning);
-        }
+        warnings.extend(
+            measure_warnings
+                .iter()
+                .map(|w| format!("measure '{}': {}", source, w)),
+        );
         measures.push(measure);
     }
     Ok(ResolvedMeasures { measures, warnings })
@@ -373,16 +385,63 @@ pub fn resolve_measures(requested: &[String]) -> Result<ResolvedMeasures, Measur
 /// The order of `te_trec_measures` in trec_eval's `measures.c`, in which trec_eval
 /// prints the measures it computes, whatever the order of its `-m` options.
 const TREC_EVAL_PRINT_ORDER: &[&str] = &[
-    "runid", "num_q", "num_ret", "num_rel", "num_rel_ret", "map", "gm_map", "Rprec",
-    "bpref", "recip_rank", "iprec_at_recall", "P", "relstring", "recall", "infAP",
-    "gm_bpref", "Rprec_mult", "utility", "11pt_avg", "binG", "G", "dcg", "ideal_dcg",
-    "ndcg", "ndcg_rel", "Rndcg", "ndcg_cut", "map_cut", "relative_P", "success",
-    "set_P", "set_relative_P", "set_recall", "set_map", "set_F",
-    "num_nonrel_judged_ret", "prefs_num_prefs_poss", "prefs_num_prefs_ful",
-    "prefs_num_prefs_ful_ret", "prefs_simp", "prefs_pair", "prefs_avgjg",
-    "prefs_avgjg_Rnonrel", "prefs_simp_ret", "prefs_pair_ret", "prefs_avgjg_ret",
-    "prefs_avgjg_Rnonrel_ret", "prefs_simp_imp", "prefs_pair_imp", "prefs_avgjg_imp",
-    "map_avgjg", "P_avgjg", "Rprec_mult_avgjg", "yaap", "rbp", "rbp_resid", "unj",
+    "runid",
+    "num_q",
+    "num_ret",
+    "num_rel",
+    "num_rel_ret",
+    "map",
+    "gm_map",
+    "Rprec",
+    "bpref",
+    "recip_rank",
+    "iprec_at_recall",
+    "P",
+    "relstring",
+    "recall",
+    "infAP",
+    "gm_bpref",
+    "Rprec_mult",
+    "utility",
+    "11pt_avg",
+    "binG",
+    "G",
+    "dcg",
+    "ideal_dcg",
+    "ndcg",
+    "ndcg_rel",
+    "Rndcg",
+    "ndcg_cut",
+    "map_cut",
+    "relative_P",
+    "success",
+    "set_P",
+    "set_relative_P",
+    "set_recall",
+    "set_map",
+    "set_F",
+    "num_nonrel_judged_ret",
+    "prefs_num_prefs_poss",
+    "prefs_num_prefs_ful",
+    "prefs_num_prefs_ful_ret",
+    "prefs_simp",
+    "prefs_pair",
+    "prefs_avgjg",
+    "prefs_avgjg_Rnonrel",
+    "prefs_simp_ret",
+    "prefs_pair_ret",
+    "prefs_avgjg_ret",
+    "prefs_avgjg_Rnonrel_ret",
+    "prefs_simp_imp",
+    "prefs_pair_imp",
+    "prefs_avgjg_imp",
+    "map_avgjg",
+    "P_avgjg",
+    "Rprec_mult_avgjg",
+    "yaap",
+    "rbp",
+    "rbp_resid",
+    "unj",
 ];
 
 /// Sort measures into the order in which trec_eval prints them.

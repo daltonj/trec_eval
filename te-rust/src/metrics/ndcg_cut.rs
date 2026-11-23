@@ -8,8 +8,7 @@ pub struct NdcgCutMeasure {
 }
 
 impl NdcgCutMeasure {
-    /// Sorts `cutoffs`, and refuses an empty list, a repeated cutoff, and a cutoff of 0 or
-    /// above `i64::MAX`.
+    /// Sorts `cutoffs`, and refuses an empty list, a repeated cutoff, and a cutoff of 0.
     pub fn new(cutoffs: Vec<usize>) -> Result<Self, MeasureParseError> {
         let cutoffs = checked_rank_cutoffs(cutoffs)?;
         let sub_metrics = cutoffs.iter().map(|c| format!("ndcg_cut_{}", c)).collect();
@@ -56,14 +55,7 @@ impl Measure for NdcgCutMeasure {
             None => return self.initial_values(),
         };
 
-        let gains_config = if !self.gains_config.custom_gains.is_empty() {
-            &self.gains_config
-        } else if let Some(ref gg) = config.global_gains {
-            gg
-        } else {
-            &self.gains_config
-        };
-        let gains = Gains::setup(gains_config, &q_state.rel_levels);
+        let gains = Gains::setup(self.gains_config.or_global(config), &q_state.rel_levels);
         let num_params = self.cutoffs.len();
         let mut dcgs = vec![0.0; num_params];
         let mut idcgs = vec![0.0; num_params];
