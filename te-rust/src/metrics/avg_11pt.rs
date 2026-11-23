@@ -138,6 +138,7 @@ mod tests {
             panic!("Expected float value");
         }
     }
+
     #[test]
     fn eleven_pt_avg_uses_the_judged_relevant_count() {
         let config = EvalConfig {

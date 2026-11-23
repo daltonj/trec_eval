@@ -234,7 +234,6 @@ mod output {
             output.status
         );
     }
-
 }
 
 /// Representative differences from trec_eval documented in docs/cli.md.
@@ -293,7 +292,6 @@ mod documented_differences {
         assert!(line.contains("qrels_jg"), "{line}");
         assert!(!line.contains("prefs"), "{line}");
     }
-
 }
 
 /// Which measures te-rust evaluates for its `-m` options, and the order of their rows.
@@ -433,7 +431,6 @@ mod integer_options {
             assert_refused(&two_grades(options), status, message);
         }
     }
-
 }
 
 /// Relevance levels given with -l, including levels above every judged grade.
