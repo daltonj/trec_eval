@@ -163,7 +163,11 @@ fn leading_integer(value: &str) -> Result<i64, String> {
 
 /// As [`leading_integer`], for a count that cannot be negative.
 fn leading_count(value: &str) -> Result<usize, String> {
-    usize::try_from(leading_integer(value)?).map_err(|_| format!("value '{}' is negative", value))
+    let count = leading_integer(value)?;
+    usize::try_from(count).map_err(|_| {
+        let problem = if count < 0 { "is negative" } else { "out of range" };
+        format!("value '{}' {}", value, problem)
+    })
 }
 
 /// Reads an input file of the given kind with `parse` and prints the warnings that `warnings`
