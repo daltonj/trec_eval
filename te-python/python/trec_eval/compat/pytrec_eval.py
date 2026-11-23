@@ -101,16 +101,24 @@ class RelevanceEvaluator:
     ):
         measure_names = [measures] if isinstance(measures, str) else list(measures)
         native_measures: List[Any] = []
+        positions: Dict[str, int] = {}
         values: Dict[str, Dict[Decimal, str]] = collections.defaultdict(dict)
         for measure in measure_names:
             match = _VALUE_REQUEST.match(measure) if isinstance(measure, str) else None
             if match is None:
                 native_measures.append(measure)
                 continue
+            # The merged request keeps the place of the first, which te-rust's
+            # first-list rule needs against an alias such as P@2.
+            name = match[1]
+            if name not in positions:
+                positions[name] = len(native_measures)
+                native_measures.append(name)
             for value in match[2].split(","):
                 # Decimal keys merge spellings of one value, such as 5, 05 and 5.0.
-                values[match[1]].setdefault(Decimal(value), value)
-        native_measures += [f"{name}.{','.join(v.values())}" for name, v in values.items()]
+                values[name].setdefault(Decimal(value), value)
+        for name, index in positions.items():
+            native_measures[index] = f"{name}.{','.join(values[name].values())}"
         if isinstance(qrel, dict):
             # pytrec_eval drops a topic whose judgments are empty. len() raises
             # TypeError for None, as in pytrec_eval.

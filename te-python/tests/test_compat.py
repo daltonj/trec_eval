@@ -124,6 +124,13 @@ def test_pytrec_eval_passes_custom_measures_through():
     assert evaluator.evaluate({"1": {"a": 1.0}}) == {"1": {"map": 1.0, "one": 1.0}}
 
 
+def test_pytrec_eval_merged_request_keeps_the_place_of_the_first():
+    # te-rust uses the first explicit list, so P.1 must stay ahead of P@2.
+    with pytest.warns(UserWarning, match="measure 'P@2': parameters ignored"):
+        evaluator = pytrec_eval.RelevanceEvaluator({"q": {"a": 1}}, ["P.1", "P@2"])
+    assert evaluator.evaluate({"q": {"a": 1.0}}) == {"q": {"P_1": 1.0}}
+
+
 def test_pytrec_eval_passes_repeated_coefficient_lists_unchanged():
     with pytest.warns(UserWarning, match="parameters ignored"):
         evaluator = pytrec_eval.RelevanceEvaluator(
