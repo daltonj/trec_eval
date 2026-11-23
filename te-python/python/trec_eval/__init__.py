@@ -196,6 +196,9 @@ def evaluate(
         -127 to 127, a NaN score, or a document repeated within a topic. Also, if
         complete_set_average is False and the run shares no topic with qrels
         (NoSharedTopicError, a subclass of ValueError).
+    TypeError, OverflowError
+        If a value in qrels or run cannot be converted, such as a grade that is not an
+        integer or does not fit in 64 bits.
     """
     evaluator = Evaluator(
         qrels=qrels,

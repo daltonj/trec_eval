@@ -1,6 +1,6 @@
 # trec_eval v11
 
-trec_eval version 11 represents a significant step in the development of this standard IR evaluation tool.  It is a compatible reimplementation in Rust, providing identical usage and exact numerical parity with the C version (v10.0), a standalone command-line interface, and native high-performance Python bindings.
+trec_eval version 11 represents a significant step in the development of this standard IR evaluation tool.  It is a compatible reimplementation in Rust, providing identical usage and exact numerical parity with the C version (v10.0), apart from the differences that [docs/cli.md](docs/cli.md) lists, a standalone command-line interface, and native high-performance Python bindings. [CHANGELOG.md](CHANGELOG.md) lists the changes that affect results, accepted input and the library API.
 
 ## Documentation
 

@@ -44,6 +44,16 @@ pytrec_eval itself gives other output in some cases:
 - It reads only the leading digits of a parameter: `set_F.1e1` as 1 and `utility.1,-1,0,0` as one coefficient, where the wrapper reads 10 and four coefficients.
 - It reads `set_F_0.5` as `set_F.0.5`. The wrapper reads a request written with an underscore, such as `P_5`, only for the measures that print a row per value. It passes other requests to `te-rust` as written, so it refuses `set_F_0.5`.
 
+### Changes from earlier releases of the wrapper
+
+Earlier releases differed from pytrec_eval in these ways, and the fixes change the results of unchanged code:
+
+- `judged_docs_only_flag` defaults to `False`, as in pytrec_eval; it defaulted to `True`. A topic whose ranking holds unjudged documents now scores differently: with the qrels `{'q': {'a': 1, 'b': 0}}` and a run that ranks an unjudged document first, then `a` and `b`, `map` is 0.5 where it was 1.0. Pass `judged_docs_only_flag=True` for the earlier results.
+- Every value is a float, as in pytrec_eval: `relstring` is 0.0 where it was a string, and counts such as `num_ret` are floats where they were integers.
+- The per-topic values of `gm_map`, `gm_bpref`, `num_q` and `runid` are returned.
+- A topic whose judgments are an empty mapping is left out of the results, as pytrec_eval leaves it out.
+- `supported_measures` lists every measure name that pytrec_eval lists.
+
 ### Parsing Utilities
 
 ```python
