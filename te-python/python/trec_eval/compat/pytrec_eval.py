@@ -116,7 +116,9 @@ class RelevanceEvaluator:
             native_measures[index] = f"{name}.{','.join(values[name].values())}"
         if isinstance(qrel, dict):
             # pytrec_eval drops a topic that has no judgments.
-            qrel = {qid: judgments for qid, judgments in qrel.items() if judgments}
+            qrel = {
+                qid: judgments for qid, judgments in qrel.items() if len(judgments) > 0
+            }
 
         self._evaluator = Evaluator(
             qrels=qrel,

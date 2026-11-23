@@ -179,6 +179,8 @@ def test_compat_drops_topics_without_judgments():
     assert evaluator.evaluate(run) == {"q1": {"map": 1.0, "num_q": 1.0}}
     evaluator = pytrec_eval.RelevanceEvaluator({"empty": {}}, "map")
     assert evaluator.evaluate({"empty": {"d": 1.0}}) == {}
+    with pytest.raises(TypeError):
+        pytrec_eval.RelevanceEvaluator({"q1": None}, "map")
 
 
 def test_compat_keeps_other_evaluation_errors(tmp_path):
