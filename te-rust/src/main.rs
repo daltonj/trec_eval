@@ -178,9 +178,12 @@ fn read_input<'a, T>(
         eprintln!("Error parsing {} file '{}': {}", kind, path, e);
         process::exit(EXIT_INPUT);
     });
+    // A warning per line of a large file is one write each unless buffered.
+    let mut stderr = io::BufWriter::new(io::stderr().lock());
     for warning in warnings(&data) {
-        eprintln!("Warning in {} file '{}': {}", kind, path, warning);
+        let _ = writeln!(stderr, "Warning in {} file '{}': {}", kind, path, warning);
     }
+    let _ = stderr.flush();
     data
 }
 
