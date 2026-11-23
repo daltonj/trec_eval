@@ -264,7 +264,26 @@ fn main() {
         }
     };
 
-    // 3. Resolve measures (groups + parameters) via the central registry.
+    // 3. Setup runtime config. trec_eval refuses a negative level while it reads its
+    // options, so the level is checked before the measures.
+    let global_gains = args.global_gains;
+    let config = EvalConfig {
+        query_flag: args.query_flag,
+        all_query_values: false,
+        summary_flag: !args.no_summary_flag,
+        relevance_level: args.relevance_level,
+        average_complete_flag: args.complete_set_average,
+        judged_docs_only_flag: args.judged_docs_only,
+        max_num_docs_per_topic: args.max_docs_per_topic.unwrap_or(usize::MAX),
+        num_docs_in_coll: args.num_docs_in_coll,
+        global_gains,
+    };
+    if let Err(e) = config.validate() {
+        eprintln!("te-rust: {}", e);
+        process::exit(EXIT_USAGE);
+    }
+
+    // 4. Resolve measures (groups + parameters) via the central registry.
     let default_group = match args.rel_format.to_ascii_lowercase().as_str() {
         "qrels_jg" => "qrels_jg",
         _ => "official",
@@ -287,24 +306,6 @@ fn main() {
         eprintln!("te-rust: Warning, {}", warning);
     }
     let active_measures = metrics::registry::in_trec_eval_order(resolved.measures);
-
-    // 4. Setup runtime config
-    let global_gains = args.global_gains;
-    let config = EvalConfig {
-        query_flag: args.query_flag,
-        all_query_values: false,
-        summary_flag: !args.no_summary_flag,
-        relevance_level: args.relevance_level,
-        average_complete_flag: args.complete_set_average,
-        judged_docs_only_flag: args.judged_docs_only,
-        max_num_docs_per_topic: args.max_docs_per_topic.unwrap_or(usize::MAX),
-        num_docs_in_coll: args.num_docs_in_coll,
-        global_gains,
-    };
-    if let Err(e) = config.validate() {
-        eprintln!("te-rust: {}", e);
-        process::exit(EXIT_USAGE);
-    }
 
     let enable_ci = args.ci || args.ci_pretty;
     let ci_config = if enable_ci {

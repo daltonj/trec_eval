@@ -543,14 +543,13 @@ mod relevance_level {
     }
 
     #[test]
-    fn a_negative_level_is_refused_before_the_files_are_read() {
+    fn a_negative_level_is_refused_before_the_measures_and_files() {
         let out = te_rust()
-            .args(["-l", "-1", "missing.qrels", "missing.run"])
+            .args(["-l", "-1", "-m", "P.x", "missing.qrels", "missing.run"])
             .output()
             .unwrap();
         assert_refused(&out, 1, "te-rust: Unusable relevance level '-1'");
     }
-
 }
 
 /// Topics that the run lacks: an error, unless -c scores them as empty rankings.
