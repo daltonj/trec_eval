@@ -1,5 +1,6 @@
-/* Refuse large file buffers and stdin allocations without needing large
-   fixtures. The make rule substitutes ftell, malloc and realloc. */
+/* Checks the readers' handling of file sizes beyond an int or unsigned and
+   of failed allocations on standard input, and the zscores searches, with
+   small inputs. The make rule renames ftell, malloc and realloc. */
 #include <limits.h>
 #include "common.h"
 #include "sysfunc.h"

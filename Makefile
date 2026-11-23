@@ -127,7 +127,7 @@ $(BIN)/trec_eval: trec_eval
 clean semiclean:
 	/bin/rm -f *.o *.BAK *~ trec_eval trec_eval.*.tar out.trec_eval Makefile.bak
 	/bin/rm -f test_allocation-sizes test_prefs-rank-comparators \
-		test_reader-limits test_file-sizes
+		test_reader-limits
 
 tar:
 	-/bin/rm -rf ./trec_eval.$(VERSIONID)
