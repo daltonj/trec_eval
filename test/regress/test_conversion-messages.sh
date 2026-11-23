@@ -7,6 +7,8 @@ for measure in iprec_at_recall.x iprec_at_recall..1,,.2 \
     11pt_avg.x ndcg.1=x; do
     expect_message 2 "could not be parsed" -m $measure $Q $R
 done
+expect_message 2 "could not be parsed" -m utility.x,0,0,0 $Q $R
+expect_message 2 "could not be parsed" -m ndcg.1=x,2=1 $Q $R
 for measure in iprec_at_recall.inf set_F.inf ndcg.1=inf; do
     expect_message 2 "is not finite" -m $measure $Q $R
 done
