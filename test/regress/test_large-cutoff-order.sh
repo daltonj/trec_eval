@@ -2,8 +2,8 @@
 # The run has one relevant doc, so precision at a huge cutoff rounds to 0.
 . test/regress/lib.sh
 D=test/regress/large-cutoff-order
-Q=test/regress/rbp-gain-range/qrels.one
-R=test/regress/rbp-gain-range/results.one
+Q=$D/qrels
+R=$D/results
 
 expect_output $D/out.P.portable -m P.2147483647,1 "$Q" "$R"
 

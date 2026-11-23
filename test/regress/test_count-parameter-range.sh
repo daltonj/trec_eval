@@ -2,12 +2,12 @@
 # retain an enormous cutoff as the denominator, rather than clamping it.
 . test/regress/lib.sh
 D=test/regress/count-parameter-range
-Q=test/regress/rbp-gain-range/qrels.one
-R=test/regress/rbp-gain-range/results.one
-expect_output $D/out.relstring -q -m relstring.1e300 $Q $R
+Q=$D/qrels
+R=$D/results
+expect_result 0 $D/out.relstring /dev/null -q -m relstring.1e300 $Q $R
 
-# A stddev of 1e-19 multiplies the score by 1e19. Clamping to 64-bit
-# LONG_MAX would give about 1.08 instead of 0 for the one relevant doc.
+# For one relevant doc, dividing by stddev 1e-19 makes the correct 1e-300
+# precision print as 0.0000, but a 64-bit LONG_MAX clamp as about 1.08.
 for measure in Rprec_mult Rprec_mult_avgjg; do
     format=qrels
     [ "$measure" = Rprec_mult_avgjg ] && format=qrels_jg
