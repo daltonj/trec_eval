@@ -18,7 +18,7 @@ It is meant as a drop-in replacement for `trec_eval` 10.x: it reads the same fil
 
 As in `trec_eval`, a repeated document is refused only in a topic that is scored, and only when a requested measure reads the ranking, which every measure but `num_q` and `runid` does. A scored topic is a qrels topic that the run has, or any qrels topic with `-c`. In the run, only the first `-M` documents of the ranking are checked. A duplicate in a `qrels_jg` file is refused when the file is read, as in `trec_eval`, and exits `2`.
 
-Exit statuses also differ from `trec_eval` 10.0 in the following cases. Without `-c`, `trec_eval` also exits `4` when any qrels topic has no results; `te-rust` scores the shared topics. `trec_eval` checks some measure parameters only while scoring and exits `4` for them, as for `utility.1,2`, where `te-rust` exits `2`.
+Besides the input and parameter differences listed below, two exit statuses differ from `trec_eval` 10.0. Without `-c`, `trec_eval` also exits `4` when any qrels topic has no results; `te-rust` scores the shared topics. `trec_eval` checks some measure parameters only while scoring and exits `4` for them, as for `utility.1,2`, where `te-rust` exits `2`.
 
 As in `trec_eval`, an illegal measure name is reported before a file error, and a qrels error before a run error. A repeated document in a qrels file is reported after the run is read, as `trec_eval` finds it while scoring. `te-rust` checks measure parameters before the files and `trec_eval` after them, so with an unusable parameter and a bad file the two report different problems, both with status `2`.
 
@@ -103,7 +103,7 @@ Example `qrels.txt`:
 
 Blank lines are skipped with a warning that names the line. `trec_eval` stops at a blank line in a qrels file with "Malformed line" and exits 2.
 
-Lines starting with `#` are comments and are ignored. Leading ASCII whitespace before `#` is allowed. `trec_eval` 10.0 accepts a qrels comment only when `#` is in the first column; an indented comment such as `  # comment` gives "Malformed line" and exit status `2`.
+Lines that start with `#` are comments and are ignored. Comments in qrels files were a trec_eval 10.x feature to support documenting how a qrels file should be use to reproduce published scores. Leading ASCII whitespace before `#` is allowed. `trec_eval` 10.0 accepts a qrels comment only when `#` is in the first column; an indented comment such as `  # comment` gives "Malformed line" and exit status `2`.
 
 ### 2. System Run File
 
