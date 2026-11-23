@@ -124,6 +124,22 @@ mod rbp {
             assert_eq!(summary(&out, &format!("rbp_{gains}")), expected);
         }
     }
+
+    #[test]
+    fn its_own_gain_map_takes_precedence_over_global_gains() {
+        // The global gains give .19 as above; the measure's own map gives .05.
+        for (request, name, expected) in [
+            ("rbp", "rbp", "0.1900"),
+            ("rbp.0=-4,1=-2", "rbp_0=-4,1=-2", "0.0500"),
+        ] {
+            let out = eval(
+                &["--global-gains", "0=2,1=2", "-m", request],
+                &fixture("ab.qrels"),
+                &fixture("ab.run"),
+            );
+            assert_eq!(summary(&out, name), expected);
+        }
+    }
 }
 
 /// The ndcg family and its two sums, dcg and ideal_dcg.
