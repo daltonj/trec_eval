@@ -18,6 +18,7 @@ refused() {
 }
 refused '1 map abc 1' "mean 'abc'"
 refused '1 map 1x 1' "mean '1x'"
+refused '1 map nan 1' "mean 'nan'"
 refused '1 map inf 1' "mean 'inf'"
 refused '1 map 0 abc' "stddev 'abc'"
 refused '1 map 0 1x' "stddev '1x'"
