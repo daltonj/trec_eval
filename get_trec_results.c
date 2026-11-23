@@ -103,19 +103,21 @@ te_get_trec_results(EPI * epi, char *text_results_file,
     } else {
         /* Read standard input into a growing buffer, keeping two bytes
            free for the newline and NUL that te_prepare_lines appends.
-           fread returns a short count only at end of file or on error. */
+           te_fread returns a short count only at end of file or on
+           error, and a capacity that cannot double fails as realloc
+           does. */
         size_t capacity = 4096;
         char *new_buf = malloc(capacity);
 
         size = 0;
         while (new_buf != NULL) {
             trec_results_buf = new_buf;
-            size += fread(trec_results_buf + size, 1, capacity - 2 - size,
-                          stdin);
+            size += te_fread(trec_results_buf + size, capacity - 2 - size,
+                             stdin);
             if (size < capacity - 2)
                 break;
-            capacity *= 2;
-            new_buf = realloc(trec_results_buf, capacity);
+            new_buf = capacity > (size_t) -1 / 2 ? NULL :
+                realloc(trec_results_buf, capacity *= 2);
         }
         if (new_buf == NULL) {
             fprintf(stderr,

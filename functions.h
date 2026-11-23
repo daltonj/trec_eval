@@ -17,6 +17,7 @@ void *te_chk_and_realloc(void *ptr, long *current_bound,
                          const long needed, const int size);
 long te_prepare_lines(char *buf, size_t size, const char *reader,
                       const char *kind, const char *file);
+size_t te_fread(char *buf, size_t size, FILE * fd);
 long te_read_lines(const char *file, char **buf, const char *reader,
                    const char *kind);
 int te_skip_line(char **ptr, long *line_num, const char *kind,

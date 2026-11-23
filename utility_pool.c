@@ -106,6 +106,27 @@ long te_prepare_lines(char *buf, size_t size, const char *reader,
     return (num_lines);
 }
 
+/* On Windows, _read refuses a count above INT_MAX, and fread is not
+   documented to split a larger request. The reader-limits test lowers
+   the limit. */
+#ifndef TE_READ_CHUNK
+#define TE_READ_CHUNK ((size_t) 1 << 30)
+#endif
+
+/* Read up to size bytes of fd into buf, at most TE_READ_CHUNK bytes per
+   request, and return the number read, which is less than size only at
+   end of file or on an error */
+size_t te_fread(char *buf, size_t size, FILE * fd)
+{
+    size_t done = 0;
+    size_t count;
+
+    do
+        count = fread(buf + done, 1, MIN(size - done, TE_READ_CHUNK), fd);
+    while (count > 0 && (done += count) < size);
+    return (done);
+}
+
 /* Read file into a new buffer *buf, prepared by te_prepare_lines, and
    return its number of lines, or print a message and return UNDEF */
 long te_read_lines(const char *file, char **buf, const char *reader,
@@ -114,14 +135,16 @@ long te_read_lines(const char *file, char **buf, const char *reader,
     FILE *fd;
     long long file_size;
     size_t size;
+    int read_ok;
 
-    if (!(fd = fopen(file, "rb")) ||
-        fseek(fd, 0L, SEEK_END) != 0 || 0 >= (file_size = ftell(fd)) ||
-        (size = file_size) != file_size || size > (size_t) -1 - 2 ||
-        NULL == (*buf = malloc(size + 2)) ||
-        -1 == fseek(fd, 0L, SEEK_SET) ||
-        size != fread(*buf, 1, size, fd) ||
-        -1 == fclose(fd)) {
+    read_ok = NULL != (fd = fopen(file, "rb")) &&
+        0 == fseek(fd, 0L, SEEK_END) && 0 < (file_size = ftell(fd)) &&
+        (size = file_size) == file_size && size <= (size_t) -1 - 2 &&
+        NULL != (*buf = malloc(size + 2)) &&
+        0 == fseek(fd, 0L, SEEK_SET) && size == te_fread(*buf, size, fd);
+    if (fd != NULL && 0 != fclose(fd))
+        read_ok = 0;
+    if (!read_ok) {
         fprintf(stderr, "trec_eval.%s: Cannot read %s file '%s'\n",
                 reader, kind, file);
         return (UNDEF);

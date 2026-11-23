@@ -1,9 +1,10 @@
 /* Checks, with small inputs, that te_read_lines asks for a buffer of a
-   whole file whose size is beyond an int or unsigned, that the results
+   whole file whose size is beyond an int or unsigned, that te_fread
+   asks for at most TE_READ_CHUNK bytes at a time, that the results
    reader refuses standard input when an allocation fails, and that the
    searches of the included convert_zscores.c stay within their counts.
-   The make rule renames ftell, malloc and realloc to the functions below:
-   ftell reports a size of UINT_MAX + 1, malloc refuses a request above
+   The make rule sets TE_READ_CHUNK to 2 and renames ftell, fread, malloc and realloc to the functions below:
+   fread records the largest request and reads with getc, ftell reports a size of UINT_MAX + 1, malloc refuses a request above
    UINT_MAX, or every request while refuse_malloc is set, and realloc
    refuses every request. Each records the size it refuses. */
 #include <limits.h>
@@ -17,7 +18,19 @@ int te_get_trec_results(EPI * epi, char *text_results_file,
                         ALL_RESULTS * all_results);
 
 static size_t refused;
+static size_t largest_read;
 static int refuse_malloc;
+
+size_t reader_fread(void *ptr, size_t size, size_t count, FILE * stream)
+{
+    size_t n = 0;
+    int c;
+
+    largest_read = MAX(largest_read, size * count);
+    while (n < size * count && EOF != (c = getc(stream)))
+        ((char *) ptr)[n++] = (char) c;
+    return (n / size);
+}
 
 long reader_ftell(FILE * stream)
 {
@@ -63,6 +76,18 @@ static int check_file_size(void)
 #endif
 }
 
+static int check_read_chunks(void)
+{
+    char buf[8];
+    size_t got = te_fread(buf, sizeof buf, stdin);
+
+    if (got == 5 && 0 == memcmp(buf, "abcde", 5) && largest_read == 2)
+        return (0);
+    printf("te_fread read %zu bytes, at most %zu at a time; expected 5, "
+           "at most 2\n", got, largest_read);
+    return (1);
+}
+
 static int check_zscores(void)
 {
     /* The matching second entries exist in storage but are outside the
@@ -105,13 +130,15 @@ int main(int argc, char **argv)
 {
     if (argc == 2 && 0 == strcmp(argv[1], "file-size"))
         return (check_file_size());
+    if (argc == 2 && 0 == strcmp(argv[1], "read-chunks"))
+        return (check_read_chunks());
     if (argc == 2 && 0 == strcmp(argv[1], "stdin-malloc"))
         return (check_stdin(1));
     if (argc == 2 && 0 == strcmp(argv[1], "stdin-realloc"))
         return (check_stdin(0));
     if (argc == 2 && 0 == strcmp(argv[1], "zscores"))
         return (check_zscores());
-    fprintf(stderr, "usage: %s file-size | stdin-malloc | stdin-realloc | "
-            "zscores\n", argv[0]);
+    fprintf(stderr, "usage: %s file-size | read-chunks | "
+            "stdin-malloc | stdin-realloc | zscores\n", argv[0]);
     return (1);
 }

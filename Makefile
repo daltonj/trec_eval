@@ -64,8 +64,10 @@ test_prefs-rank-comparators: test/regress/prefs-rank-comparators/cmp.c \
 
 test_reader-limits: test/regress/reader-limits/readers.c convert_zscores.c \
 		get_qrels.c get_trec_results.c utility_pool.c $(SRCH)
-	$(CC) $(CFLAGS) -Dftell=reader_ftell -Dmalloc=reader_malloc \
-		-Drealloc=reader_realloc -o test_reader-limits \
+	$(CC) $(CFLAGS) -DTE_READ_CHUNK=2 \
+		-Dftell=reader_ftell -Dfread=reader_fread \
+		-Dmalloc=reader_malloc -Drealloc=reader_realloc \
+		-o test_reader-limits \
 		test/regress/reader-limits/readers.c get_qrels.c \
 		get_trec_results.c utility_pool.c
 
