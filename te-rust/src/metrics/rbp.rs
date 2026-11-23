@@ -83,7 +83,7 @@ impl Measure for RbpMeasure {
             }
         }
 
-        // Normalize the table, not the lookups: a level the table lacks stays at gain 0.
+        // Normalize the gain table; a level the table lacks keeps gain 0.
         if min_gain < 0.0 || max_gain > 1.0 {
             let range = max_gain - min_gain;
             for g in &mut gains.rel_gains {

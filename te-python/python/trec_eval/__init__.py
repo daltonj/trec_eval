@@ -163,6 +163,7 @@ def evaluate(
         Measure names or groups (e.g. ['map', 'ndcg@10', 'P.5,10']). Defaults to 'official'.
     relevance_level : int, default 1
         Minimum relevance level at which a document is considered relevant (-l).
+        Must be 0 or more.
     complete_set_average : bool, default False
         Average over all queries in qrels instead of only retrieved ones (-c).
     judged_docs_only : bool, default False
@@ -170,7 +171,7 @@ def evaluate(
     max_docs_per_topic : int, optional
         Maximum number of documents per topic to evaluate (-M).
     num_docs_in_coll : int, default 0
-        Number of documents in the collection (-N). For utility, values above 2**63 - 1 are clamped to that limit.
+        Number of documents in the collection (-N).
     global_gains : str, optional
         Global relevance-to-gain mapping (e.g. '1=3.5,2=9.0').
     qid : str, optional
@@ -186,6 +187,12 @@ def evaluate(
     -------
     EvalResult
         Rich evaluation result with mapping protocol and .aggregate() / .per_query() methods.
+
+    Raises
+    ------
+    ValueError
+        If relevance_level is negative, or if complete_set_average is False and the run
+        shares no topic with qrels (NoSharedTopicError, a subclass of ValueError).
     """
     evaluator = Evaluator(
         qrels=qrels,
