@@ -28,14 +28,25 @@ pub(crate) fn evaluation_error(error: EvaluationError) -> PyErr {
     }
 }
 
-/// Issues each warning as a Python `UserWarning`.
+/// The most warnings that one call of `warn_all` issues: a file with a problem on every line
+/// would otherwise issue a warning per line, each kept in the caller's warning registry.
+const MAX_WARNINGS: usize = 10;
+
+/// Issues each warning as a Python `UserWarning`, up to `MAX_WARNINGS`, then one that counts the
+/// rest.
 pub(crate) fn warn_all(
     py: Python<'_>,
     warnings: impl IntoIterator<Item = impl AsRef<str>>,
 ) -> PyResult<()> {
     let category = py.get_type_bound::<PyUserWarning>();
-    for warning in warnings {
+    let mut warnings = warnings.into_iter();
+    for warning in warnings.by_ref().take(MAX_WARNINGS) {
         PyErr::warn_bound(py, category.as_any(), warning.as_ref(), 1)?;
+    }
+    let rest = warnings.count();
+    if rest > 0 {
+        let summary = format!("{} more warnings like these were not issued", rest);
+        PyErr::warn_bound(py, category.as_any(), &summary, 1)?;
     }
     Ok(())
 }

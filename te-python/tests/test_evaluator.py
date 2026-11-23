@@ -296,6 +296,16 @@ def test_file_warnings_reach_python(tmp_path):
     assert result.aggregate() == {"map": 1.0}
 
 
+def test_file_warnings_stop_at_ten_and_count_the_rest(tmp_path):
+    qrels = tmp_path / "qrels"
+    qrels.write_text("q 0 a 1\n" + "\n" * 12)
+    with pytest.warns(UserWarning) as caught:
+        Evaluator(qrels, measures=["map"])
+    assert [str(w.message) for w in caught] == [
+        f"qrels file '{qrels}': Line {line}: blank line skipped" for line in range(2, 12)
+    ] + ["2 more warnings like these were not issued"]
+
+
 def test_infinite_scores_are_accepted_from_memory():
     evaluator = Evaluator({"q": {"a": 1}}, measures=["P.1"])
     for score, expected in [(math.inf, 0.0), (-math.inf, 1.0)]:
