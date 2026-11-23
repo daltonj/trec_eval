@@ -1,7 +1,7 @@
 //! `dcg` and `ideal_dcg`, the numerator and the denominator of `ndcg`, which
 //! `m_ndcg.c` registers beside it.
 
-use crate::metrics::common::{topic_gains, GainsConfig, MeasureParseError};
+use crate::metrics::common::{Gains, GainsConfig, MeasureParseError};
 use crate::metrics::invariants::{self, Invariant};
 use crate::metrics::ndcg::{ideal_dcg, ranking_dcg};
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
@@ -115,7 +115,14 @@ impl Measure for DcgMeasure {
             Some(q) => q,
             None => return self.initial_values(),
         };
-        let gains = topic_gains(&self.gains_config, config, q_state);
+        let gains_config = if !self.gains_config.custom_gains.is_empty() {
+            &self.gains_config
+        } else if let Some(ref gg) = config.global_gains {
+            gg
+        } else {
+            &self.gains_config
+        };
+        let gains = Gains::setup(gains_config, &q_state.rel_levels);
         let value = match self.sum {
             Sum::Ranking => ranking_dcg(&gains, q_state),
             Sum::Ideal => ideal_dcg(&gains),

@@ -1,4 +1,3 @@
-use crate::eval::QueryEvalState;
 use crate::metrics::EvalConfig;
 use std::collections::HashMap;
 use std::fmt;
@@ -152,23 +151,6 @@ impl GainsConfig {
         }
         Ok(Self { custom_gains })
     }
-}
-
-/// The gains of a topic's levels. A measure's own gain map comes first, then
-/// `--global-gains`, then the default gains.
-pub(crate) fn topic_gains(
-    own_gains: &GainsConfig,
-    config: &EvalConfig,
-    q_state: &QueryEvalState,
-) -> Gains {
-    let gains_config = if !own_gains.custom_gains.is_empty() {
-        own_gains
-    } else if let Some(ref gg) = config.global_gains {
-        gg
-    } else {
-        own_gains
-    };
-    Gains::setup(gains_config, &q_state.rel_levels)
 }
 
 /// Reads the parameters of `rbp` and `rbp_resid`: the persistence `p`, in [0, 1), given at most

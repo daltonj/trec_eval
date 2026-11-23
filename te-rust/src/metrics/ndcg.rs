@@ -1,6 +1,6 @@
 use crate::eval::QueryEvalState;
 use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue, ValueFormat};
-use crate::metrics::common::{topic_gains, Gains, GainsConfig, MeasureParseError};
+use crate::metrics::common::{Gains, GainsConfig, MeasureParseError};
 
 pub struct NdcgMeasure {
     gains_config: GainsConfig,
@@ -95,7 +95,14 @@ impl Measure for NdcgMeasure {
             None => return self.initial_values(),
         };
 
-        let gains = topic_gains(&self.gains_config, config, q_state);
+        let gains_config = if !self.gains_config.custom_gains.is_empty() {
+            &self.gains_config
+        } else if let Some(ref gg) = config.global_gains {
+            gg
+        } else {
+            &self.gains_config
+        };
+        let gains = Gains::setup(gains_config, &q_state.rel_levels);
         let ideal = ideal_dcg(&gains);
         let score = if ideal > 0.0 { ranking_dcg(&gains, q_state) / ideal } else { 0.0 };
         vec![MetricValue::Float(score)]
