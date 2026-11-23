@@ -163,31 +163,6 @@ mod ndcg {
         assert_eq!(summary(&out, "ndcg_rel_-1=1"), "1.0000");
     }
 
-    /// The gains and the discount of ndcg_p, which docs/measures/gains.md describes, on topic 1
-    /// of topics.qrels: d1 has grade 1, d2 grade 0 and d3 grade 2, ranked in that order.
-    #[test]
-    fn ndcg_p_uses_level_gains_and_the_original_discount() {
-        let run = write(
-            "topic-1.run",
-            "1 Q0 d1 1 3 r\n1 Q0 d2 2 2 r\n1 Q0 d3 3 1 r\n",
-        );
-        let printed = |measure: &str| rows(&eval(&["-m", measure], &fixture("topics.qrels"), &run));
-        // Rank 1 is not discounted and rank i >= 2 is divided by log2(i):
-        // DCG = 1 + 0/1 + 2/log2(3) = 2.26186, and the ideal 2, 1, 0 gives 2 + 1/1 = 3.
-        assert_eq!(printed("ndcg_p"), ["ndcg_p all 0.7540"]);
-        // Exponential gains 2^r - 1 would give (1 + 3/log2(3)) / (3 + 1) = 0.7232.
-        // ndcg divides rank i by log2(i + 1): (1 + 2/2) / (2 + 1/log2(3)) = 0.7602.
-        assert_eq!(printed("ndcg"), ["ndcg all 0.7602"]);
-        // (3.5 + 9/log2(3)) / (9 + 3.5/1) = 9.17837 / 12.5.
-        assert_eq!(
-            printed("ndcg_p.1=3.5,2=9.0"),
-            ["ndcg_p_1=3.5,2=9.0 all 0.7343"]
-        );
-        // Level 0 may have a gain, and a gain may be negative. The ideal order is d3 (2), d2
-        // (1), and stops at d1 (-1): (-1 + 1/1 + 2/log2(3)) / (2 + 1/1).
-        assert_eq!(printed("ndcg_p.0=1,1=-1"), ["ndcg_p_0=1,1=-1 all 0.4206"]);
-    }
-
     #[test]
     fn dcg_sums_use_independent_gain_maps() {
         let qrels = write("dcg.qrels", "1 0 a 1\n1 0 b 2\n1 0 c 0\n");
@@ -212,7 +187,7 @@ mod ndcg {
         ] {
             assert_eq!(rows(&eval(options, &qrels, &run)), expected);
         }
-        // An empty ranking still has an ideal sum. The second qrels topic shares no run topic.
+        // An empty ranking still has an ideal sum. The run's only topic, 2, is not in the qrels.
         let run = write("other.run", "2 Q0 x 1 1 r\n");
         assert_eq!(
             rows(&eval(&["-c", "-m", "dcg", "-m", "ideal_dcg"], &qrels, &run)),

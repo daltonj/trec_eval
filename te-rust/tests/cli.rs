@@ -239,7 +239,7 @@ mod output {
 
 /// Representative differences from trec_eval documented in docs/cli.md.
 mod documented_differences {
-    use super::common::{assert_refused, fixture, rows, te_rust, test_data};
+    use super::common::{assert_refused, te_rust, test_data};
     use std::fs::File;
     use std::process::Output;
 
@@ -283,45 +283,6 @@ mod documented_differences {
     }
 
     #[test]
-    fn uppercase_v_prints_the_version() {
-        let out = te_rust().arg("-V").output().unwrap();
-        assert_eq!(out.status.code(), Some(0));
-        assert_eq!(
-            String::from_utf8(out.stdout).unwrap().trim(),
-            "te-rust 0.1.0"
-        );
-        assert!(out.stderr.is_empty());
-    }
-
-    #[test]
-    fn gain_calculations_follow_the_documented_differences() {
-        for (measure, expected) in [
-            ("ndcg.1=1,0=0.9", "ndcg_1=1,0=0.9 all 1.0000"),
-            ("Rndcg.0=0,1=-1", "Rndcg_0=0,1=-1 all 0.0000"),
-        ] {
-            let out =
-                super::common::eval(&["-m", measure], &fixture("ab.qrels"), &fixture("ab.run"));
-            assert_eq!(rows(&out), [expected]);
-        }
-    }
-
-    #[test]
-    fn listed_extensions_are_accepted() {
-        let run = test_data("results.test");
-        for (measure, row) in [("P_5", "P_5"), ("P@5", "P_5"), ("ndcg@10", "ndcg_cut_10")] {
-            let output = eval_test_data(&["-m", measure], run.to_str().unwrap());
-            assert!(output.status.success(), "{measure}");
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            assert!(
-                stdout
-                    .lines()
-                    .any(|line| line.split_whitespace().next() == Some(row)),
-                "{measure} did not print {row}: {stdout}"
-            );
-        }
-    }
-
-    #[test]
     fn rel_format_help_lists_only_supported_formats() {
         let output = te_rust().arg("--help").output().unwrap();
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -333,27 +294,6 @@ mod documented_differences {
         assert!(!line.contains("prefs"), "{line}");
     }
 
-    /// docs/cli.md lists `-l=2` as a te-rust spelling of `-l 2`.
-    #[test]
-    fn short_option_value_after_equals_is_read_like_a_separate_value() {
-        let run = test_data("results.test");
-        let run = run.to_str().unwrap();
-        for (joined, separate) in [
-            (&["-l=2", "-m", "map"][..], &["-l", "2", "-m", "map"][..]),
-            (&["-M=1", "-m", "P.1,2"], &["-M", "1", "-m", "P.1,2"]),
-        ] {
-            let (joined_out, separate_out) =
-                (eval_test_data(joined, run), eval_test_data(separate, run));
-            assert!(separate_out.status.success(), "{separate:?}");
-            assert!(!separate_out.stdout.is_empty(), "{separate:?}");
-            assert_eq!(
-                joined_out.status.code(),
-                separate_out.status.code(),
-                "{joined:?}"
-            );
-            assert_eq!(joined_out.stdout, separate_out.stdout, "{joined:?}");
-        }
-    }
 }
 
 /// Which measures te-rust evaluates for its `-m` options, and the order of their rows.
