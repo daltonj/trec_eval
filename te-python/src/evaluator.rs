@@ -3,14 +3,12 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PySequence, PySet, PyString};
 use te_rust::eval::alignment::align_query;
-use te_rust::eval::{
-    evaluate_run, DuplicateSource, EvaluationError, EvaluationOutput, QueryEvaluation,
-    SummaryEvaluation,
-};
+use te_rust::eval::{evaluate_run, EvaluationOutput, QueryEvaluation, SummaryEvaluation};
 use te_rust::io::{QrelsData, QrelsQuery, RunData, RunQuery};
-use te_rust::metrics::{registry::resolve_measures, EvalConfig, MetricValue, ValueFormat};
+use te_rust::metrics::{registry::resolve_measures, EvalConfig, Measure, MetricValue, ValueFormat};
 
-use crate::conversions::{ingest_qrels, ingest_run, ingest_run_arrays, warn_all, ColumnMapping};
+use crate::conversions::{ingest_qrels, ingest_run, ingest_run_arrays, ColumnMapping};
+use crate::errors::{evaluation_error, warn_all};
 use crate::query_state::QueryState;
 use crate::result::EvalResult;
 
@@ -18,7 +16,7 @@ use crate::result::EvalResult;
 #[pyclass(subclass, name = "Evaluator")]
 pub struct Evaluator {
     pub qrels: QrelsData,
-    pub measure_names: Vec<String>,
+    pub measures: Vec<Box<dyn Measure>>,
     pub custom_measures: Vec<PyObject>,
     pub config: EvalConfig,
 }
@@ -54,23 +52,6 @@ impl Evaluator {
         rel: Option<String>,
         all_query_values: bool,
     ) -> PyResult<Self> {
-        let mapping = ColumnMapping {
-            qid,
-            docno,
-            score_or_rel: rel,
-        };
-        let qrels_data = ingest_qrels(qrels, Some(&mapping))?;
-
-        let (measure_names, custom_measures) = parse_measures_arg(measures)?;
-
-        // Validate built-in measure names by attempting resolution
-        if !measure_names.is_empty() {
-            let resolved = resolve_measures(&measure_names).map_err(|e| {
-                PyValueError::new_err(format!("Invalid measure configuration: {}", e))
-            })?;
-            warn_all(qrels.py(), &resolved.warnings)?;
-        }
-
         let parsed_gains = global_gains
             .as_deref()
             .map(te_rust::metrics::common::GainsConfig::parse)
@@ -89,11 +70,24 @@ impl Evaluator {
             global_gains: parsed_gains,
         };
 
+        // As the CLI does, check the level, then the measures, then read the qrels
         config.validate().map_err(evaluation_error)?;
+
+        let (measure_names, custom_measures) = parse_measures_arg(measures)?;
+        let resolved = resolve_measures(&measure_names)
+            .map_err(|e| PyValueError::new_err(format!("Invalid measure configuration: {}", e)))?;
+        warn_all(qrels.py(), &resolved.warnings)?;
+
+        let mapping = ColumnMapping {
+            qid,
+            docno,
+            score_or_rel: rel,
+        };
+        let qrels_data = ingest_qrels(qrels, Some(&mapping))?;
 
         Ok(Self {
             qrels: qrels_data,
-            measure_names,
+            measures: resolved.measures,
             custom_measures,
             config,
         })
@@ -116,27 +110,32 @@ impl Evaluator {
             score_or_rel: score,
         };
         let run_data = ingest_run(run, Some(&mapping))?;
+        self.evaluate_run_data(py, run_data)
+    }
 
-        let active_measures = if !self.measure_names.is_empty() {
-            resolve_measures(&self.measure_names).map_err(|e| {
-                PyValueError::new_err(format!("Measure resolution error: {}", e))
-            })?
-            .measures
-        } else {
-            Vec::new()
-        };
+    /// Evaluate 1D contiguous arrays/sequences of query IDs, doc IDs, and scores.
+    pub fn evaluate_arrays(
+        &self,
+        py: Python<'_>,
+        query_ids: &Bound<'_, PyAny>,
+        doc_ids: &Bound<'_, PyAny>,
+        scores: &Bound<'_, PyAny>,
+    ) -> PyResult<EvalResult> {
+        let run_data = ingest_run_arrays(query_ids, doc_ids, scores)?;
+        self.evaluate_run_data(py, run_data)
+    }
+}
 
+impl Evaluator {
+    fn evaluate_run_data(&self, py: Python<'_>, run_data: RunData) -> PyResult<EvalResult> {
         let qrels_ref = &self.qrels;
+        let measures_ref = &self.measures;
         let config_ref = &self.config;
 
         // 1. Run built-in measures with GIL released
         let mut output = py
-            .allow_threads(|| {
-                evaluate_run(qrels_ref, &run_data, &active_measures, config_ref, None)
-            })
+            .allow_threads(|| evaluate_run(qrels_ref, &run_data, measures_ref, config_ref, None))
             .map_err(evaluation_error)?;
-        require_shared_topic(&output, config_ref)?;
-
 
         // 2. Run custom measures with exception sandboxing
         if !self.custom_measures.is_empty() {
@@ -152,79 +151,6 @@ impl Evaluator {
 
         Ok(EvalResult::from_output(output))
     }
-
-    /// Evaluate 1D contiguous arrays/sequences of query IDs, doc IDs, and scores.
-    pub fn evaluate_arrays(
-        &self,
-        py: Python<'_>,
-        query_ids: &Bound<'_, PyAny>,
-        doc_ids: &Bound<'_, PyAny>,
-        scores: &Bound<'_, PyAny>,
-    ) -> PyResult<EvalResult> {
-        let run_data = ingest_run_arrays(query_ids, doc_ids, scores)?;
-
-        let active_measures = if !self.measure_names.is_empty() {
-            resolve_measures(&self.measure_names).map_err(|e| {
-                PyValueError::new_err(format!("Measure resolution error: {}", e))
-            })?
-            .measures
-        } else {
-            Vec::new()
-        };
-
-        let qrels_ref = &self.qrels;
-        let config_ref = &self.config;
-
-        let mut output = py
-            .allow_threads(|| {
-                evaluate_run(qrels_ref, &run_data, &active_measures, config_ref, None)
-            })
-            .map_err(evaluation_error)?;
-        require_shared_topic(&output, config_ref)?;
-
-
-        if !self.custom_measures.is_empty() {
-            evaluate_custom_measures(
-                py,
-                qrels_ref,
-                &run_data,
-                &self.custom_measures,
-                config_ref,
-                &mut output,
-            )?;
-        }
-
-        Ok(EvalResult::from_output(output))
-    }
-}
-
-pub(crate) fn evaluation_error(error: EvaluationError) -> PyErr {
-    let EvaluationError::DuplicateDocument { source, .. } = &error else {
-        return PyValueError::new_err(error.to_string());
-    };
-    let kind = match source {
-        DuplicateSource::Qrels => "qrels",
-        DuplicateSource::Run => "run",
-    };
-    PyValueError::new_err(format!("{}: {}", kind, error))
-}
-
-pyo3::create_exception!(
-    trec_eval._trec_eval,
-    NoSharedTopicError,
-    PyValueError,
-    "Raised by `evaluate` and `evaluate_arrays` for a run that shares no topic with the qrels."
-);
-
-/// As the CLI does, refuse a run that shares no topic with the qrels, unless
-/// `complete_set_average` scores the qrels topics.
-fn require_shared_topic(output: &EvaluationOutput, config: &EvalConfig) -> PyResult<()> {
-    if !config.average_complete_flag && output.num_queries_evaluated == 0 {
-        return Err(NoSharedTopicError::new_err(
-            "no topic has both results and judgments; complete_set_average=True evaluates each qrels topic missing from the run as an empty ranking",
-        ));
-    }
-    Ok(())
 }
 
 fn parse_measures_arg(
@@ -409,7 +335,7 @@ fn evaluate_custom_measures(
 
     // Compute aggregate for each custom measure
     let total_qrels_queries = qrels.queries.len();
-    if config.summary_flag && (num_queries_evaluated > 0 || config.average_complete_flag) {
+    if config.summary_flag {
         for (m_idx, meas) in custom_measures.iter().enumerate() {
             let meas_name = &custom_names[m_idx];
             let scores = &custom_query_scores[m_idx];

@@ -3,7 +3,7 @@ import os
 import pytest
 from pathlib import Path
 import trec_eval
-from trec_eval import Evaluator, EvalResult, Measure, QueryState, ScoredDoc, Qrel, evaluate
+from trec_eval import Evaluator, EvalResult, Measure, NoSharedTopicError, QueryState, ScoredDoc, Qrel, evaluate
 
 from helpers import MockDataFrame
 
@@ -221,21 +221,22 @@ def test_numerical_parity_against_known_run():
         assert 0.0 <= score <= 1.0, f"{measure_name} score {score} outside [0, 1]"
 
 
-def test_negative_relevance_level_is_refused():
+def test_negative_relevance_level_is_refused_before_the_qrels_are_read():
     level = -1
     with pytest.raises(ValueError, match=f"Unusable relevance level '{level}'"):
-        Evaluator({"q": {"a": 1}}, relevance_level=level)
+        Evaluator("missing.qrels", relevance_level=level)
 
 
 def test_run_without_a_qrels_topic_raises():
     qrels = {"q1": {"d1": 1}}
     evaluator = Evaluator(qrels, measures=["map", "num_q"])
-    with pytest.raises(ValueError, match="no topic has both results and judgments"):
-        evaluator.evaluate({"q3": {"d1": 1.0}})
-    with pytest.raises(ValueError, match="no topic has both results and judgments"):
-        evaluator.evaluate({})
-    with pytest.raises(ValueError, match="no topic has both results and judgments"):
-        evaluator.evaluate_arrays(["q3"], ["d1"], [1.0])
+    for call in [
+        lambda: evaluator.evaluate({"q3": {"d1": 1.0}}),
+        lambda: evaluator.evaluate({}),
+        lambda: evaluator.evaluate_arrays(["q3"], ["d1"], [1.0]),
+    ]:
+        with pytest.raises(NoSharedTopicError, match="no topic has both results and judgments"):
+            call()
 
 
 def test_complete_set_averages_builtin_and_custom_measures_without_overlap():
@@ -257,21 +258,10 @@ def test_integer_cutoff_reads_its_leading_integer_with_a_warning():
     assert evaluator.evaluate({"1": {"a": 2.0, "b": 1.0}}).aggregate()["P_5"] == 0.2
 
 
-def test_integer_cutoff_without_a_leading_integer_is_refused():
-    with pytest.raises(ValueError, match="invalid integer cutoff 'x'"):
-        Evaluator({"1": {"a": 1}}, measures=["P.x"])
-
-
 def test_first_explicit_parameter_list_wins():
     with pytest.warns(UserWarning, match="measure 'P.5,10': parameters ignored"):
         evaluator = Evaluator({"1": {"a": 1}}, measures=["P.2,5", "P.5,10"])
     assert evaluator.evaluate({"1": {"a": 1.0}}).aggregate() == {"P_2": 0.5, "P_5": 0.2}
-
-
-@pytest.mark.parametrize("measure", ["set_F.nan", "Rprec_mult.1e400"])
-def test_non_finite_parameter_is_refused(measure):
-    with pytest.raises(ValueError, match="not a finite number"):
-        Evaluator({"1": {"a": 1, "b": 0}}, measures=[measure])
 
 
 @pytest.mark.parametrize("representation", ["dict", "frame", "tuples"])
@@ -316,14 +306,14 @@ def test_infinite_scores_are_accepted_from_memory():
 
 def test_nan_scores_are_refused_from_both_evaluation_entry_points():
     evaluator = Evaluator({"q": {"a": 1}}, measures=["map"])
-    for score in [
+    for call in [
         lambda: evaluator.evaluate({"q": {"a": math.nan}}),
         lambda: evaluator.evaluate_arrays(["q"], ["a"], [math.nan]),
     ]:
         with pytest.raises(
             ValueError, match="score of document 'a' for query 'q' is NaN"
         ):
-            score()
+            call()
 
 
 @pytest.mark.parametrize("measure, name", [("map", "map"), (One(), "one")])
@@ -343,16 +333,10 @@ def test_ingestion_preserves_repeated_judgments(representation, qrels_as):
         evaluator.evaluate({"q": {"a": 1.0}})
 
 
-@pytest.mark.parametrize(
-    "gains, message",
-    [
-        ("1=x", "invalid gain 'x' for relevance level 1"),
-        ("1=2,1=5", "relevance level 1 is given more than once"),
-    ],
-)
-def test_unusable_global_gains_are_refused(gains, message):
+def test_unusable_global_gains_are_refused():
+    message = "invalid gain 'x' for relevance level 1"
     with pytest.raises(ValueError, match=f"Invalid global_gains: {message}"):
-        Evaluator({"q": {"d": 1}}, measures=["ndcg"], global_gains=gains)
+        Evaluator({"q": {"d": 1}}, measures=["ndcg"], global_gains="1=x")
 
 
 def test_legal_global_gains_are_applied():

@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 use std::path::Path;
-use pyo3::exceptions::{PyFileNotFoundError, PyTypeError, PyUserWarning, PyValueError};
+use pyo3::exceptions::{PyFileNotFoundError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyIterator, PySequence, PyString};
 use te_rust::eval::check_rel_level;
 use te_rust::io::{parse_trec_qrels, parse_trec_run, QrelsData, QrelsQuery, QrelsRecord, RunData, RunQuery, RunRecord};
-use crate::evaluator::evaluation_error;
+use crate::errors::{evaluation_error, warn_all};
 
 /// Extract a file path string from a Python object if it is a `str` or `os.PathLike`.
 fn extract_path_string(obj: &Bound<'_, PyAny>) -> Option<String> {
@@ -20,15 +20,6 @@ fn extract_path_string(obj: &Bound<'_, PyAny>) -> Option<String> {
         }
     }
     None
-}
-
-/// Raises each warning as a Python `UserWarning`.
-pub fn warn_all(py: Python<'_>, warnings: impl IntoIterator<Item = impl AsRef<str>>) -> PyResult<()> {
-    let category = py.get_type_bound::<PyUserWarning>();
-    for warning in warnings {
-        PyErr::warn_bound(py, category.as_any(), warning.as_ref(), 1)?;
-    }
-    Ok(())
 }
 
 /// Options for mapping DataFrame column names.
@@ -76,7 +67,10 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
             let qrels = parse_trec_qrels(path).map_err(|e| {
                 PyValueError::new_err(format!("Failed to parse qrels file '{}': {}", path_str, e))
             })?;
-            let warnings = qrels.warnings.iter().map(|w| format!("qrels file '{}': {}", path_str, w));
+            let warnings = qrels
+                .warnings
+                .iter()
+                .map(|w| format!("qrels file '{}': {}", path_str, w));
             warn_all(obj.py(), warnings)?;
             return Ok(qrels);
         }
@@ -159,37 +153,20 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
         let doc_series = obj.get_item(&doc_col)?;
         let rel_series = obj.get_item(&rel_col)?;
 
-        let mut qid_iter = qid_series.iter()?;
-        let mut doc_iter = doc_series.iter()?;
-        let mut rel_iter = rel_series.iter()?;
-
-        let mut grouped: BTreeMap<String, Vec<QrelsRecord>> = BTreeMap::new();
-        while let (Some(q_res), Some(d_res), Some(r_res)) = (qid_iter.next(), doc_iter.next(), rel_iter.next()) {
-            let qid = q_res?.extract::<String>()?;
-            let docno = d_res?.extract::<String>()?;
-            let rel = r_res?.extract::<i64>()?;
-            check_rel_level(&qid, &docno, rel).map_err(evaluation_error)?;
-            grouped
-                .entry(qid)
-                .or_default()
-                .push(QrelsRecord { docno, rel });
-        }
-
-        let queries = grouped
-            .into_iter()
-            .map(|(qid, records)| QrelsQuery { qid, records })
-            .collect();
-
-        return Ok(QrelsData {
-            queries,
-            comments: Vec::new(),
-            warnings: Vec::new(),
-        });
+        let triples = qid_series
+            .iter()?
+            .zip(doc_series.iter()?)
+            .zip(rel_series.iter()?);
+        return qrels_from_triples(
+            triples.map(|((qid, docno), rel)| {
+                Ok((qid?.extract()?, docno?.extract()?, rel?.extract()?))
+            }),
+        );
     }
 
     // 4. Iterable of 3-tuples or objects with (query_id, doc_id, relevance)
     if let Ok(iter) = obj.iter() {
-        return ingest_qrels_from_iter(iter);
+        return qrels_from_triples(iter.map(|item| extract_qrel_item(&item?)));
     }
 
     Err(PyTypeError::new_err(
@@ -198,12 +175,14 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
 }
 
 
-fn ingest_qrels_from_iter(iter: Bound<'_, PyIterator>) -> PyResult<QrelsData> {
+/// Groups `(qid, docno, rel)` triples by topic, keeping repeated documents for evaluation to
+/// refuse, and refuses a grade outside the range that te-rust reads.
+fn qrels_from_triples(
+    triples: impl Iterator<Item = PyResult<(String, String, i64)>>,
+) -> PyResult<QrelsData> {
     let mut grouped: BTreeMap<String, Vec<QrelsRecord>> = BTreeMap::new();
-
-    for item_res in iter {
-        let item = item_res?;
-        let (qid, docno, rel) = extract_qrel_item(&item)?;
+    for triple in triples {
+        let (qid, docno, rel) = triple?;
         check_rel_level(&qid, &docno, rel).map_err(evaluation_error)?;
         grouped
             .entry(qid)
@@ -277,7 +256,10 @@ pub fn ingest_run(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> Py
             let run = parse_trec_run(path).map_err(|e| {
                 PyValueError::new_err(format!("Failed to parse run file '{}': {}", path_str, e))
             })?;
-            let warnings = run.warnings.iter().map(|w| format!("run file '{}': {}", path_str, w));
+            let warnings = run
+                .warnings
+                .iter()
+                .map(|w| format!("run file '{}': {}", path_str, w));
             warn_all(obj.py(), warnings)?;
             return Ok(run);
         }

@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import pytest
 import trec_eval.compat.pytrec_eval as pytrec_eval
+from trec_eval import Measure
 
 TEST_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "te-rust" / "tests" / "test-data"
 QRELS_FILE = str(TEST_DATA_DIR / "qrels.test")
@@ -82,9 +83,12 @@ def test_pytrec_eval_gives_every_measure_per_topic_as_a_float():
             ["iprec_at_recall.0.5", "iprec_at_recall_1.0"],
             {"iprec_at_recall_0.50": 1.0, "iprec_at_recall_1.00": 1.0},
         ),
+        # Other requests pass to te-rust unchanged.
+        (["map@1"], {"map_cut_1": 1.0}),
+        (["utility.1,0,0,0"], {"utility_1,0,0,0": 1.0}),
     ],
 )
-def test_pytrec_eval_retains_requested_cutoffs(measures, expected):
+def test_pytrec_eval_merges_only_row_per_value_requests(measures, expected):
     evaluator = pytrec_eval.RelevanceEvaluator({"1": {"a": 1}}, measures)
     assert evaluator.evaluate({"1": {"a": 1.0}}) == {"1": expected}
 
@@ -108,16 +112,16 @@ def test_pytrec_eval_reads_leading_parameter_values(measures, expected):
     assert evaluator.evaluate({"q": {"x": 2.0, "a": 1.0}}) == {"q": expected}
 
 
-@pytest.mark.parametrize(
-    "measures, expected",
-    [
-        (["map@1"], {"map_cut_1": 1.0}),
-        (["utility.1,0,0,0"], {"utility_1,0,0,0": 1.0}),
-    ],
-)
-def test_pytrec_eval_passes_other_parameters_unchanged(measures, expected):
-    evaluator = pytrec_eval.RelevanceEvaluator({"1": {"a": 1}}, measures)
-    assert evaluator.evaluate({"1": {"a": 1.0}}) == {"1": expected}
+def test_pytrec_eval_passes_custom_measures_through():
+    class One(Measure):
+        def __init__(self):
+            super().__init__(name="one")
+
+        def calc_query(self, query):
+            return 1.0
+
+    evaluator = pytrec_eval.RelevanceEvaluator({"1": {"a": 1}}, ["map", One()])
+    assert evaluator.evaluate({"1": {"a": 1.0}}) == {"1": {"map": 1.0, "one": 1.0}}
 
 
 def test_pytrec_eval_passes_repeated_coefficient_lists_unchanged():

@@ -28,8 +28,9 @@ supported_measures: Set[str] = {
 }
 
 # Measures that print one row per parameter value. pytrec_eval merges the
-# parameter lists of repeated requests for one of these, such as P_5 and P.10.
-# It reads the leading numeric list and ignores any trailing characters.
+# parameter lists of repeated requests, such as P_5 and P.10, reading each
+# leading numeric list and ignoring any trailing characters. The wrapper merges
+# them only for these measures and passes other requests to te-rust as written.
 _ROW_PER_VALUE = (
     "P", "recall", "success", "unj", "ndcg_cut", "map_cut", "relative_P",
     "iprec_at_recall", "Rprec_mult",
@@ -99,22 +100,17 @@ class RelevanceEvaluator:
         judged_docs_only_flag: bool = False,
     ):
         measure_names = [measures] if isinstance(measures, str) else list(measures)
-        native_measures: List[str] = []
-        positions: Dict[str, int] = {}
+        native_measures: List[Any] = []
         values: Dict[str, Dict[Decimal, str]] = collections.defaultdict(dict)
         for measure in measure_names:
-            match = _VALUE_REQUEST.match(measure)
+            match = _VALUE_REQUEST.match(measure) if isinstance(measure, str) else None
             if match is None:
                 native_measures.append(measure)
                 continue
-            name = match[1]
-            if name not in positions:
-                positions[name] = len(native_measures)
-                native_measures.append(name)
             for value in match[2].split(","):
-                values[name].setdefault(Decimal(value), value)
-        for name, index in positions.items():
-            native_measures[index] = f"{name}.{','.join(values[name].values())}"
+                # Decimal keys merge spellings of one value, such as 5, 05 and 5.0.
+                values[match[1]].setdefault(Decimal(value), value)
+        native_measures += [f"{name}.{','.join(v.values())}" for name, v in values.items()]
         if isinstance(qrel, dict):
             # pytrec_eval drops a topic whose judgments are empty. len() raises
             # TypeError for None, as in pytrec_eval.

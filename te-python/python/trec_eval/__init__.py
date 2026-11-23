@@ -4,7 +4,7 @@
 
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Set, Union
 
-from trec_eval._trec_eval import ComparisonResult, EvalResult, Evaluator as _RustEvaluator, QueryState, __version__
+from trec_eval._trec_eval import ComparisonResult, EvalResult, Evaluator as _RustEvaluator, NoSharedTopicError, QueryState, __version__
 from trec_eval.measures import Measure, register_measure
 from trec_eval.stats import AllPairsMatrix, ComparisonRow, MultiComparisonTable, adjust_pvalues
 
@@ -226,6 +226,7 @@ __all__ = [
     "AllPairsMatrix",
     "adjust_pvalues",
     "Measure",
+    "NoSharedTopicError",
     "QueryState",
     "register_measure",
     "ScoredDoc",
