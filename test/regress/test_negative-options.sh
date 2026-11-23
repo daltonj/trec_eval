@@ -10,5 +10,5 @@ done <<'EOF'
 -M|Invalid maximum number of documents per topic
 -l|Unusable relevance level
 EOF
-expect_output test/regress/negative-max-docs/out.M0 \
+expect_output test/regress/negative-options/out.M0 \
     -N 0 -M 0 -l 0 -m num_ret -q $Q $R

@@ -58,7 +58,7 @@ static int check_file_size(void)
     puts("te_read_lines did not ask for a buffer of the whole file");
     return (1);
 #else
-    puts("SKIP file size: UINT_MAX + 1 needs a wider long and ftell");
+    fputs("SKIP file-size: UINT_MAX + 1 needs a wider long\n", stderr);
     return (0);
 #endif
 }

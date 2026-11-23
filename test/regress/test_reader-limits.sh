@@ -1,9 +1,6 @@
-# Check file allocation sizes, stdin allocation failures and zscore search
-# bounds with small inputs and substituted allocation/position functions.
+# Check stdin allocation failures, zscore search bounds and file allocation
+# sizes with small inputs and substituted allocation/position functions.
 . test/regress/lib.sh
-
-./test_reader-limits file-size 2> /dev/null ||
-    fail "te_read_lines did not ask for a buffer of the whole file"
 
 printf "trec_eval.get_results: Cannot copy results file '-'\n" > "$T/want"
 ./test_reader-limits stdin-malloc < /dev/null 2> "$T/got" ||
@@ -17,3 +14,8 @@ printf '%4094s' '' > "$T/growing"
 diff "$T/want" "$T/got" || fail "wrong stdin realloc failure message"
 
 ./test_reader-limits zscores || fail "zscores search exceeded its count"
+
+# The size UINT_MAX + 1 needs a long wider than unsigned.
+need_long64
+./test_reader-limits file-size 2> /dev/null ||
+    fail "te_read_lines did not ask for a buffer of the whole file"

@@ -1,2 +1,0 @@
-trec_eval.get_zscores: Malformed line 1
-trec_eval: Quit in file 'test/regress/zscores-exit-status/zscores.malformed'

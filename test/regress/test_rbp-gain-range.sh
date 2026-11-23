@@ -15,6 +15,5 @@ expect_output $D/out.one -m rbp $D/qrels.topics $D/results.topics
 
 # p can appear among gain pairs; both gains rescale to 1, so p=0.5
 # gives (1-0.5)*(1+0.5)=0.75.
-printf '%-22s\tall\t0.7500\n' 'rbp_0=2,p=0.5,1=2' > "$T/expected"
-expect_result 0 "$T/expected" /dev/null -m rbp.0=2,p=0.5,1=2 \
+expect_result 0 $D/out.two.p /dev/null -m rbp.0=2,p=0.5,1=2 \
     $D/qrels.two $D/results.two

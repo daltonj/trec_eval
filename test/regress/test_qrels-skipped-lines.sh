@@ -2,9 +2,7 @@
 # has data fields so that reading it as a topic changes the -c output.
 . test/regress/lib.sh
 R=test/regress/results
-for format in qrels qrels_jg qrels_prefs prefs; do
-    kind=qrels
-    [ "$format" = prefs ] && kind=prefs
+while read -r format kind; do
     {
         printf '  # x y z 1\n'
         head -n 1 test/regress/$kind
@@ -21,4 +19,9 @@ for format in qrels qrels_jg qrels_prefs prefs; do
     printf '# comment\n\n' > "$T/only"
     expect_message 2 "No data lines in $kind file '$T/only'" \
         -R $format "$T/only" $R
-done
+done <<'EOF'
+qrels qrels
+qrels_jg qrels
+qrels_prefs qrels
+prefs prefs
+EOF

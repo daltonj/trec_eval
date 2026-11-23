@@ -9,8 +9,18 @@ fail() {
 T=$(mktemp -d) || fail "mktemp -d failed"
 trap 'rm -rf "$T"' EXIT
 
-# te_run STATUS ARGS...: capture output and error, checking the exit status.
-te_run() {
+# Skip the rest of the script unless trec_eval accepts a long of 2^32.
+need_long64() {
+    "$TREC_EVAL" -N 4294967296 -m num_q test/regress/qrels.one \
+        test/regress/results.one > /dev/null 2>&1 || {
+        echo "SKIP $0: needs a 64-bit long" >&2
+        exit 0
+    }
+}
+
+# expect_status STATUS ARGS...: run trec_eval ARGS, keeping its standard
+# output and error, and check that it exits with STATUS.
+expect_status() {
     te_want=$1
     shift
     te_args=$*
@@ -28,21 +38,17 @@ te_same() {
     diff "$T/te.$1" "$2" >&2 || te_fail "standard $1 differs from $2"
 }
 
-expect_status() {
-    te_run "$@"
-}
-
 save_output() {
     te_file=$1
     shift
-    te_run 0 "$@"
+    expect_status 0 "$@"
     cp "$T/te.output" "$te_file"
 }
 
 expect_output() {
     te_file=$1
     shift
-    te_run 0 "$@"
+    expect_status 0 "$@"
     te_same output "$te_file"
 }
 
@@ -50,7 +56,7 @@ expect_output() {
 expect_result() {
     te_want=$1 te_output=$2 te_error=$3
     shift 3
-    te_run "$te_want" "$@"
+    expect_status "$te_want" "$@"
     te_same output "$te_output"
     te_same error "$te_error"
 }
@@ -58,7 +64,7 @@ expect_result() {
 expect_message() {
     te_want=$1 te_text=$2
     shift 2
-    te_run "$te_want" "$@"
+    expect_status "$te_want" "$@"
     grep -F -q -e "$te_text" "$T/te.error" ||
         te_fail "no message containing: $te_text"
 }
