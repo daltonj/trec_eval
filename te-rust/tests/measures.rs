@@ -80,7 +80,7 @@ mod parameters {
 /// rbp normalizes the gains to [0, 1] by their range, which includes the gain 0 of an
 /// unjudged document.
 mod rbp {
-    use super::common::{eval, fixture, summary, write};
+    use super::common::{eval, fixture, summary};
 
     #[test]
     fn the_relevance_level_does_not_change_the_gains() {
@@ -96,7 +96,7 @@ mod rbp {
     #[test]
     fn an_unjudged_document_gains_0_when_a_judged_gain_is_negative() {
         // Gains -1 and 1 normalize to 0 and 1. Unjudged x stays at 0; a contributes .1 * .9.
-        let run = write("xa.run", "1 Q0 x 1 2 r\n1 Q0 a 2 1 r\n");
+        let run = fixture("xa.run");
         let out = eval(&["-m", "rbp.0=-1,1=1"], &fixture("ab.qrels"), &run);
         assert_eq!(summary(&out, "rbp_0=-1,1=1"), "0.0900");
     }
@@ -104,7 +104,7 @@ mod rbp {
     #[test]
     fn rbp_resid_accepts_a_gain_map_and_ignores_it() {
         // The residual is the weight of unjudged x, .1, and of the ranks after the last, .81.
-        let run = write("xa.run", "1 Q0 x 1 2 r\n1 Q0 a 2 1 r\n");
+        let run = fixture("xa.run");
         for (request, name) in [
             ("rbp_resid", "rbp_resid"),
             ("rbp_resid.1=0.5", "rbp_resid_1=0.5"),
@@ -174,7 +174,7 @@ mod ndcg {
     fn ndcg_rel_final_term_subtracts_when_num_rel_ret_exceeds_num_rel() {
         // x and a gain 1: DCG is 1, then 1.6309. With R = 1 and two gain-bearing results,
         // the sum is 1 + 1.6309 + (1 - 2) * 1.6309 = 1.
-        let run = write("xa.run", "1 Q0 x 1 2 r\n1 Q0 a 2 1 r\n");
+        let run = fixture("xa.run");
         let out = eval(&["-m", "ndcg_rel.-1=1"], &fixture("ab.qrels"), &run);
         assert_eq!(summary(&out, "ndcg_rel_-1=1"), "1.0000");
     }
@@ -214,12 +214,11 @@ mod ndcg {
 
 /// gm_map and gm_bpref, which floor a topic's value at 1e-5 before taking its log.
 mod geometric_means {
-    use super::common::{eval, rows, write};
+    use super::common::{eval, fixture, rows};
 
     #[test]
     fn a_missing_topic_counts_once_under_complete() {
-        let qrels = write("two.qrels", "1 0 a 1\n2 0 b 1\n");
-        let run = write("one.run", "1 Q0 a 1 1 r\n");
+        let (qrels, run) = (fixture("two.qrels"), fixture("one.run"));
         // exp((ln 1 + ln 1e-5) / 2) = sqrt(1e-5).
         let out = eval(&["-c", "-m", "gm_map", "-m", "gm_bpref"], &qrels, &run);
         assert_eq!(rows(&out), ["gm_map all 0.0032", "gm_bpref all 0.0032"]);

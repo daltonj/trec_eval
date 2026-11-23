@@ -513,8 +513,7 @@ mod complete_set {
 
     #[test]
     fn complete_set_prints_the_average_over_qrels_topics() {
-        let qrels = write("two.qrels", "1 0 a 1\n2 0 b 1\n");
-        let run = write("one.run", "1 Q0 a 1 1 r\n");
+        let (qrels, run) = (fixture("two.qrels"), fixture("one.run"));
         for (kind, measure) in [("qrels", "map"), ("qrels_jg", "map_avgjg")] {
             let out = eval(&["-R", kind, "-c", "-m", measure], &qrels, &run);
             assert_eq!(summary(&out, measure), "0.5000");
