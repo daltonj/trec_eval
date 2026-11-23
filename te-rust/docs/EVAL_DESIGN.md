@@ -50,7 +50,7 @@ pub struct EvalConfig {
     /// Remove all unjudged documents from the retrieved set before evaluating (-J).
     pub judged_docs_only_flag: bool,
     
-    /// Max number of documents per topic to evaluate (-M). Defaults to MAX_LONG.
+    /// Max number of documents per topic to evaluate (-M). Defaults to usize::MAX.
     pub max_num_docs_per_topic: usize,
     
     /// Total number of documents in the collection (-N). Defaults to 0.
@@ -74,6 +74,9 @@ This is the exact Rust equivalent of the C `RES_RELS` structure.
 pub struct QueryEvalState {
     /// Query Identifier.
     pub qid: String,
+
+    /// Global run label.
+    pub run_id: String,
     
     /// Total number of retrieved documents evaluated (after optional truncation).
     pub num_ret: usize,
@@ -131,7 +134,10 @@ Complete set evaluation (`-c` or `average_complete_flag`) uses native empty rank
 3.  **Self-Contained Metric Execution**:
     *   Measures evaluate the empty state directly. `num_ret` and `num_rel_ret` return 0, while `num_rel` retains the topic's relevant-document count. `utility` evaluates its coefficients against those counts and the configured collection size.
 
-### 3.3 Aligning and Counting Preferences (`PrefsEvalState`)
+### 3.3 Proposed Preference Alignment (`PrefsEvalState`)
+
+Preference evaluation is not implemented. The following algorithm and preference structures in section 4.1 are proposed.
+
 When evaluating preference files (`trec_prefs`) or qrels-based preference formats (`qrels_prefs`):
 
 1.  **Assigning Internal Ranks (0..num_judged)**:
@@ -192,7 +198,7 @@ pub enum ValueFormat {
     Integer,
     /// Render as a raw string (e.g. runid "my_runtag").
     Str,
-    /// Render as a string wrapped in single quotes (e.g. relstring "'1-0-1'").
+    /// Render as a string wrapped in single quotes.
     QuotedStr,
 }
 ```
@@ -210,24 +216,38 @@ pub enum MetricValue {
 
 ### 4.1 Metric Compatibility and Evaluation States
 
-To prevent running measures on incompatible relevance judgment formats (e.g., trying to calculate `map` on a preference file, or `prefs_simp` on standard `qrels`), we define the required evaluation categories and state enums:
+The implemented evaluation categories and states are:
 
 ```rust
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum EvaluationType {
-    /// Standard evaluation (e.g. map, P, ndcg) using standard qrels.
     Standard,
-    /// Pairwise preference-based evaluation (e.g. prefs_simp, prefs_pair) using prefs or qrels_prefs.
+    JudgmentGroups,
     Preferences,
 }
 
-/// Unified aligned evaluation state passed to metrics during calculation.
 #[derive(Debug, Clone)]
 pub enum EvalState {
     Standard(QueryEvalState),
-    Prefs(PrefsEvalState), // PrefsEvalState contains pairwise counts of preferred documents
+    JudgmentGroups(Vec<QueryEvalState>),
 }
 
+impl EvalState {
+    /// Return the standard QueryEvalState, or the first JG state if in JudgmentGroups mode.
+    pub fn get_standard(&self) -> Option<&QueryEvalState> {
+        match self {
+            EvalState::Standard(q) => Some(q),
+            EvalState::JudgmentGroups(jgs) => jgs.first(),
+        }
+    }
+}
+```
+
+`EvaluationType::Preferences` is reserved; preference parsers and measures are not implemented. The harness does not reject measures based on `eval_type`. Standard measures use the first judgment group; judgment-group measures treat a standard topic as one group.
+
+The following preference structures are proposed and are not present in the implementation:
+
+```rust
 /// Represents an Equivalence Class (EC) within a Judgment Group.
 #[derive(Debug, Clone)]
 pub struct EquivalenceClass {
@@ -302,6 +322,9 @@ pub trait Measure: Send + Sync {
     /// Unique root name of the measure (e.g. "map", "P").
     fn name(&self) -> &'static str;
 
+    /// Short single-sentence summary of the measure (e.g. "Mean Average Precision").
+    fn short_description(&self) -> &'static str;
+
     /// Detailed description/explanation of the measure.
     fn explanation(&self) -> &'static str;
 
@@ -312,8 +335,17 @@ pub trait Measure: Send + Sync {
     fn eval_type(&self) -> EvaluationType;
 
     /// Returns the exact sub-metric names to be calculated (e.g., `["P_5", "P_10", "P_15"]`).
-    /// These are determined and pre-computed during struct instantiation based on custom parameters.
     fn sub_metrics(&self) -> Vec<String>;
+
+    /// Whether this measure should be reported in the summary averages at the end.
+    fn is_summary_enabled(&self) -> bool {
+        true
+    }
+
+    /// Whether this measure should be reported for individual queries.
+    fn is_query_enabled(&self) -> bool {
+        true
+    }
 
     /// Whether `calc` reads the topic's ranking and judgments. `trec_eval` checks a topic for
     /// repeated documents only when a measure forms them, so a request for measures that
@@ -322,16 +354,21 @@ pub trait Measure: Send + Sync {
         true
     }
 
-    /// Returns the initial values for the running totals of this measure (e.g., `[Float(0.0), Float(0.0)]`).
-    /// The harness uses this to initialize the query aggregation accumulator.
+    /// The invariants this measure claims to uphold (self-documentation,
+    /// verified by the uniform invariant test). Defaults to the standard
+    /// unit-interval bundle for normalized ranking measures; measures whose
+    /// behavior differs (counts, unnormalized scores, signed, string) override.
+    fn invariants(&self) -> &'static [Invariant] {
+        invariants::STANDARD_UNIT_INTERVAL
+    }
+
+    /// Returns the initial values for the running totals of this measure.
     fn initial_values(&self) -> Vec<MetricValue>;
 
     /// Calculate the score(s) for a single query.
-    /// Returns a vector of MetricValue corresponding in order to the sub-metric names returned by `sub_metrics`.
     fn calc(&self, config: &EvalConfig, state: &EvalState) -> Vec<MetricValue>;
 
     /// Accumulate a single query's scores into a running total.
-    /// Defaults to type-safe numeric summation. Strings are not accumulated.
     fn accumulate(&self, q_scores: &[MetricValue], running_totals: &mut [MetricValue]) {
         for (i, score) in q_scores.iter().enumerate() {
             match (score, &mut running_totals[i]) {
@@ -343,8 +380,6 @@ pub trait Measure: Send + Sync {
     }
 
     /// Calculate the final summary score from the accumulated totals.
-    /// By default, divides double-precision running totals by the query count.
-    /// For sums (e.g. `num_ret`), this can be overridden to be a no-op.
     fn average(&self, config: &EvalConfig, running_totals: &mut [MetricValue], num_queries_evaluated: usize, total_qrels_queries: usize) {
         let denominator = if config.average_complete_flag {
             total_qrels_queries
@@ -389,6 +424,8 @@ Here is the exact mathematical implementation design for some of the most critic
     *   Divide the final sum by the denominator ($N_{\text{evaluated}}$ or $N_{\text{qrels}}$) and exponentiate:
         $$\text{summary\_score} = \exp\left(\frac{\text{sum}}{\text{denominator}}\right)$$
 
+For `gm_bpref`, replace AP with bpref and use the same accumulation and averaging.
+
 ### 5.3 Precision at Cutoffs (`P`)
 *   **Sub-metrics**: Default cutoffs are `[5, 10, 15, 20, 30, 100, 200, 500, 1000]`. If parameters are passed, parse as comma-separated integers.
 *   **Query Calculation**:
@@ -411,7 +448,7 @@ Here is the exact mathematical implementation design for some of the most critic
     *   **Query Calculation**: Returns `MetricValue::Str(state.run_id.clone())`.
     *   **Accumulate & Average**: No-ops. At the summary level, prints the run ID of the evaluated run.
 *   **`relstring`**:
-    *   **Format**: `ValueFormat::QuotedStr` (prints wrapped in single quotes).
+    *   **Format**: `ValueFormat::Str`. The returned `MetricValue::Str` already contains the surrounding single quotes.
     *   **Query Calculation**: Returns a string representation of the relevance level of the top $N$ retrieved docs. For each rank up to $N$:
         *   If `rel > 9`, append `>`.
         *   Else if `rel >= 0`, append the digit char.

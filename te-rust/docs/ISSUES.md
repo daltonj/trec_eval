@@ -31,7 +31,7 @@ This document tracks active design questions, structural decisions, and implemen
 ### 24. Measures can be production, experimental, or obsolete
 *   **Type**: feature
 *   **Status**: Resolved
-*   **Description**: Added a `MeasureStatus` enum (`Production`, `Experimental`, `Obsolete`) carried per measure in the registry `MeasureSpec`. This is a new concept (C `trec_eval` had no measure statuses). Assigned statuses: `G`, `yaap`, `binG` are Experimental; everything else (including `rbp`/`rbp_resid`) is Production; no measures are currently Obsolete (variant retained for future use). Experimental measures are excluded from predefined groups (`official`/`set`/`all_trec`) — `G` was removed from `all_trec` — but remain requestable explicitly via `-m`. Status is shown in help output (#23). Added a registry invariant test that no group contains a non-production measure, and extended the regression suite to exercise `G` and `binG` against C (previously uncovered, since no test used `-m all_trec`).
+*   **Description**: Added a `MeasureStatus` enum (`Production`, `Experimental`, `Obsolete`) carried per measure in the registry `MeasureSpec`. This is a new concept (C `trec_eval` had no measure statuses). Assigned statuses: only `yaap` is Experimental; all other registered measures, including `G` and `binG`, are Production. No measures are Obsolete. `G` and `binG` are included in `all_trec`; `yaap` is excluded from predefined groups but remains requestable explicitly via `-m`. Status is shown in help output (#23). Added a registry invariant test that no group contains a non-production measure, and extended the regression suite to exercise `G` and `binG` against C (previously uncovered, since no test used `-m all_trec`).
 
 ### 23. Help text needs to be more helpful
 *   **Type**: bug
@@ -106,13 +106,13 @@ This document tracks active design questions, structural decisions, and implemen
 ### 9. Representation and Printing of String-Valued Measures (e.g., `runid`, `relstring`)
 *   **Type**: Design
 *   **Status**: Resolved (Option A)
-*   **Description**: Resolved to introduce a standard `MetricValue` enum containing `Float(f64)`, `Integer(i64)`, and `Str(String)` variants. The `calc` method of our `Measure` trait returns this structured enum. This allows string-valued metrics (like `runid` and `relstring`) to be calculated thread-safely and returned directly to the harness without any dangerous C-style pointer-casting or global variable hacks. The print formatter formats them using `ValueFormat`, including support for wrapping string sequences in single quotes (as required for backwards-compatible `relstring` outputs).
+*   **Description**: Resolved to introduce a standard `MetricValue` enum containing `Float(f64)`, `Integer(i64)`, and `Str(String)` variants. The `calc` method of our `Measure` trait returns this structured enum. This allows string-valued metrics (like `runid` and `relstring`) to be calculated thread-safely and returned directly to the harness without any dangerous C-style pointer-casting or global variable hacks. `relstring` returns an already quoted `MetricValue::Str` and selects `ValueFormat::Str`, so the formatter prints those quotes unchanged.
 
 
 ### 10. Metric Compatibility with Ground-Truth Formats via Traits
 *   **Type**: Design
 *   **Status**: Resolved (Option A)
-*   **Description**: Resolved to use a single unified `Measure` trait exposing an `eval_type(&self) -> EvaluationType` method (returning `Standard`, `Preferences`, or `JudgmentGroups`). To optimize execution, the validation pass is performed **immediately after the ground-truth (qrels) file is loaded and parsed**, since the ground-truth format dictates the entire evaluation paradigm. If any requested measure is incompatible with the parsed ground-truth format, the harness aborts instantly with a clean diagnostic error before wasting I/O or memory opening and parsing the potentially multi-gigabyte run results file.
+*   **Description**: `Measure::eval_type` returns `Standard`, `Preferences` or `JudgmentGroups`, but the harness does not validate requested measures against the judgment format. On `qrels_jg`, standard measures use the first judgment group of each topic. On standard `qrels`, judgment-group measures treat each topic as one group. For judgments `1 a a 0`, `1 a b 1`, `1 b a 1`, `1 b b 0` and run order `a,b`, `-R qrels_jg -m map -m map_avgjg` gives `map all 0.5000` and `map_avgjg all 0.7500`. `trec_eval` 10.0 refuses the standard `map` request with exit status `4`. It likewise refuses `map_avgjg` on standard qrels, which `te-rust` accepts. Preference formats and measures are not implemented.
 
 
 ### 11. Regression Testing Harness in Rust
@@ -154,8 +154,8 @@ This document tracks active design questions, structural decisions, and implemen
 
 ### 15. Lack of Design for Preference-Based Evaluations
 *   **Type**: Design
-*   **Status**: Resolved (Full Preference Mapping & Dual-Strategy Testing)
-*   **Description**: Resolved to specify a comprehensive, type-safe Rust representation for the entire preference evaluation logic, completely defining the previously empty `PrefsEvalState`, `JudgmentGroup`, and `EquivalenceClass` structures in `EVAL_DESIGN.md`. Documented the alignment engine's exact internal doc ranking assignment (0..num_judged), Equivalence Class sorting, and partial-order preference matrix construction. To prevent regression bugs and guarantee 100% behavioral alignment with C's complex `form_prefs_counts.c`, we resolved to implement two independent transitive closure algorithms: a naive C-style iterative matrix exponentiation (the reference oracle) and a bit-parallel Warshall's algorithm (production optimizer). The evaluation engine will run both strategies in parallel during development and compare resulting matrices. This guarantees that we verify the production optimizer's safety under all imaginable dataset conditions before disabling the naive reference in production. Fully mapped the five combinatorial topological count areas (A1–A5) for both layouts.
+*   **Status**: Proposed (Preference Mapping & Dual-Strategy Testing)
+*   **Description**: `PrefsEvalState`, `JudgmentGroup` and `EquivalenceClass` in `EVAL_DESIGN.md` are proposed structures. Preference evaluation and the dual transitive-closure strategies are not implemented. The design proposes comparing a C-style iterative matrix algorithm with a bit-parallel Warshall algorithm during development.
 
 ### 19. Fragile Testing Harness: `cargo run` and Exact String Comparisons
 *   **Type**: Testing

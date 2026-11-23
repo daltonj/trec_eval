@@ -287,7 +287,7 @@ pub(crate) fn checked_float_cutoffs(mut list: Vec<f64>) -> Result<Vec<f64>, Meas
     let label = |cutoff: f64| format!("{:.2}", cutoff);
     if let Some(pair) = list
         .windows(2)
-        .find(|pair| label(pair[0]) == label(pair[1]))
+        .find(|pair| pair[0] == pair[1] || label(pair[0]) == label(pair[1]))
     {
         let message = if pair[0] == pair[1] {
             format!("cutoff {} is given more than once", pair[0])

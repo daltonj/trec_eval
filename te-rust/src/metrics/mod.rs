@@ -287,6 +287,8 @@ mod tests {
             RprecMultMeasure::new(vec![1.0, 1.0]).err().unwrap().message,
             "cutoff 1 is given more than once"
         );
+        // -0 and 0 are equal, though they print differently.
+        assert!(IprecAtRecallMeasure::new(vec![-0.0, 0.0]).is_err());
         assert!(PrecisionCutMeasure::new(vec![]).is_err());
         assert!(Avg11PtMeasure::new(vec![], "").is_err());
         assert!(RprecMultMeasure::new(vec![f64::NAN]).is_err());
