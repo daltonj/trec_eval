@@ -1,6 +1,10 @@
 /* Checks the readers' handling of file sizes beyond an int or unsigned and
-   of failed allocations on standard input, and the zscores searches, with
-   small inputs. The make rule renames ftell, malloc and realloc. */
+   of failed allocations on standard input, with small inputs, and the
+   searches of the included convert_zscores.c. The make rule renames ftell,
+   malloc and realloc to the functions below: ftell reports a size of
+   UINT_MAX + 1, malloc refuses a request above UINT_MAX, or every request
+   while refuse_malloc is set, and realloc refuses every request. Each
+   records the size it refuses. */
 #include <limits.h>
 #include "common.h"
 #include "sysfunc.h"
@@ -18,12 +22,12 @@ int te_get_trec_results(EPI * epi, char *text_results_file,
                         ALL_RESULTS * all_results);
 
 static size_t refused;
-static int refuse_stdin_malloc;
+static int refuse_malloc;
 
 long reader_ftell(FILE * stream)
 {
     (void) stream;
-#if LONG_MAX > UINT_MAX && !defined(_WIN32)
+#if LONG_MAX > UINT_MAX
     return ((long) UINT_MAX + 1);
 #else
     return (0);
@@ -32,7 +36,7 @@ long reader_ftell(FILE * stream)
 
 void *reader_malloc(size_t size)
 {
-    if (size > UINT_MAX || refuse_stdin_malloc) {
+    if (size > UINT_MAX || refuse_malloc) {
         refused = size;
         return (NULL);
     }
@@ -46,7 +50,7 @@ void *reader_realloc(void *ptr, size_t size)
     return (NULL);
 }
 
-#if LONG_MAX > UINT_MAX && !defined(_WIN32)
+#if LONG_MAX > UINT_MAX
 static int check_file_size(const char *reader, int status)
 {
     int ok = status == UNDEF && refused == (size_t) UINT_MAX + 3;
@@ -60,7 +64,7 @@ static int check_file_size(const char *reader, int status)
 
 static int check_file_sizes(char *path)
 {
-#if LONG_MAX > UINT_MAX && !defined(_WIN32)
+#if LONG_MAX > UINT_MAX
     int failed = 0;
     EPI epi = { 0 };
     ALL_REL_INFO rel_info = { 0 };
@@ -118,7 +122,7 @@ static int check_stdin(char *path, int initial)
         perror(path);
         return (1);
     }
-    refuse_stdin_malloc = initial;
+    refuse_malloc = initial;
     status = te_get_trec_results(&epi, "-", &results);
     if (status != UNDEF || refused != expected) {
         printf("stdin: got status %d and allocation %zu; "
