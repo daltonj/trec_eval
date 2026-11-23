@@ -1,4 +1,7 @@
-/* Record requested sizes without allocating enormous arrays. */
+/* Malloc, Realloc and the pool helpers request n * sizeof(type) bytes.
+   The macros return NULL when that does not fit in size_t. The pool
+   helpers refuse negative requests and allocate at least one element.
+   A stub allocator records requested sizes without allocating them. */
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>

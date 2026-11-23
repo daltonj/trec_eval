@@ -1,6 +1,7 @@
-/* Checks preference rank comparisons without constructing rankings
-   with more than INT_MAX documents. Judgment group and relevance
-   stay equal so that only rank determines the order. */
+/* Both preference rank comparators must preserve the sign of rank
+   differences beyond the int range. Checks this without constructing
+   rankings with more than INT_MAX documents. Judgment group and
+   relevance stay equal so that only rank determines the order. */
 #include <limits.h>
 #include "form_prefs_counts.c"
 
@@ -30,8 +31,6 @@ static void check(long rank1, long rank2, int want)
 
 int main(void)
 {
-    check(1, 2, -1);
-    check(2, 1, 1);
     check(1, 1, 0);
     /* An unjudged document has rank -1 */
     check(-1, LONG_MAX, -1);

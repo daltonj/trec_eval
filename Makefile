@@ -89,6 +89,8 @@ quicktest: trec_eval test_allocation-sizes test_prefs-rank-comparators \
 	./trec_eval -m qrels_jg -q -R qrels_jg  test/qrels.comments.123 test/results.test | diff - test/out.test.qrels_jg
 	./trec_eval -q -miprec_at_recall..10,.20,.25,.75,.50 -m P.5,7,3 -m recall.20,2000 -m Rprec_mult.5.0,0.2,0.35 -mutility.2,-1,0,0 -m 11pt_avg..25,.5,.75 -mndcg.1=3,2=9,4=4.5 -mndcg_cut.10,20,23.4 -msuccess.2,5,20 test/qrels.test test/results.test | diff - test/out.test.meas_params
 	./trec_eval -q -m all_trec -Z test/zscores_file test/qrels.test test/results.test | diff - test/out.test.aqZ
+	./test_allocation-sizes
+	./test_prefs-rank-comparators
 	@for t in test/regress/test_*.sh; do sh "$$t" ./trec_eval || exit 1; done
 	/bin/echo "Test succeeeded"
 
