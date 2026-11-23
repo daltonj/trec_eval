@@ -191,8 +191,11 @@ def evaluate(
     Raises
     ------
     ValueError
-        If relevance_level is negative, or if complete_set_average is False and the run
-        shares no topic with qrels (NoSharedTopicError, a subclass of ValueError).
+        If an argument or input is unusable: a negative relevance_level, an unknown
+        measure or an invalid measure parameter, invalid global_gains, a grade outside
+        -127 to 127, a NaN score, or a document repeated within a topic. Also, if
+        complete_set_average is False and the run shares no topic with qrels
+        (NoSharedTopicError, a subclass of ValueError).
     """
     evaluator = Evaluator(
         qrels=qrels,
