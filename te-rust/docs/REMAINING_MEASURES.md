@@ -50,7 +50,7 @@ Measures useful for summarizing across highly skewed topic performance or handli
 ## 5. Pool & Judgment Statistics
 Descriptive measures capturing pool coverage or unjudged proportions.
 
-- [x] **`unj`** (`m_unjudged.c`): Number of unjudged retrieved documents (at specific cutoffs, e.g., `unj_5`, `unj_10`).
+- [x] **`unj`** (`m_unjudged.c`): Fraction of unjudged documents in the top ranks (at specific cutoffs, e.g., `unj_5`, `unj_10`).
 - [x] **`num_nonrel_judged_ret`** (`m_num_nonrel_judged_ret.c`): Total count of judged non-relevant documents retrieved.
 
 ---

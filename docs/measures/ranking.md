@@ -120,7 +120,7 @@ $$\text{Success}@k = \begin{cases} 1.0 & \text{if } \sum_{i=1}^k \text{rel}(i) \
 
 ## Unjudged Fraction (`unj`)
 
-Fraction of retrieved documents in the top $k$ ranks that are not present in the judgment pool:
+Fraction of the top $k$ ranks that hold an unjudged document, one that the qrels do not list or list with a negative grade. Ranks past the end of the ranking count as judged:
 
 $$\text{unj}@k = \frac{\text{unjudged documents in top } k}{k}$$
 
