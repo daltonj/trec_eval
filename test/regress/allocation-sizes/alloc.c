@@ -39,6 +39,9 @@ int main(void)
     bound = 0;
     CHECK(NULL != te_chk_and_realloc(NULL, &bound, 0, sizeof(long)) &&
           bound == 1 && requested == sizeof(long));
+    /* setup_gains asks for no gains for a topic whose grades are all
+       negative */
+    CHECK(NULL != Malloc(0, long) && requested == 1);
     requested = 0;
     CHECK(NULL == Malloc(half, short) && requested == 0);
     CHECK(NULL == Realloc(buffer, half, short) && requested == 0);
