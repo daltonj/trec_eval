@@ -60,8 +60,7 @@ impl Measure for RprecMultMeasure {
         }
 
         // 1. Round rank cutoffs using C's + 0.9 rule
-        let cutoffs: Vec<f64> = self
-            .cutoff_percents
+        let cutoffs: Vec<f64> = self.cutoff_percents
             .iter()
             .map(|&p| (p * q_state.num_rel as f64 + 0.9).floor())
             .collect();

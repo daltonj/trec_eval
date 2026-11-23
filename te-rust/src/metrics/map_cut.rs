@@ -11,10 +11,7 @@ impl MapCutMeasure {
     pub fn new(cutoffs: Vec<usize>) -> Result<Self, MeasureParseError> {
         let cutoffs = checked_rank_cutoffs(cutoffs)?;
         let sub_metrics = cutoffs.iter().map(|c| format!("map_cut_{}", c)).collect();
-        Ok(Self {
-            cutoffs,
-            sub_metrics,
-        })
+        Ok(Self { cutoffs, sub_metrics })
     }
 }
 

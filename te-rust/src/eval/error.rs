@@ -48,11 +48,7 @@ impl std::fmt::Display for EvaluationError {
                 REL_LEVELS.end(),
             ),
             Self::NanScore { qid, docno } => {
-                write!(
-                    f,
-                    "score of document '{}' for query '{}' is NaN",
-                    docno, qid
-                )
+                write!(f, "score of document '{}' for query '{}' is NaN", docno, qid)
             }
             Self::NoSharedTopic => write!(f, "no topic has both results and judgments"),
         }

@@ -22,10 +22,7 @@ impl UtilityMeasure {
         } else {
             format!("utility_{}", params_str)
         };
-        Ok(Self {
-            params,
-            sub_metrics: vec![name],
-        })
+        Ok(Self { params, sub_metrics: vec![name] })
     }
 }
 

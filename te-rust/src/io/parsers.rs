@@ -10,13 +10,9 @@ pub enum ParseError {
     /// The file has lines, but each is blank or a comment.
     NoDataLines,
     /// A line holds a NUL byte.
-    NulCharacter {
-        line_num: usize,
-    },
+    NulCharacter { line_num: usize },
     /// A line holds a CR that is not followed by LF, as in a file with CR line endings.
-    CarriageReturn {
-        line_num: usize,
-    },
+    CarriageReturn { line_num: usize },
     /// A data line is not UTF-8; `column` is the 1-based offset of the first bad byte.
     InvalidUtf8 { line_num: usize, column: usize },
     InvalidFieldCount { line_num: usize, expected: FieldCount, found: usize },
@@ -32,9 +28,7 @@ impl std::fmt::Display for ParseError {
             ParseError::EmptyFile => write!(f, "File is empty"),
             ParseError::NoDataLines => write!(f, "No data lines"),
             ParseError::NulCharacter { line_num } => write!(f, "Line {}: NUL character", line_num),
-            ParseError::CarriageReturn { line_num } => {
-                write!(f, "Line {}: CR character without LF", line_num)
-            }
+            ParseError::CarriageReturn { line_num } => write!(f, "Line {}: CR character without LF", line_num),
             ParseError::InvalidUtf8 { line_num, column } => {
                 write!(f, "Line {}: invalid UTF-8 at byte {}", line_num, column)
             }
@@ -140,10 +134,7 @@ fn parse_grade(value: &str, line_num: usize, warnings: &mut Vec<String>) -> Resu
         })
     })?;
     if partial {
-        warnings.push(format!(
-            "Line {}: value '{}' partially read as '{}'",
-            line_num, value, rel
-        ));
+        warnings.push(format!("Line {}: value '{}' partially read as '{}'", line_num, value, rel));
     }
     if !REL_LEVELS.contains(&rel) {
         return Err(IOError::FormatError(ParseError::RelevanceOutOfBounds {
@@ -168,18 +159,10 @@ fn parse_score(value: &str, line_num: usize, warnings: &mut Vec<String>) -> Resu
         })
     })?;
     if out_of_range(&value[..len], sim) {
-        warnings.push(format!(
-            "Line {}: score '{}' out of range, read as {}",
-            line_num, value, sim
-        ));
+        warnings.push(format!("Line {}: score '{}' out of range, read as {}", line_num, value, sim));
     }
     if len < value.len() {
-        warnings.push(format!(
-            "Line {}: score '{}' partially read as '{}'",
-            line_num,
-            value,
-            &value[..len]
-        ));
+        warnings.push(format!("Line {}: score '{}' partially read as '{}'", line_num, value, &value[..len]));
     }
     Ok(sim)
 }
@@ -195,17 +178,12 @@ fn out_of_range(prefix: &str, value: f64) -> bool {
     if value != 0.0 {
         return false;
     }
-    let (significand, exponent_marks) = match unsigned
-        .strip_prefix("0x")
-        .or_else(|| unsigned.strip_prefix("0X"))
-    {
+    let (significand, exponent_marks) = match unsigned.strip_prefix("0x").or_else(|| unsigned.strip_prefix("0X")) {
         Some(hex) => (hex, ['p', 'P']),
         None => (unsigned, ['e', 'E']),
     };
     let significand = significand.split(exponent_marks).next().unwrap_or_default();
-    significand
-        .bytes()
-        .any(|b| b.is_ascii_hexdigit() && b != b'0')
+    significand.bytes().any(|b| b.is_ascii_hexdigit() && b != b'0')
 }
 
 /// The value and length of the longest prefix of `s` that C's `strtod` reads in the C locale as a
@@ -215,8 +193,7 @@ fn strtod_prefix(s: &str) -> Option<(f64, usize)> {
     let sign = usize::from(matches!(bytes.first(), Some(b'+' | b'-')));
     let negative = bytes.first() == Some(&b'-');
     let rest = &bytes[sign..];
-    let has_word =
-        |word: &[u8]| rest.len() >= word.len() && rest[..word.len()].eq_ignore_ascii_case(word);
+    let has_word = |word: &[u8]| rest.len() >= word.len() && rest[..word.len()].eq_ignore_ascii_case(word);
     let signed = |x: f64| if negative { -x } else { x };
     if has_word(b"infinity") {
         return Some((signed(f64::INFINITY), sign + 8));
@@ -224,10 +201,7 @@ fn strtod_prefix(s: &str) -> Option<(f64, usize)> {
     if has_word(b"inf") {
         return Some((signed(f64::INFINITY), sign + 3));
     }
-    if let Some(hex) = rest
-        .strip_prefix(b"0x")
-        .or_else(|| rest.strip_prefix(b"0X"))
-    {
+    if let Some(hex) = rest.strip_prefix(b"0x").or_else(|| rest.strip_prefix(b"0X")) {
         if let Some((value, len)) = hex_prefix(hex) {
             return Some((signed(value), sign + 2 + len));
         }
@@ -343,11 +317,7 @@ fn round_binary(mantissa: u64, sticky: bool, exponent: i64) -> f64 {
         return f64::from_bits(q); // subnormal; a carry into bit 52 gives the smallest normal
     }
     // Rounding up can carry into a 54th bit.
-    let (q, top) = if q >> 53 == 1 {
-        (q >> 1, top + 1)
-    } else {
-        (q, top)
-    };
+    let (q, top) = if q >> 53 == 1 { (q >> 1, top + 1) } else { (q, top) };
     if top > 1023 {
         return f64::INFINITY;
     }
@@ -437,9 +407,7 @@ fn is_field_sep(c: char) -> bool {
 }
 
 fn split_fields(line: &str) -> Vec<&str> {
-    line.split(is_field_sep)
-        .filter(|field| !field.is_empty())
-        .collect()
+    line.split(is_field_sep).filter(|field| !field.is_empty()).collect()
 }
 
 const UTF8_BOM: &[u8] = b"\xEF\xBB\xBF";
@@ -467,10 +435,7 @@ fn read_lines(mut reader: impl BufRead) -> impl Iterator<Item = Result<(usize, S
         }
     })
     .peekable();
-    let empty = lines
-        .peek()
-        .is_none()
-        .then_some(Err(IOError::FormatError(ParseError::EmptyFile)));
+    let empty = lines.peek().is_none().then_some(Err(IOError::FormatError(ParseError::EmptyFile)));
     empty.into_iter().chain(lines)
 }
 
@@ -489,14 +454,9 @@ fn decode_line(mut bytes: Vec<u8>, line_num: usize, byte_offset: usize) -> Resul
         return Err(IOError::FormatError(ParseError::NulCharacter { line_num }));
     }
     if bytes.contains(&b'\r') {
-        return Err(IOError::FormatError(ParseError::CarriageReturn {
-            line_num,
-        }));
+        return Err(IOError::FormatError(ParseError::CarriageReturn { line_num }));
     }
-    let start = bytes
-        .iter()
-        .position(|&b| !is_field_sep(char::from(b)))
-        .unwrap_or(bytes.len());
+    let start = bytes.iter().position(|&b| !is_field_sep(char::from(b))).unwrap_or(bytes.len());
     if bytes[start..].starts_with(b"#") {
         return Ok(String::from_utf8_lossy(&bytes).into_owned());
     }
@@ -603,11 +563,7 @@ fn parse_trec_qrels_from(reader: impl BufRead) -> Result<QrelsData, IOError> {
     }
     queries.push(current_query);
 
-    Ok(QrelsData {
-        queries,
-        comments,
-        warnings,
-    })
+    Ok(QrelsData { queries, comments, warnings })
 }
 
 struct RawQrelsJG {
@@ -698,11 +654,7 @@ fn parse_trec_qrels_jg_from(reader: impl BufRead) -> Result<QrelsJGData, IOError
         }
     }
 
-    Ok(QrelsJGData {
-        queries,
-        comments,
-        warnings,
-    })
+    Ok(QrelsJGData { queries, comments, warnings })
 }
 
 /// Parses standard results (run) file format. A document retrieved twice for a topic is kept:

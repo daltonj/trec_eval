@@ -12,17 +12,11 @@ pub struct MeasureParseError {
 
 impl MeasureParseError {
     pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            illegal_name: false,
-        }
+        Self { message: message.into(), illegal_name: false }
     }
 
     pub fn illegal_name(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            illegal_name: true,
-        }
+        Self { message: message.into(), illegal_name: true }
     }
 }
 
@@ -170,9 +164,8 @@ impl GainsConfig {
 /// Reads the parameters of `rbp` and `rbp_resid`: the persistence `p`, in [0, 1), given at most
 /// once and 0.9 by default, and a gain map from the other pairs.
 pub(crate) fn parse_rbp_params(params: &str) -> Result<(f64, GainsConfig), MeasureParseError> {
-    let (p, gains): (Vec<_>, Vec<_>) = parse_key_values(params)?
-        .into_iter()
-        .partition(|(name, _)| name == "p");
+    let (p, gains): (Vec<_>, Vec<_>) =
+        parse_key_values(params)?.into_iter().partition(|(name, _)| name == "p");
     let persistence = match &p[..] {
         [] => 0.9,
         [(_, value)] => match value.parse::<f64>() {
@@ -186,11 +179,7 @@ pub(crate) fn parse_rbp_params(params: &str) -> Result<(f64, GainsConfig), Measu
                 return Err(MeasureParseError::new(message));
             }
         },
-        _ => {
-            return Err(MeasureParseError::new(
-                "parameter 'p' is given more than once",
-            ))
-        }
+        _ => return Err(MeasureParseError::new("parameter 'p' is given more than once")),
     };
     Ok((persistence, GainsConfig::from_pairs(gains)?))
 }
@@ -228,10 +217,7 @@ impl Gains {
 
         // 2. Then add all other relevance levels that were NOT specified in custom_gains,
         // up to the highest level with a judged document. rel_levels can be padded past it.
-        let num_rel_levels = rel_levels
-            .iter()
-            .rposition(|&n| n > 0)
-            .map_or(0, |top| top + 1);
+        let num_rel_levels = rel_levels.iter().rposition(|&n| n > 0).map_or(0, |top| top + 1);
         for (i, &num_at_level) in rel_levels.iter().enumerate().take(num_rel_levels) {
             let rel_level = i as i64;
             if !config.custom_gains.contains_key(&rel_level) {
@@ -273,9 +259,7 @@ fn require_cutoffs<T>(cutoffs: &[T]) -> Result<(), MeasureParseError> {
 
 /// Sorts rank cutoffs, which the single-pass measures rely on, and refuses an empty list, a
 /// repeated cutoff, and a cutoff of 0.
-pub(crate) fn checked_rank_cutoffs(
-    mut cutoffs: Vec<usize>,
-) -> Result<Vec<usize>, MeasureParseError> {
+pub(crate) fn checked_rank_cutoffs(mut cutoffs: Vec<usize>) -> Result<Vec<usize>, MeasureParseError> {
     require_cutoffs(&cutoffs)?;
     cutoffs.sort_unstable();
     if cutoffs.first() == Some(&0) {
@@ -479,4 +463,5 @@ mod parser_tests {
         assert_eq!(gains, HashMap::from([(1, 3.0), (2, 9.5), (-1, 0.0)]));
         assert!(GainsConfig::parse("").unwrap().custom_gains.is_empty());
     }
+
 }

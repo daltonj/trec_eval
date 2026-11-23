@@ -20,10 +20,7 @@ fn _trec_eval(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<EvalResult>()?;
     m.add_class::<ComparisonResult>()?;
     m.add_class::<QueryState>()?;
-    m.add(
-        "NoSharedTopicError",
-        m.py().get_type_bound::<NoSharedTopicError>(),
-    )?;
+    m.add("NoSharedTopicError", m.py().get_type_bound::<NoSharedTopicError>())?;
     Ok(())
 }
 

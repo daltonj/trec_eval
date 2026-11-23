@@ -193,10 +193,7 @@ fn align_ranked_query(
         }
     }
 
-    let rel_levels_size = std::cmp::max(
-        max_rel_grade + 1,
-        relevance_level_cutoff.min(*REL_LEVELS.end()) + 1,
-    ) as usize;
+    let rel_levels_size = std::cmp::max(max_rel_grade + 1, relevance_level_cutoff.min(*REL_LEVELS.end()) + 1) as usize;
     let mut rel_levels = vec![0; rel_levels_size];
     let mut num_rel = 0;
 

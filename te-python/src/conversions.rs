@@ -67,10 +67,7 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
             let qrels = parse_trec_qrels(path).map_err(|e| {
                 PyValueError::new_err(format!("Failed to parse qrels file '{}': {}", path_str, e))
             })?;
-            let warnings = qrels
-                .warnings
-                .iter()
-                .map(|w| format!("qrels file '{}': {}", path_str, w));
+            let warnings = qrels.warnings.iter().map(|w| format!("qrels file '{}': {}", path_str, w));
             warn_all(obj.py(), warnings)?;
             return Ok(qrels);
         }
@@ -153,14 +150,9 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
         let doc_series = obj.get_item(&doc_col)?;
         let rel_series = obj.get_item(&rel_col)?;
 
-        let triples = qid_series
-            .iter()?
-            .zip(doc_series.iter()?)
-            .zip(rel_series.iter()?);
+        let triples = qid_series.iter()?.zip(doc_series.iter()?).zip(rel_series.iter()?);
         return qrels_from_triples(
-            triples.map(|((qid, docno), rel)| {
-                Ok((qid?.extract()?, docno?.extract()?, rel?.extract()?))
-            }),
+            triples.map(|((qid, docno), rel)| Ok((qid?.extract()?, docno?.extract()?, rel?.extract()?))),
         );
     }
 
@@ -256,10 +248,7 @@ pub fn ingest_run(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> Py
             let run = parse_trec_run(path).map_err(|e| {
                 PyValueError::new_err(format!("Failed to parse run file '{}': {}", path_str, e))
             })?;
-            let warnings = run
-                .warnings
-                .iter()
-                .map(|w| format!("run file '{}': {}", path_str, w));
+            let warnings = run.warnings.iter().map(|w| format!("run file '{}': {}", path_str, w));
             warn_all(obj.py(), warnings)?;
             return Ok(run);
         }

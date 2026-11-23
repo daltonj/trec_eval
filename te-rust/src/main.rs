@@ -3,9 +3,7 @@ use std::io::{self, Write};
 use std::process;
 
 use te_rust::eval::bootstrap::BootstrapConfig;
-use te_rust::eval::{
-    evaluate_run, evaluate_run_jg, DuplicateSource, EvaluationError, EvaluationOutput,
-};
+use te_rust::eval::{evaluate_run, evaluate_run_jg, DuplicateSource, EvaluationError, EvaluationOutput};
 use te_rust::io::{parse_trec_qrels, parse_trec_qrels_jg, parse_trec_run, IOError};
 use te_rust::metrics::registry::MeasureSpec;
 use te_rust::metrics::{EvalConfig, Measure, MetricValue, ValueFormat};
@@ -146,10 +144,7 @@ fn leading_integer(value: &str) -> Result<i64, String> {
     match te_rust::io::parsers::read_leading_integer(value) {
         Ok((integer, partial)) => {
             if partial {
-                eprintln!(
-                    "te-rust: Warning, value '{}' partially read as '{}'",
-                    value, integer
-                );
+                eprintln!("te-rust: Warning, value '{}' partially read as '{}'", value, integer);
             }
             Ok(integer)
         }
@@ -193,11 +188,7 @@ fn handle_help_flags(help_measures: bool, help_measure: Option<&str>) {
         for spec in metrics::registry::registry() {
             if spec.name.eq_ignore_ascii_case(target) {
                 if let Ok(m) = (spec.factory)("", &mut Vec::new()) {
-                    check_write(print_measure_help(
-                        &mut io::stdout().lock(),
-                        spec,
-                        m.as_ref(),
-                    ));
+                    check_write(print_measure_help(&mut io::stdout().lock(), spec, m.as_ref()));
                     process::exit(0);
                 }
             }
@@ -212,19 +203,10 @@ fn print_measure_list(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "{}", "-".repeat(70))?;
     for spec in metrics::registry::registry() {
         if let Ok(m) = (spec.factory)("", &mut Vec::new()) {
-            writeln!(
-                out,
-                "{:<22} {:<13} {}",
-                m.name(),
-                spec.status.label(),
-                m.short_description()
-            )?;
+            writeln!(out, "{:<22} {:<13} {}", m.name(), spec.status.label(), m.short_description())?;
         }
     }
-    writeln!(
-        out,
-        "\nRequest measures with -m <name> (repeatable). See --help-measure <name> for details."
-    )?;
+    writeln!(out, "\nRequest measures with -m <name> (repeatable). See --help-measure <name> for details.")?;
     out.flush()
 }
 
@@ -326,11 +308,7 @@ fn main() {
         Ok(resolved) => resolved,
         Err(e) => {
             eprintln!("te-rust: {}", e);
-            process::exit(if e.illegal_name {
-                EXIT_USAGE
-            } else {
-                EXIT_INPUT
-            });
+            process::exit(if e.illegal_name { EXIT_USAGE } else { EXIT_INPUT });
         }
     };
     for warning in &resolved.warnings {
@@ -353,9 +331,7 @@ fn main() {
     let qrels_kind = args.rel_format.to_ascii_lowercase();
     let output = match qrels_kind.as_str() {
         "qrels_jg" => {
-            let qrels = read_input("qrels_jg", &qrels_filename, parse_trec_qrels_jg, |d| {
-                &d.warnings
-            });
+            let qrels = read_input("qrels_jg", &qrels_filename, parse_trec_qrels_jg, |d| &d.warnings);
             let run = read_input("run", &run_filename, parse_trec_run, |d| &d.warnings);
             evaluate_run_jg(&qrels, &run, &active_measures, &config, ci_config.as_ref())
         }
@@ -374,12 +350,7 @@ fn main() {
     });
 
     // 6. Print the query results, then the summary
-    check_write(print_results(
-        &mut io::stdout().lock(),
-        &output,
-        &config,
-        args.ci_pretty,
-    ));
+    check_write(print_results(&mut io::stdout().lock(), &output, &config, args.ci_pretty));
 }
 
 fn print_results(
@@ -400,31 +371,15 @@ fn print_results(
         for s_eval in &output.summary_results {
             if let (Some(ci), true) = (&s_eval.ci, ci_pretty) {
                 if let MetricValue::Float(f) = &s_eval.value {
-                    writeln!(
-                        out,
-                        "{:<22}\tall\t{:.4} [{:.4}, {:.4}]",
-                        s_eval.name, f, ci.lower, ci.upper
-                    )?;
+                    writeln!(out, "{:<22}\tall\t{:.4} [{:.4}, {:.4}]", s_eval.name, f, ci.lower, ci.upper)?;
                 }
             } else {
                 print_metric_value(out, &s_eval.name, "all", &s_eval.value, s_eval.format)?;
                 if let Some(ci) = &s_eval.ci {
                     let lower_name = format!("{}_ci_lower", s_eval.name);
                     let upper_name = format!("{}_ci_upper", s_eval.name);
-                    print_metric_value(
-                        out,
-                        &lower_name,
-                        "all",
-                        &MetricValue::Float(ci.lower),
-                        ValueFormat::Float,
-                    )?;
-                    print_metric_value(
-                        out,
-                        &upper_name,
-                        "all",
-                        &MetricValue::Float(ci.upper),
-                        ValueFormat::Float,
-                    )?;
+                    print_metric_value(out, &lower_name, "all", &MetricValue::Float(ci.lower), ValueFormat::Float)?;
+                    print_metric_value(out, &upper_name, "all", &MetricValue::Float(ci.upper), ValueFormat::Float)?;
                 }
             }
         }
@@ -432,13 +387,7 @@ fn print_results(
     out.flush()
 }
 
-fn print_metric_value(
-    out: &mut impl Write,
-    name: &str,
-    qid: &str,
-    val: &MetricValue,
-    format: ValueFormat,
-) -> io::Result<()> {
+fn print_metric_value(out: &mut impl Write, name: &str, qid: &str, val: &MetricValue, format: ValueFormat) -> io::Result<()> {
     match (val, format) {
         (MetricValue::Float(f), ValueFormat::Float) => {
             writeln!(out, "{:<22}\t{}\t{:.4}", name, qid, f)

@@ -21,10 +21,7 @@ impl SetFMeasure {
         } else {
             format!("set_F_{}", params_str)
         };
-        Ok(Self {
-            beta,
-            sub_metrics: vec![name],
-        })
+        Ok(Self { beta, sub_metrics: vec![name] })
     }
 }
 
