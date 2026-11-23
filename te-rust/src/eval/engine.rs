@@ -36,7 +36,8 @@ pub struct EvaluationOutput {
 ///
 /// # Errors
 ///
-/// Refuses a negative relevance level. Otherwise returns the first error that
+/// Refuses a negative relevance level, and a run that has no qrels topic unless
+/// `config.average_complete_flag` is set. Otherwise returns the first error that
 /// [`align_query`](crate::eval::align_query) gives for a scored topic: a qrels topic that the
 /// run has, or any qrels topic when `config.average_complete_flag` is set. Repeated documents
 /// are refused only when a measure reads the ranking ([`Measure::reads_ranking`]).
@@ -70,6 +71,9 @@ pub fn evaluate_run(
         if config.average_complete_flag || in_run {
             eval_qids.push(qrels_q.qid.clone());
         }
+    }
+    if num_queries_evaluated == 0 && !config.average_complete_flag {
+        return Err(EvaluationError::NoSharedTopic);
     }
 
     let mut running_totals: Vec<Vec<MetricValue>> = measures
@@ -140,7 +144,7 @@ pub fn evaluate_run(
     let mut summary_results = Vec::new();
     let total_qrels_queries = qrels.queries.len();
 
-    if config.summary_flag && (num_queries_evaluated > 0 || config.average_complete_flag) {
+    if config.summary_flag {
         for (m_idx, m) in measures.iter().enumerate() {
             if !m.is_summary_enabled() {
                 continue;
@@ -220,6 +224,9 @@ pub fn evaluate_run_jg(
             eval_qids.push(qrels_q.qid.clone());
         }
     }
+    if num_queries_evaluated == 0 && !config.average_complete_flag {
+        return Err(EvaluationError::NoSharedTopic);
+    }
 
     let mut running_totals: Vec<Vec<MetricValue>> = measures
         .iter()
@@ -290,7 +297,7 @@ pub fn evaluate_run_jg(
     let mut summary_results = Vec::new();
     let total_qrels_queries = qrels.queries.len();
 
-    if config.summary_flag && (num_queries_evaluated > 0 || config.average_complete_flag) {
+    if config.summary_flag {
         for (m_idx, m) in measures.iter().enumerate() {
             if !m.is_summary_enabled() {
                 continue;

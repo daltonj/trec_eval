@@ -3,8 +3,10 @@ use std::io::{self, Write};
 use std::process;
 
 use te_rust::eval::bootstrap::BootstrapConfig;
-use te_rust::eval::{evaluate_run, evaluate_run_jg, DuplicateSource, EvaluationError, EvaluationOutput};
-use te_rust::io::{parse_trec_qrels, parse_trec_qrels_jg, parse_trec_run, RunData};
+use te_rust::eval::{
+    evaluate_run, evaluate_run_jg, DuplicateSource, EvaluationError, EvaluationOutput,
+};
+use te_rust::io::{parse_trec_qrels, parse_trec_qrels_jg, parse_trec_run, IOError};
 use te_rust::metrics::registry::MeasureSpec;
 use te_rust::metrics::{EvalConfig, Measure, MetricValue, ValueFormat};
 use te_rust::metrics;
@@ -118,15 +120,23 @@ fn refuse_evaluation_error(
     qrels_file: &str,
     run_file: &str,
 ) -> ! {
-    let EvaluationError::DuplicateDocument { source, .. } = error else {
-        eprintln!("te-rust: {}", error);
-        process::exit(EXIT_INPUT);
-    };
-    let (kind, file) = match source {
-        DuplicateSource::Qrels => (qrels_kind, qrels_file),
-        DuplicateSource::Run => ("run", run_file),
-    };
-    eprintln!("Error in {} file '{}': {}", kind, file, error);
+    match error {
+        EvaluationError::DuplicateDocument { source, .. } => {
+            let (kind, file) = match source {
+                DuplicateSource::Qrels => (qrels_kind, qrels_file),
+                DuplicateSource::Run => ("run", run_file),
+            };
+            eprintln!("Error in {} file '{}': {}", kind, file, error);
+        }
+        EvaluationError::NoSharedTopic => eprintln!(
+            "te-rust: {}; -c evaluates each qrels topic missing from the run as an empty ranking",
+            error
+        ),
+        _ => {
+            eprintln!("te-rust: {}", error);
+            process::exit(EXIT_INPUT);
+        }
+    }
     process::exit(EXIT_TOPIC);
 }
 
@@ -136,7 +146,10 @@ fn leading_integer(value: &str) -> Result<i64, String> {
     match te_rust::io::parsers::read_leading_integer(value) {
         Ok((integer, partial)) => {
             if partial {
-                eprintln!("te-rust: Warning, value '{}' partially read as '{}'", value, integer);
+                eprintln!(
+                    "te-rust: Warning, value '{}' partially read as '{}'",
+                    value, integer
+                );
             }
             Ok(integer)
         }
@@ -152,20 +165,22 @@ fn leading_count(value: &str) -> Result<usize, String> {
     usize::try_from(leading_integer(value)?).map_err(|_| format!("value '{}' is negative", value))
 }
 
-/// Reads the run file and prints its warnings, or exits with EXIT_INPUT when it cannot.
-fn read_run(path: &str) -> RunData {
-    match parse_trec_run(path) {
-        Ok(data) => {
-            for warning in &data.warnings {
-                eprintln!("Warning in run file '{}': {}", path, warning);
-            }
-            data
-        }
-        Err(e) => {
-            eprintln!("Error parsing run file '{}': {}", path, e);
-            process::exit(EXIT_INPUT);
-        }
+/// Reads an input file of the given kind with `parse` and prints the warnings that `warnings`
+/// returns, or exits with EXIT_INPUT when the file cannot be read.
+fn read_input<'a, T>(
+    kind: &str,
+    path: &'a str,
+    parse: impl FnOnce(&'a str) -> Result<T, IOError>,
+    warnings: impl FnOnce(&T) -> &[String],
+) -> T {
+    let data = parse(path).unwrap_or_else(|e| {
+        eprintln!("Error parsing {} file '{}': {}", kind, path, e);
+        process::exit(EXIT_INPUT);
+    });
+    for warning in warnings(&data) {
+        eprintln!("Warning in {} file '{}': {}", kind, path, warning);
     }
+    data
 }
 
 fn handle_help_flags(help_measures: bool, help_measure: Option<&str>) {
@@ -178,7 +193,11 @@ fn handle_help_flags(help_measures: bool, help_measure: Option<&str>) {
         for spec in metrics::registry::registry() {
             if spec.name.eq_ignore_ascii_case(target) {
                 if let Ok(m) = (spec.factory)("", &mut Vec::new()) {
-                    check_write(print_measure_help(&mut io::stdout().lock(), spec, m.as_ref()));
+                    check_write(print_measure_help(
+                        &mut io::stdout().lock(),
+                        spec,
+                        m.as_ref(),
+                    ));
                     process::exit(0);
                 }
             }
@@ -193,10 +212,19 @@ fn print_measure_list(out: &mut impl Write) -> io::Result<()> {
     writeln!(out, "{}", "-".repeat(70))?;
     for spec in metrics::registry::registry() {
         if let Ok(m) = (spec.factory)("", &mut Vec::new()) {
-            writeln!(out, "{:<22} {:<13} {}", m.name(), spec.status.label(), m.short_description())?;
+            writeln!(
+                out,
+                "{:<22} {:<13} {}",
+                m.name(),
+                spec.status.label(),
+                m.short_description()
+            )?;
         }
     }
-    writeln!(out, "\nRequest measures with -m <name> (repeatable). See --help-measure <name> for details.")?;
+    writeln!(
+        out,
+        "\nRequest measures with -m <name> (repeatable). See --help-measure <name> for details."
+    )?;
     out.flush()
 }
 
@@ -234,12 +262,12 @@ fn main() {
     restore_default_sigpipe();
 
     let args = Args::try_parse().unwrap_or_else(|e| {
-        let status = if e.use_stderr() { EXIT_USAGE } else { 0 };
         let result = e.print();
-        if !e.use_stderr() {
-            check_write(result);
+        if e.use_stderr() {
+            process::exit(EXIT_USAGE);
         }
-        process::exit(status);
+        check_write(result);
+        process::exit(0);
     });
 
     // 1. Handle help flags if present
@@ -266,7 +294,6 @@ fn main() {
 
     // 3. Setup runtime config. trec_eval refuses a negative level while it reads its
     // options, so the level is checked before the measures.
-    let global_gains = args.global_gains;
     let config = EvalConfig {
         query_flag: args.query_flag,
         all_query_values: false,
@@ -276,7 +303,7 @@ fn main() {
         judged_docs_only_flag: args.judged_docs_only,
         max_num_docs_per_topic: args.max_docs_per_topic.unwrap_or(usize::MAX),
         num_docs_in_coll: args.num_docs_in_coll,
-        global_gains,
+        global_gains: args.global_gains,
     };
     if let Err(e) = config.validate() {
         eprintln!("te-rust: {}", e);
@@ -299,7 +326,11 @@ fn main() {
         Ok(resolved) => resolved,
         Err(e) => {
             eprintln!("te-rust: {}", e);
-            process::exit(if e.illegal_name { EXIT_USAGE } else { EXIT_INPUT });
+            process::exit(if e.illegal_name {
+                EXIT_USAGE
+            } else {
+                EXIT_INPUT
+            });
         }
     };
     for warning in &resolved.warnings {
@@ -319,66 +350,36 @@ fn main() {
     };
 
     // 5. Read the qrels, then the run, as trec_eval does, and evaluate
-    let output = match args.rel_format.to_ascii_lowercase().as_str() {
+    let qrels_kind = args.rel_format.to_ascii_lowercase();
+    let output = match qrels_kind.as_str() {
         "qrels_jg" => {
-            let qrels_jg_data = match parse_trec_qrels_jg(&qrels_filename) {
-                Ok(data) => data,
-                Err(e) => {
-                    eprintln!("Error parsing qrels_jg file '{}': {}", qrels_filename, e);
-                    process::exit(EXIT_INPUT);
-                }
-            };
-            for warning in &qrels_jg_data.warnings {
-                eprintln!("Warning in qrels_jg file '{}': {}", qrels_filename, warning);
-            }
-            let run_data = read_run(&run_filename);
-            evaluate_run_jg(
-                &qrels_jg_data,
-                &run_data,
-                &active_measures,
-                &config,
-                ci_config.as_ref(),
-            )
-            .unwrap_or_else(|error| {
-                refuse_evaluation_error(error, "qrels_jg", &qrels_filename, &run_filename);
-            })
+            let qrels = read_input("qrels_jg", &qrels_filename, parse_trec_qrels_jg, |d| {
+                &d.warnings
+            });
+            let run = read_input("run", &run_filename, parse_trec_run, |d| &d.warnings);
+            evaluate_run_jg(&qrels, &run, &active_measures, &config, ci_config.as_ref())
         }
         "qrels" => {
-            let qrels_data = match parse_trec_qrels(&qrels_filename) {
-                Ok(data) => data,
-                Err(e) => {
-                    eprintln!("Error parsing qrels file '{}': {}", qrels_filename, e);
-                    process::exit(EXIT_INPUT);
-                }
-            };
-            for warning in &qrels_data.warnings {
-                eprintln!("Warning in qrels file '{}': {}", qrels_filename, warning);
-            }
-            let run_data = read_run(&run_filename);
-            evaluate_run(
-                &qrels_data,
-                &run_data,
-                &active_measures,
-                &config,
-                ci_config.as_ref(),
-            )
-            .unwrap_or_else(|error| {
-                refuse_evaluation_error(error, "qrels", &qrels_filename, &run_filename);
-            })
+            let qrels = read_input("qrels", &qrels_filename, parse_trec_qrels, |d| &d.warnings);
+            let run = read_input("run", &run_filename, parse_trec_run, |d| &d.warnings);
+            evaluate_run(&qrels, &run, &active_measures, &config, ci_config.as_ref())
         }
         other => {
             eprintln!("te-rust: Unsupported relevance judgments format '{}'", other);
             process::exit(EXIT_INPUT);
         }
-    };
-
-    if !config.average_complete_flag && output.num_queries_evaluated == 0 {
-        eprintln!("te-rust: no topic has both results and judgments; -c evaluates each qrels topic missing from the run as an empty ranking");
-        process::exit(EXIT_TOPIC);
     }
+    .unwrap_or_else(|error| {
+        refuse_evaluation_error(error, &qrels_kind, &qrels_filename, &run_filename)
+    });
 
     // 6. Print the query results, then the summary
-    check_write(print_results(&mut io::stdout().lock(), &output, &config, args.ci_pretty));
+    check_write(print_results(
+        &mut io::stdout().lock(),
+        &output,
+        &config,
+        args.ci_pretty,
+    ));
 }
 
 fn print_results(
@@ -399,15 +400,31 @@ fn print_results(
         for s_eval in &output.summary_results {
             if let (Some(ci), true) = (&s_eval.ci, ci_pretty) {
                 if let MetricValue::Float(f) = &s_eval.value {
-                    writeln!(out, "{:<22}\tall\t{:.4} [{:.4}, {:.4}]", s_eval.name, f, ci.lower, ci.upper)?;
+                    writeln!(
+                        out,
+                        "{:<22}\tall\t{:.4} [{:.4}, {:.4}]",
+                        s_eval.name, f, ci.lower, ci.upper
+                    )?;
                 }
             } else {
                 print_metric_value(out, &s_eval.name, "all", &s_eval.value, s_eval.format)?;
                 if let Some(ci) = &s_eval.ci {
                     let lower_name = format!("{}_ci_lower", s_eval.name);
                     let upper_name = format!("{}_ci_upper", s_eval.name);
-                    print_metric_value(out, &lower_name, "all", &MetricValue::Float(ci.lower), ValueFormat::Float)?;
-                    print_metric_value(out, &upper_name, "all", &MetricValue::Float(ci.upper), ValueFormat::Float)?;
+                    print_metric_value(
+                        out,
+                        &lower_name,
+                        "all",
+                        &MetricValue::Float(ci.lower),
+                        ValueFormat::Float,
+                    )?;
+                    print_metric_value(
+                        out,
+                        &upper_name,
+                        "all",
+                        &MetricValue::Float(ci.upper),
+                        ValueFormat::Float,
+                    )?;
                 }
             }
         }
@@ -415,7 +432,13 @@ fn print_results(
     out.flush()
 }
 
-fn print_metric_value(out: &mut impl Write, name: &str, qid: &str, val: &MetricValue, format: ValueFormat) -> io::Result<()> {
+fn print_metric_value(
+    out: &mut impl Write,
+    name: &str,
+    qid: &str,
+    val: &MetricValue,
+    format: ValueFormat,
+) -> io::Result<()> {
     match (val, format) {
         (MetricValue::Float(f), ValueFormat::Float) => {
             writeln!(out, "{:<22}\t{}\t{:.4}", name, qid, f)
