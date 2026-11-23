@@ -1,6 +1,6 @@
-# Check stdin allocation failures, zscore search bounds, the read limit and
-# file allocation sizes with small inputs, a lowered limit and substituted
-# allocation, read and position functions.
+# Check stdin allocation failures, zscore search bounds, the line and read
+# limits and file allocation sizes with small inputs, lowered limits and
+# substituted allocation, read and position functions.
 . test/regress/lib.sh
 
 printf "trec_eval.get_results: Cannot copy results file '-'\n" > "$T/want"
@@ -15,6 +15,11 @@ printf '%4094s' '' > "$T/growing"
 diff "$T/want" "$T/got" || fail "wrong stdin realloc failure message"
 
 ./test_reader-limits zscores || fail "zscores search exceeded its count"
+
+printf "trec_eval.test: 3 lines or more in test file 'three'\n" > "$T/want"
+./test_reader-limits line-count > /dev/null 2> "$T/got" ||
+    fail "te_prepare_lines did not refuse TE_MAX_LINES lines"
+diff "$T/want" "$T/got" || fail "wrong line-count message"
 
 printf abcde | ./test_reader-limits read-chunks ||
     fail "te_fread read more than TE_READ_CHUNK bytes at a time"

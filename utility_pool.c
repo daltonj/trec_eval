@@ -69,13 +69,19 @@ void *te_chk_and_realloc(void *ptr, long *current_bound,
     return (te_realloc_array(ptr, *current_bound, size));
 }
 
+/* Line numbers are held in a long, which has 32 bits on Windows. The
+   reader-limits test lowers the limit. */
+#ifndef TE_MAX_LINES
+#define TE_MAX_LINES LONG_MAX
+#endif
+
 /* Prepare the size bytes of an input file, read into buf with room for
    two more: blank a UTF-8 byte-order mark, which the readers then skip as
    leading white space, end the last line with a newline, add a NUL, and
-   return the number of lines. A NUL byte, or a CR that does not end a
-   line, is an error: print a message naming the reader, the kind of file
-   and the file, and return UNDEF. A CR that ends the file ends its last
-   line. */
+   return the number of lines. A NUL byte, a CR that does not end a line,
+   or TE_MAX_LINES lines or more is an error: print a message naming the
+   reader, the kind of file and the file, and return UNDEF. A CR that ends
+   the file ends its last line. */
 long te_prepare_lines(char *buf, size_t size, const char *reader,
                       const char *kind, const char *file)
 {
@@ -89,9 +95,14 @@ long te_prepare_lines(char *buf, size_t size, const char *reader,
     buf[size] = '\0';
 
     for (i = 0; i < size; i++) {
-        if (buf[i] == '\n')
-            num_lines++;
-        else if (buf[i] == '\0') {
+        if (buf[i] == '\n') {
+            if (++num_lines == TE_MAX_LINES) {
+                fprintf(stderr, "trec_eval.%s: %ld lines or more "
+                        "in %s file '%s'\n", reader, (long) TE_MAX_LINES,
+                        kind, file);
+                return (UNDEF);
+            }
+        } else if (buf[i] == '\0') {
             fprintf(stderr, "trec_eval.%s: NUL character "
                     "in line %ld of %s file '%s'\n",
                     reader, num_lines + 1, kind, file);

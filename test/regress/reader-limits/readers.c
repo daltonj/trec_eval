@@ -1,9 +1,11 @@
 /* Checks, with small inputs, that te_read_lines asks for a buffer of a
-   whole file whose size is beyond an int or unsigned, that te_fread
+   whole file whose size is beyond an int or unsigned, that
+   te_prepare_lines refuses a file of TE_MAX_LINES lines, that te_fread
    asks for at most TE_READ_CHUNK bytes at a time, that the results
    reader refuses standard input when an allocation fails, and that the
    searches of the included convert_zscores.c stay within their counts.
-   The make rule sets TE_READ_CHUNK to 2 and renames ftell, fread, malloc and realloc to the functions below:
+   The make rule sets TE_MAX_LINES to 3 and TE_READ_CHUNK to 2, and
+   renames ftell, fread, malloc and realloc to the functions below:
    fread records the largest request and reads with getc, ftell reports a size of UINT_MAX + 1, malloc refuses a request above
    UINT_MAX, or every request while refuse_malloc is set, and realloc
    refuses every request. Each records the size it refuses. */
@@ -76,6 +78,17 @@ static int check_file_size(void)
 #endif
 }
 
+static int check_line_count(void)
+{
+    char two[] = "a\nb\n\0", three[] = "a\nb\nc\0\0";
+
+    if (2 == te_prepare_lines(two, 4, "test", "test", "two") &&
+        UNDEF == te_prepare_lines(three, 5, "test", "test", "three"))
+        return (0);
+    puts("te_prepare_lines did not refuse TE_MAX_LINES lines");
+    return (1);
+}
+
 static int check_read_chunks(void)
 {
     char buf[8];
@@ -130,6 +143,8 @@ int main(int argc, char **argv)
 {
     if (argc == 2 && 0 == strcmp(argv[1], "file-size"))
         return (check_file_size());
+    if (argc == 2 && 0 == strcmp(argv[1], "line-count"))
+        return (check_line_count());
     if (argc == 2 && 0 == strcmp(argv[1], "read-chunks"))
         return (check_read_chunks());
     if (argc == 2 && 0 == strcmp(argv[1], "stdin-malloc"))
@@ -138,7 +153,7 @@ int main(int argc, char **argv)
         return (check_stdin(0));
     if (argc == 2 && 0 == strcmp(argv[1], "zscores"))
         return (check_zscores());
-    fprintf(stderr, "usage: %s file-size | read-chunks | "
+    fprintf(stderr, "usage: %s file-size | line-count | read-chunks | "
             "stdin-malloc | stdin-realloc | zscores\n", argv[0]);
     return (1);
 }
