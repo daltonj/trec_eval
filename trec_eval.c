@@ -37,8 +37,8 @@ normally ever used.   \n\
     'measure' can also be a nickname for a set of measures. Current \n\
     nicknames include \n\
        'official': the main measures often used by TREC\n\
-       'all_trec': all measures calculated with the standard TREC\n\
-                   results and rel_info format files.\n\
+       'all_trec': the standard TREC measures, calculated with the\n\
+                   standard TREC results and rel_info format files.\n\
        'set': subset of all_trec that calculates unranked values.\n\
        'prefs': Measures not in all_trec that calculate preference measures.\n\
        'qrels_jg': Measures that average over the judgment groups of\n\
@@ -48,7 +48,6 @@ normally ever used.   \n\
  --complete_rel_info_wanted:\n\
  -c: Average over the complete set of queries in the relevance judgements.\n\
      Evaluates each qrels topic missing from the run as an empty ranking.\n\
-     The value for a missing topic depends on the evaluation measure.\n\
      Without -c, a qrels topic missing from the run is an error.\n\
      Default is off.\n\
  --level_for_rel num:\n\
