@@ -62,17 +62,19 @@ test_prefs-rank-comparators: test/regress/prefs-rank-comparators/cmp.c \
 	$(CC) $(CFLAGS) -o test_prefs-rank-comparators \
 		test/regress/prefs-rank-comparators/cmp.c utility_pool.c
 
-test_file-sizes: test/regress/file-sizes/size.c get_qrels.c get_qrels_jg.c \
-		get_prefs.c get_qrels_prefs.c get_zscores.c utility_pool.c $(SRCH)
-	$(CC) $(CFLAGS) -Dftell=size_ftell -Dmalloc=size_malloc \
-		-o test_file-sizes test/regress/file-sizes/size.c get_qrels.c \
+test_reader-limits: test/regress/reader-limits/readers.c get_qrels.c \
 		get_qrels_jg.c get_prefs.c get_qrels_prefs.c get_zscores.c \
+		get_trec_results.c convert_zscores.c utility_pool.c $(SRCH)
+	$(CC) $(CFLAGS) -Dftell=reader_ftell -Dmalloc=reader_malloc \
+		-Drealloc=reader_realloc -o test_reader-limits \
+		test/regress/reader-limits/readers.c get_qrels.c get_qrels_jg.c \
+		get_prefs.c get_qrels_prefs.c get_zscores.c get_trec_results.c \
 		utility_pool.c
 
 install: $(BIN)/trec_eval
 
 quicktest: trec_eval test_allocation-sizes test_prefs-rank-comparators \
-		test_file-sizes
+		test_reader-limits
 	./trec_eval test/qrels.test test/results.test | diff - test/out.test
 	./trec_eval test/qrels.test.with-comments test/results.test | diff - test/out.test
 	./trec_eval test/qrels.comment.test test/results.comment.test | diff - test/out.comment.test
@@ -124,7 +126,8 @@ $(BIN)/trec_eval: trec_eval
 #########################################################################
 clean semiclean:
 	/bin/rm -f *.o *.BAK *~ trec_eval trec_eval.*.tar out.trec_eval Makefile.bak
-	/bin/rm -f test_allocation-sizes test_prefs-rank-comparators test_file-sizes
+	/bin/rm -f test_allocation-sizes test_prefs-rank-comparators \
+		test_reader-limits test_file-sizes
 
 tar:
 	-/bin/rm -rf ./trec_eval.$(VERSIONID)
