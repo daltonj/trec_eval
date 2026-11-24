@@ -57,7 +57,7 @@ te_init_11ptavg(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval)
         UNDEF == te_check_recall_levels(tm))
         return (UNDEF);
     qsort(tm->meas_params->param_values, tm->meas_params->num_params,
-          sizeof(double), comp_double);
+          sizeof(double), te_comp_double);
     return (1);
 }
 

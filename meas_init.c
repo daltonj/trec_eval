@@ -345,7 +345,8 @@ static int get_double_cutoffs(PARAMS * params, char *param_string,
     cutoffs = (double *) params->param_values;
 
     /* Sort cutoffs in increasing order */
-    qsort((char *) cutoffs, params->num_params, sizeof(double), comp_double);
+    qsort((char *) cutoffs, params->num_params, sizeof(double),
+          te_comp_double);
 
     /* Sanity checking: non-duplicates */
     for (i = 1; i < params->num_params; i++) {
@@ -505,7 +506,7 @@ static int comp_long(const void *ptr1, const void *ptr2)
     return (0);
 }
 
-int comp_double(const void *ptr1, const void *ptr2)
+int te_comp_double(const void *ptr1, const void *ptr2)
 {
     if (*((double *) ptr1) < *((double *) ptr2))
         return (-1);

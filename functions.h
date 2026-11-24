@@ -42,7 +42,7 @@ int te_init_Rprec_mult(EPI * epi, TREC_MEAS * tm, TREC_EVAL * eval);
 /* Check shared by iprec_at_recall and 11pt_avg, defined in m_iprec_at_recall.c */
 int te_check_recall_levels(const TREC_MEAS * tm);
 /* qsort comparison of doubles, defined in meas_init.c */
-int comp_double(const void * ptr1, const void * ptr2);
+int te_comp_double(const void * ptr1, const void * ptr2);
 /* Functions for converting strings to numbers, with warnings for unexpected inputs*/
 long str_to_long(const char * str, int * error);
 long str_to_long_ctx(const char * str, int * error, const char * fmt, ...);

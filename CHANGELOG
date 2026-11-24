@@ -208,7 +208,7 @@ Unreleased
 	    (#143 item 9).
 	  functions.h declares the reader, number conversion and
 	    initialisation functions that the readers and measures now
-	    share, comp_double, and MIN_REL_LEVEL and MAX_REL_LEVEL.
+	    share, te_comp_double, and MIN_REL_LEVEL and MAX_REL_LEVEL.
 	Build:
 	  make quicktest also builds and runs three test programs and
 	    the scripts in test/regress. make clean removes the
