@@ -34,10 +34,21 @@ void *te_realloc_array(void *ptr, size_t n, size_t size)
    The procedures return the current pointer if the needed number is less
    than the current bound, otherwise they expand the space (either malloc
    or realloc depending on the procedure), resetting the current bound.
-   It's an error if current_bound or needed is negative, NULL is returned.
+   It's an error if current_bound or needed is negative, or if the new
+   bound does not fit in a long: NULL is returned.
    Procedures assume that if current bound is 0, the space has not been
    allocated at all yet.
 */
+
+/* The product of two counts for a pool request, or -1, which the
+   procedures refuse, if either count is negative or the product does not
+   fit in a long, which has 32 bits on Windows */
+long te_mul_counts(const long a, const long b)
+{
+    if (a < 0 || b < 0 || (a > 0 && b > LONG_MAX / a))
+        return (-1);
+    return (a * b);
+}
 
 void *te_chk_and_malloc(void *ptr, long *current_bound,
                         const long needed, const size_t size)
@@ -46,6 +57,8 @@ void *te_chk_and_malloc(void *ptr, long *current_bound,
         return (NULL);
     if (needed <= *current_bound && *current_bound > 0)
         return (ptr);
+    if (needed > LONG_MAX - *current_bound)
+        return (NULL);
     if (*current_bound > 0)
         Free(ptr);
     /* Allocate at least one element, so that a first request for
@@ -61,6 +74,8 @@ void *te_chk_and_realloc(void *ptr, long *current_bound,
         return (NULL);
     if (needed <= *current_bound && *current_bound > 0)
         return (ptr);
+    if (needed > LONG_MAX - *current_bound)
+        return (NULL);
     if (*current_bound == 0) {
         *current_bound += needed > 0 ? needed : 1;
         return (te_malloc_array(*current_bound, size));

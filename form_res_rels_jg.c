@@ -104,7 +104,8 @@ te_form_res_rels_jg(const EPI * epi, const REL_INFO * rel_info,
     /* Reserve space for temp structure copying results */
     if (NULL == (ranked_rel_list =
                  te_chk_and_malloc(ranked_rel_list, &max_ranked_rel_list,
-                                   num_results * num_jgs, sizeof(long))) ||
+                                   te_mul_counts(num_results, num_jgs),
+                                   sizeof(long))) ||
         NULL == (jgs = te_chk_and_malloc(jgs, &max_num_jgs,
                                          num_jgs, sizeof(RES_RELS))) ||
         NULL == (docno_info =
@@ -157,7 +158,8 @@ te_form_res_rels_jg(const EPI * epi, const REL_INFO * rel_info,
     }
     if (NULL == (rel_levels =
                  te_chk_and_malloc(rel_levels, &max_rel_levels,
-                                   (max_rel + 1) * num_jgs, sizeof(long))))
+                                   te_mul_counts(max_rel + 1, num_jgs),
+                                   sizeof(long))))
         return (UNDEF);
     (void) memset(rel_levels, 0, (max_rel + 1) * num_jgs * sizeof(long));
 

@@ -296,7 +296,7 @@ form_prefs_counts(const EPI * epi, const REL_INFO * rel_info,
                  te_chk_and_malloc(jgs, &max_num_jgs, num_jgs, sizeof(JG))) ||
         NULL == (ca_pool =
                  te_chk_and_malloc(ca_pool, &max_ca_pool,
-                                   num_judged * num_judged,
+                                   te_mul_counts(num_judged, num_judged),
                                    sizeof(unsigned short))) ||
         NULL == (ca_ptr_pool =
                  te_chk_and_malloc(ca_ptr_pool, &max_ca_ptr_pool, num_judged,
@@ -307,16 +307,19 @@ form_prefs_counts(const EPI * epi, const REL_INFO * rel_info,
         /* Reserve pool space for preference arrays, and rel_level arrays */
         if (NULL == (rel_pool =
                      te_chk_and_malloc(rel_pool, &max_rel_pool,
-                                       num_judged * num_jgs_with_subgroups,
+                                       te_mul_counts(num_judged,
+                                                     num_jgs_with_subgroups),
                                        sizeof(double))) ||
             NULL == (pa_pool =
                      te_chk_and_malloc(pa_pool, &max_pa_pool,
-                                       num_judged * num_judged *
-                                       num_jgs_with_subgroups,
+                                       te_mul_counts(te_mul_counts
+                                                     (num_judged, num_judged),
+                                                     num_jgs_with_subgroups),
                                        sizeof(unsigned char)))
             || NULL == (pa_ptr_pool =
                         te_chk_and_malloc(pa_ptr_pool, &max_pa_ptr_pool,
-                                          num_judged * num_jgs_with_subgroups,
+                                          te_mul_counts(num_judged,
+                                                        num_jgs_with_subgroups),
                                           sizeof(unsigned char *))))
             return (UNDEF);
     }
@@ -605,11 +608,13 @@ static int add_transitives(PREFS_ARRAY * pa)
        zero out arrays */
     if (NULL == (temp_pa_pool =
                  te_chk_and_malloc(temp_pa_pool, &max_temp_pa_pool,
-                                   2 * pa->num_judged * pa->num_judged,
+                                   te_mul_counts(2, te_mul_counts
+                                                 ((long) pa->num_judged,
+                                                  (long) pa->num_judged)),
                                    sizeof(unsigned char))) ||
         NULL == (temp_pa_ptr_pool =
                  te_chk_and_malloc(temp_pa_ptr_pool, &max_temp_pa_ptr_pool,
-                                   2 * pa->num_judged,
+                                   te_mul_counts(2, (long) pa->num_judged),
                                    sizeof(unsigned char *))))
         return (UNDEF);
 

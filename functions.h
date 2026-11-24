@@ -12,6 +12,7 @@
 #include "trec_format.h"
 
 /* Utility functions */
+long te_mul_counts(const long a, const long b);
 void *te_chk_and_malloc(void *ptr, long *current_bound,
                         const long needed, const size_t size);
 void *te_chk_and_realloc(void *ptr, long *current_bound,
