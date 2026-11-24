@@ -131,8 +131,8 @@ clean semiclean:
 	/bin/rm -f *.o *.BAK *~ trec_eval trec_eval.*.tar out.trec_eval Makefile.bak
 	/bin/rm -f test_allocation-sizes test_prefs-rank-comparators \
 		test_reader-limits
-	/bin/rm -rf test_allocation-sizes.dSYM test_prefs-rank-comparators.dSYM \
-		test_reader-limits.dSYM
+	/bin/rm -rf trec_eval.dSYM test_allocation-sizes.dSYM \
+		test_prefs-rank-comparators.dSYM test_reader-limits.dSYM
 
 tar:
 	-/bin/rm -rf ./trec_eval.$(VERSIONID)

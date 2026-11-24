@@ -117,7 +117,9 @@ Unreleased
 	    readers, number conversions and te_comp_double; trec_eval.h
 	    defines MIN_REL_LEVEL and MAX_REL_LEVEL.
 	  make quicktest builds three test programs and runs the scripts
-	    in test/regress. CI adds sanitizer and 32-bit builds.
+	    in test/regress. make clean removes the programs and, on
+	    macOS, their .dSYM directories and trec_eval's. CI adds
+	    sanitizer and 32-bit builds.
 6/18/26 Version 10.0
 	Breaking fix: change uses of int truncation to round/floor.
 	-c mode now prints out skipped queries in -q mode.
