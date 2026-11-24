@@ -18,6 +18,16 @@ need_long64() {
     }
 }
 
+# Skip the rest of the script unless trec_eval refuses a long of 2^32, as
+# a build whose long has 32 bits does.
+need_long32() {
+    "$TREC_EVAL" -N 4294967296 -m num_q test/regress/qrels.one \
+        test/regress/results.one > /dev/null 2>&1 && {
+        echo "SKIP $0: needs a 32-bit long" >&2
+        exit 0
+    }
+}
+
 # expect_status STATUS ARGS...: run trec_eval ARGS, keeping its standard
 # output and error, and check that it exits with STATUS.
 expect_status() {
