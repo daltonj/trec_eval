@@ -2,7 +2,7 @@
 
 mod common;
 
-use common::{assert_refused, eval, rows, stderr, summary, write};
+use common::{assert_refused, eval, rows, stderr, summary, te_rust, write};
 
 #[test]
 fn file_warnings_name_the_format_and_line() {
@@ -70,6 +70,46 @@ fn repeated_documents_name_the_source_and_exit_4() {
         &repeated_run,
     );
     assert_eq!(rows(&out), ["runid all r", "num_q all 1"]);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_repeated_document_in_a_fifo_is_reported_without_lines() {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    use std::time::{Duration, Instant};
+
+    let qrels = write("one.qrels", "1 0 a 1\n");
+    let fifo = write("repeat.fifo", "");
+    std::fs::remove_file(&fifo).expect("failed to remove the placeholder");
+    assert!(Command::new("mkfifo").arg(&fifo).status().expect("failed to run mkfifo").success());
+    let mut child = te_rust()
+        .args(["-m", "map"])
+        .arg(&qrels)
+        .arg(&fifo)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to run te-rust");
+    // The writer closes here, so te-rust reads the run to its end; a second open would wait.
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(&fifo)
+        .and_then(|mut writer| writer.write_all(b"1 Q0 a 1 2 r\n1 Q0 a 2 1 r\n"))
+        .expect("failed to write the run");
+    let start = Instant::now();
+    while child.try_wait().expect("failed to wait for te-rust").is_none() {
+        if start.elapsed() > Duration::from_secs(10) {
+            child.kill().ok();
+            panic!("te-rust opened the run again and waited for a writer");
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    assert_refused(
+        &child.wait_with_output().expect("failed to read te-rust's output"),
+        4,
+        &format!("Error in run file '{}': duplicate document 'a' for query '1'", fifo.display()),
+    );
 }
 
 #[test]

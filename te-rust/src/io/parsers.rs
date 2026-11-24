@@ -659,15 +659,18 @@ fn parse_trec_qrels_jg_from(reader: impl BufRead) -> Result<QrelsJGData, IOError
 
 /// Finds the first two data lines of the qrels or run file at `path` whose first and third
 /// fields are `qid` and `docno`, numbered as parse errors number lines, so that a message about
-/// a repeated document can name them. Returns None for a file that is not a regular file, which
-/// cannot be read a second time.
+/// a repeated document can name them. Returns None when the path is not a regular file, which
+/// cannot be read a second time (opening a FIFO again would wait for a new writer), or when a read
+/// fails before both lines are found.
 pub fn repeated_document_lines<P: AsRef<Path>>(path: P, qid: &str, docno: &str) -> Option<(usize, usize)> {
-    let file = File::open(path).ok()?;
-    if !file.metadata().ok()?.is_file() {
+    if !std::fs::metadata(&path).ok()?.is_file() {
         return None;
     }
-    let mut lines = read_lines(BufReader::new(file)).filter_map(|line| {
-        let (line_num, line) = line.ok()?;
+    repeated_document_lines_from(BufReader::new(File::open(path).ok()?), qid, docno)
+}
+
+fn repeated_document_lines_from(reader: impl BufRead, qid: &str, docno: &str) -> Option<(usize, usize)> {
+    let mut lines = read_lines(reader).map_while(Result::ok).filter_map(|(line_num, line)| {
         let fields = split_fields(&line);
         (fields.len() > 2 && fields[0] == qid && fields[2] == docno).then_some(line_num)
     });
@@ -1035,6 +1038,30 @@ mod tests {
             let (value, len) = strtod_prefix(s).unwrap();
             assert_eq!(out_of_range(&s[..len], value), expected, "{s}");
         }
+    }
+
+    #[test]
+    fn repeated_document_lines_count_every_line_and_stop_at_a_read_error() {
+        let file = b"1 Q0 a 1 3 r\n# 1 Q0 a\n\n1 Q0 b 2 2 r\n1 Q0 a 3 1 r\n";
+        assert_eq!(repeated_document_lines_from(&file[..], "1", "a"), Some((1, 5)));
+
+        // One line, then a read that fails every time it is tried
+        struct Failing(usize);
+        impl io::Read for Failing {
+            fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+                self.0 += 1;
+                match self.0 {
+                    1 => {
+                        let line = b"1 Q0 a 1 2 r\n";
+                        buf[..line.len()].copy_from_slice(line);
+                        Ok(line.len())
+                    }
+                    2..=10 => Err(io::Error::other("read failed")),
+                    _ => panic!("read again after a failed read"),
+                }
+            }
+        }
+        assert_eq!(repeated_document_lines_from(BufReader::new(Failing(0)), "1", "a"), None);
     }
 
     #[test]
