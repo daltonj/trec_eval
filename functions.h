@@ -7,6 +7,7 @@
 #ifndef FUNCTIONSH
 #define FUNCTIONSH
 
+#include <stdio.h>
 #include "trec_eval.h"
 #include "trec_format.h"
 
