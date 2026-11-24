@@ -446,6 +446,11 @@ def test_repeated_document_messages_name_the_file_that_was_read(tmp_path, monkey
         with pytest.raises(ValueError) as error:
             Evaluator("qrels", ["map"]).evaluate({"q": {"a": 1.0}})
         assert str(error.value) == f"Error in qrels file 'qrels': {expected}"
+        # A measure warning, issued by the constructor, does not change the file read either
+        os.chdir(tmp_path / "a")
+        with pytest.raises(ValueError) as error:
+            Evaluator("qrels", ["map", "P.5x"]).evaluate({"q": {"a": 1.0}})
+        assert str(error.value) == f"Error in qrels file 'qrels': {expected}"
         os.chdir(tmp_path / "a")
         with pytest.raises(ValueError) as error:
             Evaluator({"q": {"a": 1}}, ["map"]).evaluate("run")

@@ -72,13 +72,14 @@ impl Evaluator {
             global_gains: parsed_gains,
         };
 
-        // As the CLI does, check the level, then the measures, then read the qrels
+        // As the CLI does, check the level, then the measures, then read the qrels. The measure
+        // warnings follow the read, so that a warning handler that changes the working directory
+        // cannot change which qrels file is read.
         config.validate().map_err(evaluation_error)?;
 
         let (measure_names, custom_measures) = parse_measures_arg(measures)?;
         let resolved = resolve_measures(&measure_names)
             .map_err(|e| PyValueError::new_err(format!("Invalid measure configuration: {}", e)))?;
-        warn_all(qrels.py(), &resolved.warnings)?;
 
         let mapping = ColumnMapping {
             qid,
@@ -86,6 +87,7 @@ impl Evaluator {
             score_or_rel: rel,
         };
         let (qrels_data, qrels_file) = ingest_qrels(qrels, Some(&mapping))?;
+        warn_all(qrels.py(), &resolved.warnings)?;
 
         Ok(Self {
             qrels: qrels_data,
