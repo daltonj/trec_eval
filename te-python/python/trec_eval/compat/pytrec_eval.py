@@ -99,26 +99,26 @@ class RelevanceEvaluator:
         relevance_level: int = 1,
         judged_docs_only_flag: bool = False,
     ):
-        measure_names = [measures] if isinstance(measures, str) else list(measures)
-        native_measures: List[Any] = []
+        requests = [measures] if isinstance(measures, str) else list(measures)
+        normalized_requests: List[Any] = []
         positions: Dict[str, int] = {}
         values: Dict[str, Dict[Decimal, str]] = collections.defaultdict(dict)
-        for measure in measure_names:
+        for measure in requests:
             match = _VALUE_REQUEST.match(measure) if isinstance(measure, str) else None
             if match is None:
-                native_measures.append(measure)
+                normalized_requests.append(measure)
                 continue
             # The merged request keeps the place of the first, which te-rust's
             # first-list rule needs against an alias such as P@2.
             name = match[1]
             if name not in positions:
-                positions[name] = len(native_measures)
-                native_measures.append(name)
+                positions[name] = len(normalized_requests)
+                normalized_requests.append(name)
             for value in match[2].split(","):
                 # Decimal keys merge spellings of one value, such as 5, 05 and 5.0.
                 values[name].setdefault(Decimal(value), value)
         for name, index in positions.items():
-            native_measures[index] = f"{name}.{','.join(values[name].values())}"
+            normalized_requests[index] = f"{name}.{','.join(values[name].values())}"
         if isinstance(qrel, dict):
             # pytrec_eval drops a topic whose judgments are empty. len() raises
             # TypeError for None, as in pytrec_eval.
@@ -128,12 +128,12 @@ class RelevanceEvaluator:
 
         self._evaluator = Evaluator(
             qrels=qrel,
-            measures=native_measures,
+            measures=normalized_requests,
             relevance_level=relevance_level,
             judged_docs_only=judged_docs_only_flag,
             all_query_values=True,
         )
-        self.measures = set(measure_names)
+        self.measures = set(requests)
 
     def evaluate(self, run: Any) -> Dict[str, Dict[str, float]]:
         """Evaluate run and return nested dict matching pytrec_eval output format."""

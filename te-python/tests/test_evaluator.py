@@ -313,6 +313,8 @@ def test_a_grade_is_read_through_index_once():
         Evaluator({"q": {"d": ChangingGrade()}}, measures=["map"])
     assert ChangingGrade.calls == 1
 
+
+def test_a_grade_error_reports_the_value_and_not_a_custom_string():
     class Grade(int):
         def __str__(self):
             return "1"
