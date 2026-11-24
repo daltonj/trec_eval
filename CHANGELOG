@@ -105,7 +105,11 @@ Unreleased
 	Inputs now refused, with exit status 4:
 	  Where long has 32 bits, as on Windows, an input whose table of
 	    counts has more entries than a long holds, such as a prefs
-	    judgment group of 65,536 documents (#143 item 9).
+	    judgment group of 65,536 documents, and a topic id of 2 GiB
+	    or more (#143 item 9).
+	  A prefs pair on which more than 65,535 judgment groups agree,
+	    where the count wrapped to 0 and prefs_pair gave 0.0000
+	    instead of 1.0000 (#144).
 	Inputs read differently or with a new warning:
 	  A run score is read with strtod. Characters after the number
 	    are ignored with a warning, and a score beyond the range of
@@ -134,6 +138,9 @@ Unreleased
 	  On 64-bit builds, judgments and zscores files of 2 GiB or more
 	    are read, instead of refused or read in part (#143 item 9).
 	Messages:
+	  A failed write to standard output, as on a full disk or a
+	    closed descriptor, gives "Can't write to standard output"
+	    and exit status 8, where trec_eval exited 0 (#141).
 	  Without -c, a qrels topic missing from the run is reported as
 	    "qrels qid '<qid>' not found in results", not "result qid
 	    '<qid>' not found in qrels". It is found before any topic is
@@ -173,6 +180,10 @@ Unreleased
 	  -h -m rbp_resid says that rbp_resid accepts gains and ignores
 	    them (#142 item 6).
 	Memory errors and leaks, with no change in printed values:
+	  The readers pass input bytes to isspace and isdigit as
+	    unsigned char, so a byte above 127, as in a UTF-8 topic id,
+	    is no longer a negative argument where char is signed
+	    (#143).
 	  bpref and gm_bpref no longer read past their table of grade
 	    counts when -l exceeds a topic's highest grade by more than
 	    1 (#102).
