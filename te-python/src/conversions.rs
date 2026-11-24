@@ -179,14 +179,16 @@ fn ingest_qrels_value(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -
         let doc_series = obj.get_item(&doc_col)?;
         let rel_series = obj.get_item(&rel_col)?;
 
-        let triples = qid_series.iter()?.zip(doc_series.iter()?).zip(rel_series.iter()?);
-        return qrels_from_triples(
-            triples.map(|((qid, docno), rel)| {
-                let (qid, docno): (String, String) = (qid?.extract()?, docno?.extract()?);
-                let rel = extract_grade(&rel?, &qid, &docno)?;
+        let mut columns = [qid_series.iter()?, doc_series.iter()?, rel_series.iter()?];
+        let names = format!("qrels columns '{}', '{}' and '{}'", qid_col, doc_col, rel_col);
+        return qrels_from_triples(std::iter::from_fn(move || {
+            next_in_step(&mut columns, &names).transpose().map(|row| {
+                let [qid, docno, rel] = row?;
+                let (qid, docno): (String, String) = (qid.extract()?, docno.extract()?);
+                let rel = extract_grade(&rel, &qid, &docno)?;
                 Ok((qid, docno, rel))
-            }),
-        );
+            })
+        }));
     }
 
     // 4. Iterable of 3-tuples or objects with (query_id, doc_id, relevance)
@@ -220,6 +222,21 @@ fn extract_grade(obj: &Bound<'_, PyAny>, qid: &str, docno: &str) -> PyResult<i64
             REL_LEVELS.end()
         ))
     })
+}
+
+/// The next item of each of three iterators that are read in step, or None when all three end
+/// together. An iterator's error is raised, and inputs of different lengths, which `zip` would cut
+/// to the shortest, are refused with a `ValueError` that names them.
+fn next_in_step<'py>(
+    iterators: &mut [Bound<'py, PyIterator>; 3],
+    names: &str,
+) -> PyResult<Option<[Bound<'py, PyAny>; 3]>> {
+    let [a, b, c] = iterators.each_mut().map(|iterator| iterator.next().transpose());
+    match (a?, b?, c?) {
+        (Some(a), Some(b), Some(c)) => Ok(Some([a, b, c])),
+        (None, None, None) => Ok(None),
+        _ => Err(PyValueError::new_err(format!("{} have different lengths", names))),
+    }
 }
 
 /// Groups `(qid, docno, rel)` triples by topic, keeping repeated documents for evaluation to
@@ -390,15 +407,14 @@ fn ingest_run_value(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
         let doc_series = obj.get_item(&doc_col)?;
         let score_series = obj.get_item(&score_col)?;
 
-        let mut qid_iter = qid_series.iter()?;
-        let mut doc_iter = doc_series.iter()?;
-        let mut score_iter = score_series.iter()?;
+        let mut columns = [qid_series.iter()?, doc_series.iter()?, score_series.iter()?];
+        let names = format!("run columns '{}', '{}' and '{}'", qid_col, doc_col, score_col);
 
         let mut grouped: BTreeMap<String, Vec<RunRecord>> = BTreeMap::new();
-        while let (Some(q_res), Some(d_res), Some(s_res)) = (qid_iter.next(), doc_iter.next(), score_iter.next()) {
-            let qid = q_res?.extract::<String>()?;
-            let docno = d_res?.extract::<String>()?;
-            let sim = s_res?.extract::<f64>()?;
+        while let Some([qid, docno, sim]) = next_in_step(&mut columns, &names)? {
+            let qid = qid.extract::<String>()?;
+            let docno = docno.extract::<String>()?;
+            let sim = sim.extract::<f64>()?;
             grouped.entry(qid).or_default().push(RunRecord { docno, sim });
         }
 
@@ -433,14 +449,11 @@ pub fn ingest_run_arrays(
 ) -> PyResult<RunData> {
     let mut grouped: BTreeMap<String, Vec<RunRecord>> = BTreeMap::new();
 
-    let mut qid_iter = query_ids.iter()?;
-    let mut doc_iter = doc_ids.iter()?;
-    let mut score_iter = scores.iter()?;
-
-    while let (Some(q_res), Some(d_res), Some(s_res)) = (qid_iter.next(), doc_iter.next(), score_iter.next()) {
-        let qid = q_res?.extract::<String>()?;
-        let docno = d_res?.extract::<String>()?;
-        let sim = s_res?.extract::<f64>()?;
+    let mut columns = [query_ids.iter()?, doc_ids.iter()?, scores.iter()?];
+    while let Some([qid, docno, sim]) = next_in_step(&mut columns, "query_ids, doc_ids and scores")? {
+        let qid = qid.extract::<String>()?;
+        let docno = docno.extract::<String>()?;
+        let sim = sim.extract::<f64>()?;
         grouped.entry(qid).or_default().push(RunRecord { docno, sim });
     }
 

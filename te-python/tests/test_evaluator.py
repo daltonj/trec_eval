@@ -452,6 +452,31 @@ def test_repeated_document_messages_name_the_file_that_was_read(tmp_path, monkey
         assert str(error.value) == f"Error in run file 'run': {expected}"
 
 
+def test_parallel_inputs_of_different_lengths_are_refused():
+    evaluator = Evaluator({"q": {"a": 1, "b": 1}}, ["map"])
+    with pytest.raises(
+        ValueError, match="query_ids, doc_ids and scores have different lengths"
+    ):
+        evaluator.evaluate_arrays(["q", "q"], ["a", "b"], [1.0])
+    with pytest.raises(
+        ValueError, match="run columns 'qid', 'docno' and 'score' have different"
+    ):
+        evaluator.evaluate(
+            MockDataFrame({"qid": ["q", "q"], "docno": ["a", "b"], "score": [1.0]})
+        )
+    with pytest.raises(
+        ValueError, match="qrels columns 'qid', 'docno' and 'rel' have different"
+    ):
+        Evaluator(MockDataFrame({"qid": ["q", "q"], "docno": ["a", "b"], "rel": [1]}), ["map"])
+
+    def scores():
+        yield 1.0
+        raise RuntimeError("source read failed")
+
+    with pytest.raises(RuntimeError, match="source read failed"):
+        evaluator.evaluate_arrays(["q"], ["a"], scores())
+
+
 def test_unusable_global_gains_are_refused():
     message = "invalid gain 'x' for relevance level 1"
     with pytest.raises(ValueError, match=f"Invalid global_gains: {message}"):
