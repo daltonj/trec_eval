@@ -116,8 +116,12 @@ te_get_trec_results(EPI * epi, char *text_results_file,
                              stdin);
             if (size < capacity - 2)
                 break;
-            new_buf = capacity > (size_t) -1 / 2 ? NULL :
-                realloc(trec_results_buf, capacity *= 2);
+            if (capacity > (size_t) -1 / 2) {
+                new_buf = NULL;
+                break;
+            }
+            capacity *= 2;
+            new_buf = realloc(trec_results_buf, capacity);
         }
         if (new_buf == NULL) {
             fprintf(stderr,

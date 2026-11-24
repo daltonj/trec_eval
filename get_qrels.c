@@ -39,7 +39,6 @@ long str_to_long_ctx(const char * str, int * error, const char * fmt, ...) {
     *error = 0;
     long value = strtol(str, &endptr, 10);
     if (errno == ERANGE) {
-        /* value is 0 */
         fprintf(stderr, "Error: value `%s' out of range", str);
         *error = 1;
     } else if (endptr == str) {

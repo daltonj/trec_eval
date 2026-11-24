@@ -13,9 +13,9 @@ for form in ec pa; do
                     printf "1 g%d s2 c 1\n1 g%d s2 d 0\n", g, g
             } }' > "$T/prefs"
         if [ $groups = 65535 ]; then
-            expect_status 0 -R prefs -m prefs_pair "$T/prefs" "$T/run"
-            grep -q 'prefs_pair.*1\.0000' "$T/te.output" ||
-                te_fail "prefs_pair is not 1.0000"
+            printf '%-22s\tall\t1.0000\n' prefs_pair > "$T/want"
+            expect_result 0 "$T/want" /dev/null \
+                -R prefs -m prefs_pair "$T/prefs" "$T/run"
         else
             expect_status 4 -R prefs -m prefs_pair "$T/prefs" "$T/run"
             grep -q 'more than 65535 judgment groups prefer one document' \

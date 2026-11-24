@@ -160,7 +160,8 @@ te_calc_Rndcg(const EPI * epi, const REL_INFO * rel_info,
         i++;
     }
 
-    /* No ideal gain above 0, eg every relevant doc has gain 0 */
+    /* Without an ideal gain above 0, as when every relevant doc has gain 0,
+       there are no points to average */
     if (num_changed_ideal_gain > 0)
         eval->values[tm->eval_index].value = sum / num_changed_ideal_gain;
     else
