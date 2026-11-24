@@ -75,7 +75,7 @@ Other changes:
 
 These defects in te-python have no issue on usnistgov/trec_eval.
 
-- A file name given to the Python API is encoded by `os.fsencode`, as `open` encodes it: a name that is not UTF-8 opens the file it names, and a name that cannot be encoded raises `UnicodeEncodeError`, where te-python replaced the unencodable characters and could open another file. A directory raises `IsADirectoryError`, where it was reported as not found, and another path that is not a regular file, such as a FIFO, is read.
+- A file name given to the Python API is encoded by `os.fsencode`, as `open` encodes it: a name that is not UTF-8 opens the file it names, and a name that cannot be encoded raises `UnicodeEncodeError`, where te-python replaced the unencodable characters and could open another file. A directory raises `IsADirectoryError`, where it was reported as not found, a file that cannot be read raises the `OSError` that `open` raises, such as `PermissionError`, where it raised `ValueError`, and another path that is not a regular file, such as a FIFO, is read.
 - `evaluate_arrays`, and qrels or runs given as DataFrame columns, raise `ValueError` when the three inputs have different lengths, where te-python stopped at the shortest, and pass on an error raised by an input's iterator.
 - A measure given to `Evaluator` that is neither a name nor a custom measure, an object with `calc_query` or a callable, raises `TypeError` when the `Evaluator` is made, where `measures=[None]` failed only at evaluation.
 - `compare_against_baseline` without `measures` compares every measure that the baseline reports, where it raised `AttributeError`.

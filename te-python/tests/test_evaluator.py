@@ -492,6 +492,21 @@ def test_a_file_name_is_read_as_open_reads_it(tmp_path):
         Evaluator(str(tmp_path / "q\ud800"), ["map"])
 
 
+@pytest.mark.skipif(not hasattr(os, "geteuid") or os.geteuid() == 0, reason="root reads any file")
+def test_an_unreadable_file_raises_the_error_that_open_raises(tmp_path):
+    path = tmp_path / "qrels"
+    path.write_text("q 0 a 1\n")
+    path.chmod(0)
+    try:
+        with pytest.raises(PermissionError) as error:
+            Evaluator(path, ["map"])
+        assert error.value.filename == str(path)
+        with pytest.raises(PermissionError):
+            Evaluator({"q": {"a": 1}}, ["map"]).evaluate(path)
+    finally:
+        path.chmod(0o644)
+
+
 def test_a_directory_is_not_reported_as_a_missing_file(tmp_path):
     with pytest.raises(IsADirectoryError, match="Qrels file is a directory"):
         Evaluator(str(tmp_path), ["map"])

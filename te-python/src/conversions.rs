@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use pyo3::exceptions::{PyFileNotFoundError, PyIsADirectoryError, PyTypeError, PyValueError};
+use pyo3::exceptions::{PyFileNotFoundError, PyIsADirectoryError, PyOSError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyIterator, PyLong, PySequence, PyString};
 use te_rust::eval::check_rel_level;
 use te_rust::io::parsers::REL_LEVELS;
-use te_rust::io::{parse_trec_qrels, parse_trec_run, QrelsData, QrelsQuery, QrelsRecord, RunData, RunQuery, RunRecord};
+use te_rust::io::{parse_trec_qrels, parse_trec_run, IOError, QrelsData, QrelsQuery, QrelsRecord, RunData, RunQuery, RunRecord};
 use crate::errors::{evaluation_error, warn_all};
 
 /// The file path that a `str` or `os.PathLike` names, encoded by `os.fsencode` as `open` encodes
@@ -36,6 +36,24 @@ impl InputFile {
         Self {
             name: path.display().to_string(),
             path: std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf()),
+        }
+    }
+
+    /// The exception for a file that could not be read: the `OSError` subclass that `open` raises
+    /// for the same error, such as `PermissionError`, or `ValueError` for a malformed file.
+    fn read_error(&self, kind: &str, error: IOError) -> PyErr {
+        match error {
+            IOError::FileReadError(e) => match e.raw_os_error() {
+                Some(code) => {
+                    let message = e.to_string();
+                    let message = message.strip_suffix(&format!(" (os error {})", code)).unwrap_or(&message);
+                    PyOSError::new_err((code, message.to_string(), self.name.clone()))
+                }
+                None => PyOSError::new_err(format!("Cannot read {} file '{}': {}", kind, self.name, e)),
+            },
+            IOError::FormatError(e) => {
+                PyValueError::new_err(format!("Failed to parse {} file '{}': {}", kind, self.name, e))
+            }
         }
     }
 }
@@ -93,9 +111,7 @@ pub fn ingest_qrels(
         if !path.exists() {
             return Err(PyFileNotFoundError::new_err(format!("Qrels file not found: '{}'", file.name)));
         }
-        let qrels = parse_trec_qrels(&path).map_err(|e| {
-            PyValueError::new_err(format!("Failed to parse qrels file '{}': {}", file.name, e))
-        })?;
+        let qrels = parse_trec_qrels(&path).map_err(|e| file.read_error("qrels", e))?;
         let warnings = qrels.warnings.iter().map(|w| format!("qrels file '{}': {}", file.name, w));
         warn_all(obj.py(), warnings)?;
         return Ok((qrels, Some(file)));
@@ -331,9 +347,7 @@ pub fn ingest_run(
         if !path.exists() {
             return Err(PyFileNotFoundError::new_err(format!("Run file not found: '{}'", file.name)));
         }
-        let run = parse_trec_run(&path).map_err(|e| {
-            PyValueError::new_err(format!("Failed to parse run file '{}': {}", file.name, e))
-        })?;
+        let run = parse_trec_run(&path).map_err(|e| file.read_error("run", e))?;
         let warnings = run.warnings.iter().map(|w| format!("run file '{}': {}", file.name, w));
         warn_all(obj.py(), warnings)?;
         return Ok((run, Some(file)));
