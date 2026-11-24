@@ -492,6 +492,12 @@ def test_a_directory_is_not_reported_as_a_missing_file(tmp_path):
         Evaluator({"q": {"a": 1}}, ["map"]).evaluate(tmp_path)
 
 
+def test_measures_that_are_neither_names_nor_measures_are_refused():
+    for measure in [None, 5]:
+        with pytest.raises(TypeError, match=f"Invalid measure {measure!r}"):
+            Evaluator({"q": {"a": 1}}, ["map", measure])
+
+
 def test_unusable_global_gains_are_refused():
     message = "invalid gain 'x' for relevance level 1"
     with pytest.raises(ValueError, match=f"Invalid global_gains: {message}"):

@@ -163,6 +163,17 @@ impl Evaluator {
     }
 }
 
+/// A custom measure as evaluation calls it: an object with `calc_query`, or a callable.
+fn custom_measure(item: Bound<'_, PyAny>) -> PyResult<PyObject> {
+    if item.hasattr("calc_query")? || item.is_callable() {
+        return Ok(item.unbind());
+    }
+    Err(PyTypeError::new_err(format!(
+        "Invalid measure {}: expected a measure name, or a custom measure with calc_query or __call__",
+        item.repr()?
+    )))
+}
+
 fn parse_measures_arg(
     measures: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<(Vec<String>, Vec<PyObject>)> {
@@ -190,7 +201,7 @@ fn parse_measures_arg(
             if let Ok(py_str) = item.downcast::<PyString>() {
                 names.push(py_str.to_string_lossy().into_owned());
             } else {
-                custom.push(item.into_any().unbind());
+                custom.push(custom_measure(item.into_any())?);
             }
         }
         return Ok((names, custom));
@@ -203,7 +214,7 @@ fn parse_measures_arg(
             if let Ok(py_str) = item.downcast::<PyString>() {
                 names.push(py_str.to_string_lossy().into_owned());
             } else {
-                custom.push(item.into_any().unbind());
+                custom.push(custom_measure(item.into_any())?);
             }
         }
         return Ok((names, custom));
@@ -215,7 +226,7 @@ fn parse_measures_arg(
             if let Ok(py_str) = item.downcast::<PyString>() {
                 names.push(py_str.to_string_lossy().into_owned());
             } else {
-                custom.push(item.into_any().unbind());
+                custom.push(custom_measure(item.into_any())?);
             }
         }
         return Ok((names, custom));
