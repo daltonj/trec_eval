@@ -194,43 +194,43 @@ parse_zscore_line(char **start_ptr, char **qid_ptr, char **meas_ptr,
     char *ptr = *start_ptr;
 
     /* Get qid */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     *qid_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *ptr++ = '\0';
     /* Get meas */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     *meas_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *ptr++ = '\0';
     /* Get mean */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     *mean_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *ptr++ = '\0';
     /* Get stddev */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *stddev_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr != '\n') {
         *ptr++ = '\0';
-        while (*ptr != '\n' && isspace(*ptr))
+        while (*ptr != '\n' && isspace((unsigned char) *ptr))
             ptr++;
         if (*ptr != '\n')
             return (UNDEF);

@@ -27,7 +27,7 @@ static int valid_int(const char *str)
     // Check for non-digit chars in the rest of the stirng.
     //
     while (*str) {
-        if (!isdigit(*str))
+        if (!isdigit((unsigned char) *str))
             return 0;
         else
             ++str;

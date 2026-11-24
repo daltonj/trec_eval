@@ -264,52 +264,52 @@ parse_prefs_line(char **start_ptr, char **qid_ptr, char **jg_ptr,
     char *ptr = *start_ptr;
 
     /* Get qid */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     *qid_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *ptr++ = '\0';
     /* Get Judgment Group */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     *jg_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *ptr++ = '\0';
     /* Get Judgment Sub Group */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     *jsg_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *ptr++ = '\0';
     /* Get docno */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     *docno_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *ptr++ = '\0';
     /* Get relevance */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *rel_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr != '\n') {
         *ptr++ = '\0';
-        while (*ptr != '\n' && isspace(*ptr))
+        while (*ptr != '\n' && isspace((unsigned char) *ptr))
             ptr++;
         if (*ptr != '\n')
             return (UNDEF);

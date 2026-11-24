@@ -241,50 +241,50 @@ parse_results_line(char **start_ptr, char **qid_ptr, char **docno_ptr,
 
     /* Get qid */
     *qid_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *ptr++ = '\0';
     /* Skip iter */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr++ == '\n')
         return (UNDEF);
     /* Get docno */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     *docno_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *ptr++ = '\0';
     /* Skip rank */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr++ == '\n')
         return (UNDEF);
     /* Get sim */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     *sim_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *ptr++ = '\0';
     /* Get run_id */
-    while (*ptr != '\n' && isspace(*ptr))
+    while (*ptr != '\n' && isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr == '\n')
         return (UNDEF);
     *run_id_ptr = ptr;
-    while (!isspace(*ptr))
+    while (!isspace((unsigned char) *ptr))
         ptr++;
     if (*ptr != '\n') {
         /* Skip over rest of line */
