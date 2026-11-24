@@ -75,8 +75,9 @@ Unreleased
 	    ends neither a line nor the file, a CR between two fields
 	    included (#143 items 1, 5, 7 and 10).
 	  A qrels, qrels_jg, prefs or qrels_prefs file with no data
-	    lines (#143 item 2), and a results file or standard input
-	    with no data lines, which crashed (#99).
+	    lines (#143 item 2). A results file of only comments or
+	    blank lines, and standard input without data lines, which
+	    crashed; an empty results file already exited 2 (#99).
 	  In a zscores file, a mean or standard deviation that is not a
 	    finite number, and a negative standard deviation
 	    (#143 item 12).
@@ -152,9 +153,9 @@ Unreleased
 	    parentheses: the measure, or the line and file, and for a
 	    judgment the topic and document (#142 item 17). "Illegal
 	    cutoff" no longer follows the error for a cutoff.
-	  New messages name the line and file of a NUL, a CR, a
-	    relevance level out of range and a file without data lines
-	    (#99, #143).
+	  New messages name the line and file of a NUL, a CR and a
+	    relevance level out of range, and name a file without data
+	    lines (#99, #143).
 	Help text:
 	  -h gives the -N default as 0 and the long form of -M as
 	    --Max_retrieved_per_topic (#141 item 8).
@@ -189,10 +190,20 @@ Unreleased
 	  The function clear_relstr and its declaration in functions.h
 	    (#144 item 3).
 	  m_ndcg_p.c, which the Makefile did not build (#141 item 9).
+	Declarations:
+	  In common.h, Malloc and Realloc call te_malloc_array and
+	    te_realloc_array, defined in utility_pool.c, and return NULL
+	    when n * sizeof(type) does not fit in a size_t
+	    (#143 item 9).
+	  functions.h declares the reader, number conversion and
+	    initialisation functions that the readers and measures now
+	    share, comp_double, and MIN_REL_LEVEL and MAX_REL_LEVEL.
 	Build:
 	  make quicktest also builds and runs three test programs and
 	    the scripts in test/regress. make clean removes the
 	    programs.
+	  CI runs make quicktest with the address, undefined behaviour
+	    and float-cast-overflow sanitizers, and as a 32-bit build.
 6/18/26 Version 10.0
 	Breaking fix: change uses of int truncation to round/floor.
 	-c mode now prints out skipped queries in -q mode.
