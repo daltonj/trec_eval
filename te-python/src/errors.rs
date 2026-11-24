@@ -3,6 +3,8 @@ use pyo3::prelude::*;
 use te_rust::eval::{DuplicateSource, EvaluationError};
 use te_rust::io::parsers::repeated_document_lines;
 
+use crate::conversions::InputFile;
+
 pyo3::create_exception!(
     trec_eval._trec_eval,
     NoSharedTopicError,
@@ -35,8 +37,8 @@ pub(crate) fn evaluation_error(error: EvaluationError) -> PyErr {
 /// the two lines, as the CLI reports it.
 pub(crate) fn evaluation_error_in(
     error: EvaluationError,
-    qrels_file: Option<&str>,
-    run_file: Option<&str>,
+    qrels_file: Option<&InputFile>,
+    run_file: Option<&InputFile>,
 ) -> PyErr {
     if let EvaluationError::DuplicateDocument { source, qid, docno } = &error {
         let (kind, file) = match source {
@@ -44,12 +46,12 @@ pub(crate) fn evaluation_error_in(
             DuplicateSource::Run => ("run", run_file),
         };
         if let Some(file) = file {
-            return PyValueError::new_err(match repeated_document_lines(file, qid, docno) {
+            return PyValueError::new_err(match repeated_document_lines(&file.path, qid, docno) {
                 Some((first, second)) => format!(
                     "Error in {} file '{}': Line {}: {}, first at line {}",
-                    kind, file, second, error, first
+                    kind, file.name, second, error, first
                 ),
-                None => format!("Error in {} file '{}': {}", kind, file, error),
+                None => format!("Error in {} file '{}': {}", kind, file.name, error),
             });
         }
     }

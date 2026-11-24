@@ -7,7 +7,7 @@ use te_rust::eval::{evaluate_run, EvaluationError, EvaluationOutput, QueryEvalua
 use te_rust::io::{QrelsData, QrelsQuery, RunData, RunQuery};
 use te_rust::metrics::{registry::resolve_measures, EvalConfig, Measure, MetricValue, ValueFormat};
 
-use crate::conversions::{extract_path_string, ingest_qrels, ingest_run, ingest_run_arrays, ColumnMapping};
+use crate::conversions::{ingest_qrels, ingest_run, ingest_run_arrays, ColumnMapping, InputFile};
 use crate::errors::{evaluation_error, evaluation_error_in, warn_all};
 use crate::query_state::QueryState;
 use crate::result::EvalResult;
@@ -17,7 +17,7 @@ use crate::result::EvalResult;
 pub struct Evaluator {
     pub qrels: QrelsData,
     /// The qrels file, when the qrels were read from one, for messages about it.
-    pub qrels_file: Option<String>,
+    pub qrels_file: Option<InputFile>,
     pub measures: Vec<Box<dyn Measure>>,
     pub custom_measures: Vec<PyObject>,
     pub config: EvalConfig,
@@ -85,11 +85,11 @@ impl Evaluator {
             docno,
             score_or_rel: rel,
         };
-        let qrels_data = ingest_qrels(qrels, Some(&mapping))?;
+        let (qrels_data, qrels_file) = ingest_qrels(qrels, Some(&mapping))?;
 
         Ok(Self {
             qrels: qrels_data,
-            qrels_file: extract_path_string(qrels),
+            qrels_file,
             measures: resolved.measures,
             custom_measures,
             config,
@@ -112,8 +112,8 @@ impl Evaluator {
             docno,
             score_or_rel: score,
         };
-        let run_data = ingest_run(run, Some(&mapping))?;
-        self.evaluate_run_data(py, run_data, extract_path_string(run).as_deref())
+        let (run_data, run_file) = ingest_run(run, Some(&mapping))?;
+        self.evaluate_run_data(py, run_data, run_file.as_ref())
     }
 
     /// Evaluate 1D contiguous arrays/sequences of query IDs, doc IDs, and scores.
@@ -134,12 +134,12 @@ impl Evaluator {
         &self,
         py: Python<'_>,
         run_data: RunData,
-        run_file: Option<&str>,
+        run_file: Option<&InputFile>,
     ) -> PyResult<EvalResult> {
         let qrels_ref = &self.qrels;
         let measures_ref = &self.measures;
         let config_ref = &self.config;
-        let refuse = |error| evaluation_error_in(error, self.qrels_file.as_deref(), run_file);
+        let refuse = |error| evaluation_error_in(error, self.qrels_file.as_ref(), run_file);
 
         // 1. Run built-in measures with GIL released
         let mut output = py

@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use pyo3::exceptions::{PyFileNotFoundError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyIterator, PyLong, PySequence, PyString};
@@ -9,7 +9,7 @@ use te_rust::io::{parse_trec_qrels, parse_trec_run, QrelsData, QrelsQuery, Qrels
 use crate::errors::{evaluation_error, warn_all};
 
 /// Extract a file path string from a Python object if it is a `str` or `os.PathLike`.
-pub(crate) fn extract_path_string(obj: &Bound<'_, PyAny>) -> Option<String> {
+fn extract_path_string(obj: &Bound<'_, PyAny>) -> Option<String> {
     if let Ok(py_str) = obj.downcast::<PyString>() {
         return Some(py_str.to_string_lossy().into_owned());
     }
@@ -21,6 +21,20 @@ pub(crate) fn extract_path_string(obj: &Bound<'_, PyAny>) -> Option<String> {
         }
     }
     None
+}
+
+/// The file that an input was read from: its name as given, for messages, and its absolute path,
+/// which still names the file after the working directory changes.
+pub struct InputFile {
+    pub name: String,
+    pub path: PathBuf,
+}
+
+impl InputFile {
+    fn new(name: String) -> Self {
+        let path = std::path::absolute(&name).unwrap_or_else(|_| PathBuf::from(&name));
+        Self { name, path }
+    }
 }
 
 /// Options for mapping DataFrame column names.
@@ -59,8 +73,12 @@ fn find_column_name(
     Err(PyTypeError::new_err("Object is not a DataFrame (missing .columns)"))
 }
 
-/// Ingest relevance judgments (qrels) from a Python object (file path, dict, DataFrame, or iterable).
-pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> PyResult<QrelsData> {
+/// Ingest relevance judgments (qrels) from a Python object (file path, dict, DataFrame, or iterable),
+/// with the file they were read from, if any.
+pub fn ingest_qrels(
+    obj: &Bound<'_, PyAny>,
+    mapping: Option<&ColumnMapping>,
+) -> PyResult<(QrelsData, Option<InputFile>)> {
     // 1. File path / PathLike
     if let Some(path_str) = extract_path_string(obj) {
         let path = Path::new(&path_str);
@@ -70,14 +88,18 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
             })?;
             let warnings = qrels.warnings.iter().map(|w| format!("qrels file '{}': {}", path_str, w));
             warn_all(obj.py(), warnings)?;
-            return Ok(qrels);
+            return Ok((qrels, Some(InputFile::new(path_str))));
         }
         return Err(PyFileNotFoundError::new_err(format!(
             "Qrels file not found: '{}'",
             path_str
         )));
     }
+    ingest_qrels_value(obj, mapping).map(|qrels| (qrels, None))
+}
 
+/// Ingest relevance judgments (qrels) from a Python object that is not a file path.
+fn ingest_qrels_value(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> PyResult<QrelsData> {
     // 2. Nested Dictionary: Dict[str, Dict[str, Union[int, float]]]
     if let Ok(dict) = obj.downcast::<PyDict>() {
         let mut grouped: BTreeMap<String, BTreeMap<String, i64>> = BTreeMap::new();
@@ -269,8 +291,12 @@ fn extract_qrel_item(item: &Bound<'_, PyAny>) -> PyResult<(String, String, i64)>
     Ok((qid, docno, rel))
 }
 
-/// Ingest run results from a Python object (file path, dict, DataFrame, or iterable).
-pub fn ingest_run(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> PyResult<RunData> {
+/// Ingest run results from a Python object (file path, dict, DataFrame, or iterable), with the file
+/// they were read from, if any.
+pub fn ingest_run(
+    obj: &Bound<'_, PyAny>,
+    mapping: Option<&ColumnMapping>,
+) -> PyResult<(RunData, Option<InputFile>)> {
     // 1. File path / PathLike
     if let Some(path_str) = extract_path_string(obj) {
         let path = Path::new(&path_str);
@@ -280,14 +306,18 @@ pub fn ingest_run(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> Py
             })?;
             let warnings = run.warnings.iter().map(|w| format!("run file '{}': {}", path_str, w));
             warn_all(obj.py(), warnings)?;
-            return Ok(run);
+            return Ok((run, Some(InputFile::new(path_str))));
         }
         return Err(PyFileNotFoundError::new_err(format!(
             "Run file not found: '{}'",
             path_str
         )));
     }
+    ingest_run_value(obj, mapping).map(|run| (run, None))
+}
 
+/// Ingest run results from a Python object that is not a file path.
+fn ingest_run_value(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> PyResult<RunData> {
     // 2. Nested Dictionary: Dict[str, Dict[str, float]]
     if let Ok(dict) = obj.downcast::<PyDict>() {
         let mut grouped: BTreeMap<String, Vec<RunRecord>> = BTreeMap::new();

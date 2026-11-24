@@ -403,6 +403,32 @@ def test_repeated_documents_in_files_name_the_file_and_lines(tmp_path, measure):
     )
 
 
+def test_repeated_document_messages_name_the_file_that_was_read(tmp_path, monkeypatch):
+    class MovingPath:
+        def __init__(self, *paths):
+            self.paths = iter(paths)
+
+        def __fspath__(self):
+            return str(next(self.paths))
+
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    (tmp_path / "a" / "qrels").write_text("q 0 a 0\nq 0 a 1\n")
+    (tmp_path / "b" / "qrels").write_text("# b\n# b\nq 0 a 0\nq 0 a 1\n")
+    expected = "Line 2: duplicate document 'a' for query 'q', first at line 1"
+    # The path is read once, and the lines come from the file that was read.
+    evaluator = Evaluator(MovingPath(tmp_path / "a" / "qrels", tmp_path / "b" / "qrels"), ["map"])
+    with pytest.raises(ValueError) as error:
+        evaluator.evaluate({"q": {"a": 1.0}})
+    assert str(error.value) == f"Error in qrels file '{tmp_path / 'a' / 'qrels'}': {expected}"
+    monkeypatch.chdir(tmp_path / "a")
+    evaluator = Evaluator("qrels", ["map"])
+    monkeypatch.chdir(tmp_path / "b")
+    with pytest.raises(ValueError) as error:
+        evaluator.evaluate({"q": {"a": 1.0}})
+    assert str(error.value) == f"Error in qrels file 'qrels': {expected}"
+
+
 def test_unusable_global_gains_are_refused():
     message = "invalid gain 'x' for relevance level 1"
     with pytest.raises(ValueError, match=f"Invalid global_gains: {message}"):
