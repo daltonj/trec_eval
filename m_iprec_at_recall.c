@@ -34,6 +34,8 @@ TREC_MEAS te_meas_iprec_at_recall = { "iprec_at_recall",
     with a topic with 3 relevant docs for graphing purposes?  The Precision \n\
     interpolation used here is\n\
       Int_Prec (rankX) == MAX (Prec (rankY)) for all Y >= X.\n\
+    Recall levels must be finite, in [0, 1] and distinct to two decimals,\n\
+    the precision of their row names.\n\
     Default usage: -m iprec_at_recall.0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1 ...\n",
     te_init_iprec_at_recall,
     te_calc_iprec_at_recall,

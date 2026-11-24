@@ -32,14 +32,14 @@ TREC_MEAS te_meas_11pt_avg = { "11pt_avg",
     Obsolete, only use for comparisons of old runs; should use map instead.\n\
     Average interpolated at the given recall points - default is the\n\
     11 points being reported for ircl_prn.\n\
-    Both map and 11-pt_avg (and even R-prec) can be regarded as estimates of\n\
+    Both map and 11pt_avg (and even R-prec) can be regarded as estimates of\n\
     the area under the standard ircl_prn curve.\n\
-    Warning: name assumes user does not change default parameter values:\n\
-    measure name is independent of parameter values and number of parameters.\n\
-    Will actually average over all parameter values given.\n\
+    Given recall levels, the row name ends with them as given. The value\n\
+    averages over every level given, in any order, and counts a repeated\n\
+    level each time. Levels must be finite and in [0, 1].\n\
     To get 3-pt_avg as in trec_eval version 8 and earlier, use\n\
-      trec_eval -m 11-pt_avg.0.2,0.5,0.8 ...\n\
-    Default usage: -m 11-pt_avg.0.0,.1,.2,.3,.4,.5,.6,.7,.8..9,1.0\n",
+      trec_eval -m 11pt_avg.0.2,0.5,0.8 ...\n\
+    Default usage: -m 11pt_avg.0.0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1.0\n",
     te_init_11ptavg,
     te_calc_11ptavg,
     te_acc_meas_s,

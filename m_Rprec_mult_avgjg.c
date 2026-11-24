@@ -34,6 +34,8 @@ TREC_MEAS te_meas_Rprec_mult_avgjg = { "Rprec_mult_avgjg",
     high multiples then it is precision oriented (compared to B).\n\
     If there is more than one judgment group (set of evalutation judgments\n\
     of a user), then the measure is averaged over those jgs.\n\
+    Multiples must be finite, above 0 and distinct to two decimals, the\n\
+    precision of their row names.\n\
     Default param: \n\
     trec_eval -m Rprec_mult_avgjg.0.2,0.4,0.6,0.8,1.0,1.2,1.4,1.6,1.8,2.0  ...\n",
     te_init_Rprec_mult,

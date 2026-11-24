@@ -18,7 +18,8 @@
 for each measure and qid to be calculated.
 Format of Zscore file is 
      qid  measure_name  mean stddev
-where measure_name and qid are strings, and mean and stddev are doubles.
+where measure_name and qid are strings, and mean and stddev are finite
+doubles, stddev not negative.
 
 Fields are separated by whitespace, string fields can contain no whitespace.
 File may contain no NULL characters.

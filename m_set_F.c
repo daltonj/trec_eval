@@ -26,7 +26,8 @@ static PARAMS default_set_F_params = {
 TREC_MEAS te_meas_set_F = { "set_F",
     "      Set F measure: weighted harmonic mean of recall and precision\n\
     set_Fx = (x+1) * P * R / (R + x*P)\n\
-    where x is the relative importance of R to P (default 1.0).\n\
+    where x is the relative importance of R to P (default 1.0). x must be\n\
+    finite and not negative.\n\
     Default usage: trec_eval -m set_F.1.0 ...\n\
     Cite: Variant of van Rijsbergen's E measure ('Information Retrieval',\n\
     Butterworths, 1979).\n",

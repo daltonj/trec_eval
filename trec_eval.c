@@ -90,6 +90,9 @@ normally ever used.   \n\
     If mean is not in Zmeanfile for a measure and query, -1000000 is printed.\n\
     Zmean_file format is ascii lines of form \n\
        qid  measure_name  mean  std_dev\n\
+    mean and std_dev must be finite, and std_dev must not be negative. With\n\
+    std_dev 0, the Z score is 0 if the raw score equals mean, and otherwise\n\
+    -1000000 is printed.\n\
  \n\
  \n\
 Standard evaluation procedure:\n\

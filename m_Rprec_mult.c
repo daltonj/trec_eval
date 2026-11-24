@@ -32,6 +32,8 @@ TREC_MEAS te_meas_Rprec_mult = { "Rprec_mult",
     whether methods are precision oriented or recall oriented.  If method A\n\
     dominates method B at the low multiples but performs less well at the\n\
     high multiples then it is precision oriented (compared to B).\n\
+    Multiples must be finite, above 0 and distinct to two decimals, the\n\
+    precision of their row names.\n\
     Default param: -m Rprec_mult.0.2,0.4,0.6,0.8,1.0,1.2,1.4,1.6,1.8,2.0 ...\n",
     te_init_Rprec_mult,
     te_calc_Rprec_mult,
