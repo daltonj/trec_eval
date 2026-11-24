@@ -53,7 +53,7 @@ class Evaluator(_RustEvaluator):
         MultiComparisonTable
         """
         baseline_res = self.evaluate(baseline)
-        target_measures = [measures] if isinstance(measures, str) else (measures or self.measure_names)
+        target_measures = [measures] if isinstance(measures, str) else (measures or list(baseline_res.aggregate()))
 
         raw_rows = []
         for m in target_measures:

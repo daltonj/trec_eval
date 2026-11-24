@@ -93,6 +93,13 @@ def test_multiple_comparisons_adjustments():
     assert adjust_pvalues(raw_p, method="none") == raw_p
 
 
+def test_compare_against_baseline_defaults_to_the_evaluator_measures(multi_system_setup):
+    qrels, baseline, strong, weak = multi_system_setup
+    evaluator = Evaluator(qrels, measures=["map", "ndcg@10"])
+    table = evaluator.compare_against_baseline(baseline, {"strong": strong, "weak": weak})
+    assert sorted({row["measure"] for row in table.to_dict()}) == ["map", "ndcg_cut_10"]
+
+
 def test_compare_against_baseline(multi_system_setup):
     qrels, baseline, strong, weak = multi_system_setup
     evaluator = Evaluator(qrels, measures=["map", "ndcg@10"])
