@@ -91,19 +91,28 @@ fn a_repeated_document_in_a_fifo_is_reported_without_lines() {
         .stderr(Stdio::piped())
         .spawn()
         .expect("failed to run te-rust");
-    // The writer closes here, so te-rust reads the run to its end; a second open would wait.
-    std::fs::OpenOptions::new()
-        .write(true)
-        .open(&fifo)
-        .and_then(|mut writer| writer.write_all(b"1 Q0 a 1 2 r\n1 Q0 a 2 1 r\n"))
-        .expect("failed to write the run");
+    // The writer opens the FIFO once te-rust does and closes it after the run, so te-rust reads
+    // the run to its end; a second open by te-rust would wait for another writer. If te-rust
+    // stops before it opens the FIFO, the writer waits, and the assertions below fail.
     let start = Instant::now();
+    let writer = std::thread::spawn({
+        let fifo = fifo.clone();
+        move || {
+            std::fs::OpenOptions::new()
+                .write(true)
+                .open(&fifo)
+                .and_then(|mut writer| writer.write_all(b"1 Q0 a 1 2 r\n1 Q0 a 2 1 r\n"))
+        }
+    });
     while child.try_wait().expect("failed to wait for te-rust").is_none() {
         if start.elapsed() > Duration::from_secs(10) {
             child.kill().ok();
             panic!("te-rust opened the run again and waited for a writer");
         }
         std::thread::sleep(Duration::from_millis(20));
+    }
+    if writer.is_finished() {
+        writer.join().expect("the writer panicked").expect("failed to write the run");
     }
     assert_refused(
         &child.wait_with_output().expect("failed to read te-rust's output"),
