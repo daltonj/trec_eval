@@ -65,20 +65,18 @@ impl Measure for UtilityMeasure {
             None => return self.initial_values(),
         };
 
-        // Signed cells allow a collection size smaller than the documents counted.
-        // num_rel_ret counts judged documents only, as trec_eval's does: at a negative -l,
-        // unjudged documents (RELVALUE_NONPOOL, RELVALUE_UNJUDGED) pass the level too.
-        let num_ret = q_state.results_rel_list.len() as i64;
-        let num_rel_ret = q_state.num_rel_ret as i64;
-        let num_rel = q_state.num_rel as i64;
+        // Signed cells allow a collection size smaller than the documents counted; i128 holds
+        // every usize count. num_rel_ret counts judged documents only, as trec_eval's does: at a
+        // negative -l, unjudged documents (RELVALUE_NONPOOL, RELVALUE_UNJUDGED) pass the level too.
+        let num_ret = q_state.results_rel_list.len() as i128;
+        let num_rel_ret = q_state.num_rel_ret as i128;
+        let num_rel = q_state.num_rel as i128;
 
         let a = num_rel_ret as f64;
         let b = (num_ret - num_rel_ret) as f64;
         let c = (num_rel - num_rel_ret) as f64;
 
-        // Subtract counts of at least 0 from num_docs_in_coll, so that no step can wrap.
-        let num_docs_in_coll = i64::try_from(config.num_docs_in_coll).unwrap_or(i64::MAX);
-        let d = (num_docs_in_coll - num_ret - (num_rel - num_rel_ret)) as f64;
+        let d = (config.num_docs_in_coll as i128 - num_ret - (num_rel - num_rel_ret)) as f64;
 
         let score = self.params[0] * a +
                     self.params[1] * b +

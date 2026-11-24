@@ -166,7 +166,7 @@ fn alignment_refuses_nan_scores() {
 
 #[test]
 #[cfg(target_pointer_width = "64")]
-fn utility_uses_i64_max_for_a_larger_collection() {
+fn utility_keeps_a_collection_size_above_i64_max() {
     let qrels = qrels(vec![judgments("1", &[("a", 1)])]);
     let run = run(vec![results("1", &[("a", 1.0)])]);
     let utility: Vec<Box<dyn Measure>> = vec![Box::new(
@@ -178,10 +178,10 @@ fn utility_uses_i64_max_for_a_larger_collection() {
         ..Default::default()
     };
     let out = evaluate_run(&qrels, &run, &utility, &config, None).unwrap();
-    // Clamping leaves i64::MAX - 1, which rounds to the same f64 as i64::MAX.
+    // d = N - 1, the one retrieved document being relevant.
     assert_eq!(
         out.summary_results[0].value,
-        MetricValue::Float(i64::MAX as f64),
+        MetricValue::Float((num_docs_in_coll - 1) as f64),
         "{num_docs_in_coll}"
     );
 }
