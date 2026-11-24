@@ -11,7 +11,8 @@ pub enum ParseError {
     NoDataLines,
     /// A line holds a NUL byte.
     NulCharacter { line_num: usize },
-    /// A line holds a CR that is not followed by LF, as in a file with CR line endings.
+    /// A line holds a CR that is not followed by LF, as in a file with CR line endings. A CR
+    /// that ends the file is accepted.
     CarriageReturn { line_num: usize },
     /// A data line is not UTF-8; `column` is the 1-based offset of the first bad byte.
     InvalidUtf8 { line_num: usize, column: usize },

@@ -113,7 +113,7 @@ mod exit_status {
     }
 }
 
-/// Failed writes to standard output. trec_eval ignores them and exits 0; te-rust reports them.
+/// Output failures: exit 8 for a write error, or SIGPIPE for a pipe without a reader.
 #[cfg(unix)]
 mod output {
     use super::common::{fixture, stderr, te_rust, write};
@@ -156,7 +156,7 @@ mod output {
     }
 
     #[test]
-    fn closed_stdout_ends_with_sigpipe_and_no_panic() {
+    fn a_pipe_without_a_reader_ends_with_sigpipe_and_no_panic() {
         use std::os::unix::process::CommandExt;
 
         let mut command = te_rust();
@@ -381,7 +381,7 @@ mod integer_options {
         for (option, value, read, measure, expected) in [
             // b alone is relevant, at rank 2.
             ("-l", "2.5", "2", "map", "map all 0.5000"),
-            // Only b is retained; AP = (1/2) / 2.
+            // c and b are retained; b, the one relevant, is at rank 2. AP = (1/2) / 2.
             ("-M", "2x", "2", "map", "map all 0.2500"),
             // Nonretrieved nonrelevant = 10 - 3 - (2 - 2).
             (
@@ -489,7 +489,8 @@ mod relevance_level {
     }
 }
 
-/// Topics that the run lacks: an error, unless -c scores them as empty rankings.
+/// A run that shares no topic is an error without -c; with -c, a qrels topic missing from the
+/// run is scored as an empty ranking.
 mod complete_set {
     use super::common::{assert_refused, eval, fixture, rows, summary, write};
     use std::path::PathBuf;

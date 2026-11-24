@@ -101,7 +101,7 @@ Example `qrels.txt`:
 302 0 LA010189-0001 1
 ```
 
-Blank lines are skipped with a warning that names the line. `trec_eval` stops at a blank line in a qrels file with "Malformed line" and exits 2. `te-rust` prints its warnings about a file only when it reads the whole file without error.
+Blank lines are skipped with a warning that names the line. `trec_eval` 10.0 stops at a blank line in a qrels file with "Malformed line" and exits 2; with the fixes for issue #143 it skips the line with a warning, as `te-rust` does. `te-rust` prints its warnings about a file only when it reads the whole file without error.
 
 A topic whose judgments are all negative has no relevant document, and `te-rust` scores its ranking as such. When that topic sorts first, `trec_eval` 10.0 exits `4` with "Can't calculate measure" for every measure except `num_q`. When it sorts later, `trec_eval` 10.0 uses the grade counts of the topic before it, and with grades of -2 or lower it can crash.
 

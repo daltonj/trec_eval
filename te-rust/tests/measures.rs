@@ -13,9 +13,7 @@ mod cutoffs {
     #[test]
     fn eleven_pt_avg_does_not_depend_on_list_order() {
         // Interpolated precision is 1 at recall 0.5 and 2/4 at recall 1.0, so the average is
-        // 0.75 in either order. trec_eval reads 11pt_avg with get_double_params, which does not
-        // sort, and walks the list from its last entry, so it prints 1.0000 for the descending
-        // list. The row name keeps the levels as given, as in trec_eval.
+        // 0.75 in either order. The row name keeps the levels in the order given.
         let qrels = write("two-relevant.qrels", TWO_RELEVANT_QRELS);
         let run = write("two-relevant.run", TWO_RELEVANT_RUN);
         assert_eq!(
@@ -203,7 +201,12 @@ mod ndcg {
         ] {
             assert_eq!(rows(&eval(options, &qrels, &run)), expected);
         }
-        // An empty ranking still has an ideal sum. The run's only topic, 2, is not in the qrels.
+    }
+
+    #[test]
+    fn an_empty_ranking_keeps_the_ideal_dcg() {
+        let qrels = write("dcg.qrels", "1 0 a 1\n1 0 b 2\n1 0 c 0\n");
+        // The run's only topic, 2, is not in the qrels, so -c scores topic 1 as an empty ranking.
         let run = write("other.run", "2 Q0 x 1 1 r\n");
         assert_eq!(
             rows(&eval(&["-c", "-m", "dcg", "-m", "ideal_dcg"], &qrels, &run)),

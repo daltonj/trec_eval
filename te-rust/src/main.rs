@@ -105,7 +105,6 @@ struct Args {
 
 // CLI exit statuses: 1 usage or illegal measure name, 2 input or measure
 // parameter error, 4 topic evaluation error, 8 output write error.
-// Status 8 is an extension; trec_eval ignores output write errors.
 const EXIT_USAGE: i32 = 1;
 const EXIT_INPUT: i32 = 2;
 const EXIT_TOPIC: i32 = 4;
