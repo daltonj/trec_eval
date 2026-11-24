@@ -25,7 +25,7 @@ TOP_SRCS = trec_eval.c formats.c meas_init.c meas_acc.c meas_avg.c \
 FORMAT_SRCS = get_qrels.c get_trec_results.c get_prefs.c get_qrels_prefs.c \
 	get_qrels_jg.c form_res_rels.c form_res_rels_jg.c \
         form_prefs_counts.c \
-        utility_pool.c get_zscores.c convert_zscores.c
+        utility_pool.c utility_input.c get_zscores.c convert_zscores.c
 
 MEAS_SRCS =  measures.c  m_map.c m_P.c m_num_q.c m_num_ret.c m_num_rel.c \
         m_num_rel_ret.c m_gm_map.c m_Rprec.c m_recip_rank.c m_bpref.c \
@@ -63,13 +63,14 @@ test_prefs-rank-comparators: test/regress/prefs-rank-comparators/cmp.c \
 		test/regress/prefs-rank-comparators/cmp.c utility_pool.c
 
 test_reader-limits: test/regress/reader-limits/readers.c convert_zscores.c \
-		get_qrels.c get_trec_results.c utility_pool.c $(SRCH)
+		get_qrels.c get_trec_results.c utility_pool.c utility_input.c \
+		$(SRCH)
 	$(CC) $(CFLAGS) -DTE_MAX_LINES=3 -DTE_READ_CHUNK=2 \
 		-Dftell=reader_ftell -Dfread=reader_fread \
 		-Dmalloc=reader_malloc -Drealloc=reader_realloc \
 		-o test_reader-limits \
 		test/regress/reader-limits/readers.c get_qrels.c \
-		get_trec_results.c utility_pool.c
+		get_trec_results.c utility_pool.c utility_input.c
 
 install: $(BIN)/trec_eval
 

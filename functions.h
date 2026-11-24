@@ -18,6 +18,7 @@ void *te_chk_and_malloc(void *ptr, long *current_bound,
                         const long needed, const size_t size);
 void *te_chk_and_realloc(void *ptr, long *current_bound,
                          const long needed, const int size);
+/* Reading of input files, defined in utility_input.c */
 long te_prepare_lines(char *buf, size_t size, const char *reader,
                       const char *kind, const char *file);
 size_t te_fread(char *buf, size_t size, FILE * fd);
