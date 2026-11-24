@@ -143,12 +143,12 @@ pub fn registry() -> &'static [MeasureSpec] {
             status: Production,
             usage: "set_F[.<x>]  weight x of recall against precision, beta^2 of F_beta (default: 1.0)",
             factory: |p, _| {
-                let beta = if p.is_empty() {
+                let weight = if p.is_empty() {
                     1.0
                 } else {
                     p.parse::<f64>().map_err(|_| MeasureParseError::new(format!("invalid float parameter '{}'", p)))?
                 };
-                Ok(Box::new(metrics::set_f::SetFMeasure::new(beta, p)?))
+                Ok(Box::new(metrics::set_f::SetFMeasure::new(weight, p)?))
             },
         },
         MeasureSpec {

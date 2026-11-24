@@ -2,18 +2,19 @@ use crate::metrics::{EvalConfig, EvalState, EvaluationType, Measure, MetricValue
 use crate::metrics::common::{check_finite, MeasureParseError};
 
 pub struct SetFMeasure {
-    beta: f64,
+    /// beta squared in F_beta: the weight of recall against precision.
+    weight: f64,
     sub_metrics: Vec<String>,
 }
 
 impl SetFMeasure {
     /// Refuses a weight that is negative or not finite.
-    pub fn new(beta: f64, params_str: &str) -> Result<Self, MeasureParseError> {
-        check_finite(beta)?;
-        if beta < 0.0 {
+    pub fn new(weight: f64, params_str: &str) -> Result<Self, MeasureParseError> {
+        check_finite(weight)?;
+        if weight < 0.0 {
             return Err(MeasureParseError::new(format!(
                 "set_F weight {} is negative",
-                beta
+                weight
             )));
         }
         let name = if params_str.is_empty() {
@@ -21,7 +22,7 @@ impl SetFMeasure {
         } else {
             format!("set_F_{}", params_str)
         };
-        Ok(Self { beta, sub_metrics: vec![name] })
+        Ok(Self { weight, sub_metrics: vec![name] })
     }
 }
 
@@ -61,8 +62,8 @@ impl Measure for SetFMeasure {
             let score = if q_state.num_rel_ret > 0 && q_state.num_ret > 0 && q_state.num_rel > 0 {
                 let p = (q_state.num_rel_ret as f64) / (q_state.num_ret as f64);
                 let r = (q_state.num_rel_ret as f64) / (q_state.num_rel as f64);
-                let denominator = self.beta * p + r;
-                (self.beta + 1.0) * p * r / denominator
+                let denominator = self.weight * p + r;
+                (self.weight + 1.0) * p * r / denominator
             } else {
                 0.0
             };
@@ -97,11 +98,11 @@ mod tests {
     }
 
     #[test]
-    fn test_set_f_custom_beta() {
+    fn test_set_f_custom_weight() {
         let measure = SetFMeasure::new(0.5, "0.5").unwrap();
         let config = EvalConfig::default();
         // P = 2 / 3, R = 1.0.
-        // beta = 0.5.
+        // weight = 0.5, beta squared.
         // score: 1.5 * (2/3) * 1.0 / (0.5 * 2/3 + 1.0) = 1.0 / (4/3) = 3 / 4 = 0.75.
         let state = make_mock_state(vec![1, 0, 1], 2);
         let actual = measure.calc(&config, &EvalState::Standard(state));
