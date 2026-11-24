@@ -9,23 +9,35 @@ fail() {
 T=$(mktemp -d) || fail "mktemp -d failed"
 trap 'rm -rf "$T"' EXIT
 
-# Skip the rest of the script unless trec_eval accepts a long of 2^32.
-need_long64() {
+# long_bits: 64 if trec_eval accepts a long of 2^32 as -N, 32 if it
+# refuses it as a build whose long has 32 bits does; any other result fails
+# the script.
+long_bits() {
     "$TREC_EVAL" -N 4294967296 -m num_q test/regress/qrels.one \
-        test/regress/results.one > /dev/null 2>&1 || {
-        echo "SKIP $0: needs a 64-bit long" >&2
-        exit 0
-    }
+        test/regress/results.one > /dev/null 2> "$T/long-bits.error"
+    case $? in
+    0) echo 64 ;;
+    1) grep -q "Invalid number of documents in collection" \
+           "$T/long-bits.error" && echo 32 ;;
+    esac
 }
 
-# Skip the rest of the script unless trec_eval refuses a long of 2^32, as
-# a build whose long has 32 bits does.
+# Skip the rest of the script unless long has 64 bits.
+need_long64() {
+    case $(long_bits) in
+    64) ;;
+    32) echo "SKIP $0: needs a 64-bit long" >&2; exit 0 ;;
+    *) fail "cannot tell the width of long: $(cat "$T/long-bits.error")" ;;
+    esac
+}
+
+# Skip the rest of the script unless long has 32 bits.
 need_long32() {
-    "$TREC_EVAL" -N 4294967296 -m num_q test/regress/qrels.one \
-        test/regress/results.one > /dev/null 2>&1 && {
-        echo "SKIP $0: needs a 32-bit long" >&2
-        exit 0
-    }
+    case $(long_bits) in
+    32) ;;
+    64) echo "SKIP $0: needs a 32-bit long" >&2; exit 0 ;;
+    *) fail "cannot tell the width of long: $(cat "$T/long-bits.error")" ;;
+    esac
 }
 
 # expect_status STATUS ARGS...: run trec_eval ARGS, keeping its standard
