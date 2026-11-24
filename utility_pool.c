@@ -189,7 +189,7 @@ int te_skip_line(char **ptr, long *line_num, const char *kind,
 {
     char *p = *ptr;
 
-    while (*p != '\n' && isspace(*p))
+    while (*p != '\n' && isspace((unsigned char) *p))
         p++;
     *ptr = p;
     if (*p != '\n' && *p != '#')
