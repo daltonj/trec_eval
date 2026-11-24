@@ -529,6 +529,12 @@ int main(int argc, char * argv[])
     Free(accum_eval.values);
     Free(epi.meas_arg);
 
+    /* A write to standard output that failed, as on a full disk, would
+       otherwise lose results without a message */
+    if (EOF == fflush(stdout) || ferror(stdout)) {
+        fprintf(stderr, "trec_eval: Can't write to standard output\n");
+        exit(8);
+    }
     exit(0);
 }
 
