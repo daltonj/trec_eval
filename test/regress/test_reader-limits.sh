@@ -22,7 +22,7 @@ printf "trec_eval.test: 3 lines or more in test file 'three'\n" > "$T/want"
 diff "$T/want" "$T/got" || fail "wrong line-count message"
 
 printf abcde | ./test_reader-limits read-chunks ||
-    fail "te_fread read more than TE_READ_CHUNK bytes at a time"
+    fail "te_fread did not read in requests of TE_READ_CHUNK bytes up to a short read"
 
 # The size UINT_MAX + 1 needs a long wider than unsigned.
 need_long64

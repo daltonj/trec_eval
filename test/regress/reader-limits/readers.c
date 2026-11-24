@@ -21,6 +21,7 @@ int te_get_trec_results(EPI * epi, char *text_results_file,
 
 static size_t refused;
 static size_t largest_read;
+static int reads;
 static int refuse_malloc;
 
 size_t reader_fread(void *ptr, size_t size, size_t count, FILE * stream)
@@ -28,6 +29,7 @@ size_t reader_fread(void *ptr, size_t size, size_t count, FILE * stream)
     size_t n = 0;
     int c;
 
+    reads++;
     largest_read = MAX(largest_read, size * count);
     while (n < size * count && EOF != (c = getc(stream)))
         ((char *) ptr)[n++] = (char) c;
@@ -94,10 +96,12 @@ static int check_read_chunks(void)
     char buf[8];
     size_t got = te_fread(buf, sizeof buf, stdin);
 
-    if (got == 5 && 0 == memcmp(buf, "abcde", 5) && largest_read == 2)
+    /* Requests of 2, 2 and 2 bytes; the short third read ends it */
+    if (got == 5 && 0 == memcmp(buf, "abcde", 5) && largest_read == 2 &&
+        reads == 3)
         return (0);
-    printf("te_fread read %zu bytes, at most %zu at a time; expected 5, "
-           "at most 2\n", got, largest_read);
+    printf("te_fread read %zu bytes in %d requests of at most %zu; "
+           "expected 5 in 3 of at most 2\n", got, reads, largest_read);
     return (1);
 }
 

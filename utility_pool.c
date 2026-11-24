@@ -130,11 +130,14 @@ long te_prepare_lines(char *buf, size_t size, const char *reader,
 size_t te_fread(char *buf, size_t size, FILE * fd)
 {
     size_t done = 0;
+    size_t request;
     size_t count;
 
-    do
-        count = fread(buf + done, 1, MIN(size - done, TE_READ_CHUNK), fd);
-    while (count > 0 && (done += count) < size);
+    do {
+        request = MIN(size - done, TE_READ_CHUNK);
+        count = fread(buf + done, 1, request, fd);
+        done += count;
+    } while (count == request && done < size);
     return (done);
 }
 
