@@ -300,6 +300,19 @@ def test_qrels_refuse_integer_grades_beyond_64_bits_with_value_error():
         assert result.aggregate() == {"map": 1.0}
 
 
+def test_a_grade_is_read_through_index_once():
+    class ChangingGrade:
+        calls = 0
+
+        def __index__(self):
+            ChangingGrade.calls += 1
+            return 2**63 if ChangingGrade.calls == 1 else 1
+
+    with pytest.raises(ValueError, match=f"relevance level {2**63} "):
+        Evaluator({"q": {"d": ChangingGrade()}}, measures=["map"])
+    assert ChangingGrade.calls == 1
+
+
 def test_in_memory_qrels_accept_grade_boundaries():
     for grade, expected in [(-127, 0.0), (127, 1.0)]:
         result = Evaluator({"q": {"d": grade}}, measures=["map"]).evaluate(

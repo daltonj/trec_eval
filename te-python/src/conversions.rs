@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use pyo3::exceptions::{PyFileNotFoundError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyIterator, PySequence, PyString};
+use pyo3::types::{PyDict, PyIterator, PyLong, PySequence, PyString};
 use te_rust::eval::check_rel_level;
 use te_rust::io::parsers::REL_LEVELS;
 use te_rust::io::{parse_trec_qrels, parse_trec_run, QrelsData, QrelsQuery, QrelsRecord, RunData, RunQuery, RunRecord};
@@ -178,13 +178,14 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
 
 /// Reads a grade as an `i64`. An integer too large for one, an `int` or another integer such as a
 /// NumPy integer, is refused with the `ValueError` that `check_rel_level` gives for a grade outside
-/// the range that te-rust reads.
+/// the range that te-rust reads. Another integer is read through `__index__` once.
 fn extract_grade(obj: &Bound<'_, PyAny>, qid: &str, docno: &str) -> PyResult<i64> {
-    obj.extract::<i64>().map_err(|e| {
-        let py = obj.py();
-        let Ok(value) = py.import_bound("operator").and_then(|operator| operator.call_method1("index", (obj,))) else {
-            return e;
-        };
+    let value = if obj.is_instance_of::<PyLong>() {
+        obj.clone()
+    } else {
+        obj.py().import_bound("operator")?.call_method1("index", (obj,))?
+    };
+    value.extract::<i64>().map_err(|_| {
         PyValueError::new_err(format!(
             "relevance level {} for document '{}' in query '{}' is outside {} to {}",
             value,
