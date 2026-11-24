@@ -3,33 +3,196 @@ Change Log  (only recent)
 ------------------------------------------------------------------------------
 Unreleased
 	Fixes for issues #94 to #99, #102, #107, #141 to #144 and #195.
-	Results change in these cases:
-	  rbp no longer depends on the build or on -q (#94).
-	  Under -c, num_rel on the all row counts the grades that -l makes
-	  relevant (#95), and utility, rbp_resid and relstring with
-	  parameters score a missing topic as an empty ranking (#96).
-	  A topic whose grades are all negative is scored with its own
-	  grade counts (#97).
-	  ndcg, ideal_dcg, Rndcg, ndcg_rel and G with gains less than 1
-	  apart, and ndcg_rel, which is 0 when no judged level has a
-	  positive gain (#98).
-	  dcg, ideal_dcg and ndcg each use their own gain map (#195).
-	  -Z with a zscores file that lacks a topic or a measure (#144).
-	Inputs now refused with exit status 2: run scores that are not
-	numbers or are NaN (#107); relevance levels that are not numbers or
-	are outside -127 to 127, and files with a NUL byte or a CR that does
-	not end a line (#143); measure parameters that give no usable value,
-	and cutoffs that repeat or print the same row name (#142). A negative
-	-l, -M or -N exits with status 1 (#142).
-	A run score with trailing characters, such as 1.5x, is read with a
-	warning (#107). Blank lines in judgments files are skipped with a
-	warning, and a UTF-8 byte-order mark is skipped (#143).
-	A run without data lines, or empty standard input, gives a message
-	instead of a crash (#99). Judgments and zscores files of 2 GiB or
-	more are read (#143). With no -m, -R qrels_jg, prefs and qrels_prefs
-	print measures that they can compute (#141).
-	Other messages, exit statuses and help text (#141); reads past
-	tables and leaks (#102, #144).
+	Results that change:
+	  rbp starts the range of its gains at 0, where it read min and
+	    max before setting them. Its value no longer depends on the
+	    build or on -q, and on graded qrels it can change (#94).
+	  Under -c, num_rel on the all row counts only the judgments at
+	    or above -l, and only in the topic that -D names (#95).
+	  Under -c, a qrels topic missing from the run is evaluated as a
+	    ranking that retrieves nothing, where it was scored on a
+	    placeholder document and some rows were then reset. utility,
+	    rbp_resid and relstring with parameters, and gain maps that
+	    give level -1 a gain, change for such a topic:
+	    utility.1,-1,0,0 gives 0 instead of -1, rbp_resid.p=0.5 0
+	    instead of 1, relstring.3 '' instead of '-', and ndcg.-1=1 0
+	    instead of 1. utility with a nonzero third or fourth
+	    coefficient gives p3 * num_rel + p4 * (N - num_rel), where N
+	    is the -N value (#96).
+	  A topic whose grades are all negative is evaluated with its
+	    own grade counts. It no longer exits with status 4 or
+	    crashes, and ndcg, ideal_dcg, ndcg_rel and G with a gain on
+	    level -2 no longer use the previous topic's ideal ranking
+	    (#97).
+	  ndcg, ideal_dcg, Rndcg, ndcg_rel and G give the right value
+	    with gains less than 1 apart: ndcg.1=0.3,2=0.6,3=0.9 gives
+	    0.9225, the value of ndcg.1=3,2=6,3=9, instead of 0, and
+	    ndcg.0=0,1=0.3,2=0.9,3=0.6 gives 1.0000 instead of 1.0840
+	    (#98).
+	  ndcg_rel gives 0 instead of inf when no ideal gain is positive
+	    (#98).
+	  dcg, ideal_dcg and ndcg each keep their own gain map. Two of
+	    them with a gain map, as in -m all_trec -m dcg.1=3, no
+	    longer crash or print one measure with the gains or name of
+	    another (#195).
+	  11pt_avg sorts its recall levels: 11pt_avg.1.0,0.5 gives the
+	    value of 11pt_avg.0.5,1.0 under its own row name
+	    (#142 item 5).
+	  11pt_avg and iprec_at_recall give 0 instead of nan for a topic
+	    that retrieves nothing, as under -J or -M 0, so such a topic
+	    no longer makes the all row nan (#142 item 4).
+	  Rndcg gives 0 instead of nan for a topic with no positive
+	    ideal gain (#142 item 9).
+	  Integer cutoffs that differ by 2^31 or more are sorted: with
+	    P.4294967297,1, P_1 prints first and is 1.0000, not 1.5000
+	    (#142 item 12).
+	  -Z converts a value only with the zscores line of its own
+	    topic and measure. A missing line gives -1000000.0000, where
+	    the line of another topic could be used (#144 item 1).
+	  With no -m, -R qrels_jg prints the qrels_jg measures, and
+	    -R prefs and -R qrels_prefs print the prefs measures,
+	    instead of exiting with status 4 (#141 item 1).
+	  bpref and gm_bpref with a very large -l, such as
+	    -l 1000000000000, give 0 instead of crashing (#102).
+	  A relstring length beyond the number of documents retrieved,
+	    such as relstring.1e300, lists every retrieved document on
+	    every build. The length was converted to a long with
+	    undefined behaviour (#142 item 2).
+	Row names that change:
+	  Rprec_mult and Rprec_mult_avgjg print a cutoff in full, to two
+	    decimals: Rprec_mult.100000000 prints
+	    Rprec_mult_100000000.00, not Rprec_mult_10000000
+	    (#142 item 14).
+	Inputs now refused, with exit status 2:
+	  A run score that has no leading number, or is NaN (#107).
+	  In a qrels or qrels_jg file, a relevance level outside -127 to
+	    127 (#143 item 4). prefs and qrels_prefs files keep no range
+	    limit.
+	  In a prefs or qrels_prefs file, a level that is not a number
+	    or is NaN. Such a level was read as 0, or could crash
+	    (#143 item 3).
+	  In any input file or standard input, a NUL byte, and a CR that
+	    ends neither a line nor the file, a CR between two fields
+	    included (#143 items 1, 5, 7 and 10).
+	  A qrels, qrels_jg, prefs or qrels_prefs file with no data
+	    lines (#143 item 2), and a results file or standard input
+	    with no data lines, which crashed (#99).
+	  In a zscores file, a mean or standard deviation that is not a
+	    finite number, and a negative standard deviation
+	    (#143 item 12).
+	  Measure parameters that cannot be used (#142): in G, dcg,
+	    ideal_dcg, ndcg, ndcg_rel, Rndcg, rbp and rbp_resid, a gain
+	    name that is not a relevance level or repeats a level, and
+	    in rbp and rbp_resid a p given twice (item 6); a
+	    floating-point value that is not a number (item 7) or is not
+	    finite (item 8); an iprec_at_recall or 11pt_avg recall level
+	    outside [0, 1], an Rprec_mult or Rprec_mult_avgjg multiple
+	    that is not positive, a negative set_F weight, and an rbp or
+	    rbp_resid p outside [0, 1) (item 11); floating-point cutoffs
+	    that print the same row name, such as Rprec_mult.0.999,1.001
+	    (item 15); and utility without exactly four coefficients,
+	    which exited 4 at the first topic (item 16).
+	  A gain name beyond the range of a long, such as
+	    ndcg.99999999999999999999=1, exits 2 when the measure is
+	    initialised, instead of 4 at the first topic (#142 item 6).
+	  An unreadable or malformed zscores file exits with status 2
+	    after "Quit in file", instead of 255 (#141 item 4).
+	Options now refused, with exit status 1:
+	  A negative -l, -M or -N (#142 items 1, 10 and 13). A negative
+	    -M crashed, and a negative -l counted documents outside the
+	    qrels as relevant. -l 0 and -M 0 stay legal.
+	Inputs now refused, with exit status 4:
+	  Where long has 32 bits, as on Windows, an input whose table of
+	    counts has more entries than a long holds, such as a prefs
+	    judgment group of 65,536 documents (#143 item 9).
+	Inputs read differently or with a new warning:
+	  A run score is read with strtod. Characters after the number
+	    are ignored with a warning, and a score beyond the range of
+	    a double is kept as inf or 0 with a warning (#107,
+	    #143 item 13).
+	  A prefs or qrels_prefs level, a zscores mean or standard
+	    deviation, and a floating-point measure parameter with
+	    characters after the number are read with a warning
+	    (#142 item 7, #143 items 3 and 12).
+	  In qrels, qrels_jg, prefs and qrels_prefs files, a line whose
+	    first non-blank character is # is skipped, wherever it is. A
+	    comment no longer crashes the reader, stops it with
+	    "Malformed line" or becomes a judgment, and an indented #
+	    line no longer adds a topic named # (#143 items 2 and 8).
+	  A blank line in a qrels, qrels_jg, prefs or qrels_prefs file
+	    is skipped with a warning that names the line, instead of
+	    "Malformed line" (#143 item 8).
+	  A UTF-8 byte-order mark at the start of any input file is
+	    skipped (#143 item 6).
+	  Only "-" itself reads results from standard input. Another
+	    path that starts with "-" is opened as a file
+	    (#143 item 11).
+	  Results on standard input are read in full, so a NUL is
+	    refused as in a file, instead of dropping or joining lines
+	    (#143 item 10).
+	  On 64-bit builds, judgments and zscores files of 2 GiB or more
+	    are read, instead of refused or read in part (#143 item 9).
+	Messages:
+	  Without -c, a qrels topic missing from the run is reported as
+	    "qrels qid '<qid>' not found in results", not "result qid
+	    '<qid>' not found in qrels". It is found before any topic is
+	    evaluated, so -q and -D print nothing before the exit with
+	    status 4 (#141 items 2 and 3).
+	  "Malformed line" counts every line of the file, comment and
+	    blank lines included, in the qrels, qrels_jg, prefs,
+	    qrels_prefs and results readers (#141 item 5, #143 item 14).
+	  The duplicate-document messages end with a newline
+	    (#141 item 6).
+	  Message prefixes name the file that prints them: form_res_rels
+	    and form_res_rels_jg replace form_res_qrels,
+	    form_prefs_counts replaces form_prefs_info, get_qrels_jg
+	    replaces get_qrels, and get_qrels_prefs, with "Cannot read
+	    qrels file", replaces get_prefs (#141 item 7).
+	  Number conversion warnings and errors name the source in
+	    parentheses: the measure, or the line and file, and for a
+	    judgment the topic and document (#142 item 17). "Illegal
+	    cutoff" no longer follows the error for a cutoff.
+	  New messages name the line and file of a NUL, a CR, a
+	    relevance level out of range and a file without data lines
+	    (#99, #143).
+	Help text:
+	  -h gives the -N default as 0 and the long form of -M as
+	    --Max_retrieved_per_topic (#141 item 8).
+	  -h says that -c evaluates a missing topic as an empty ranking
+	    and that without -c a missing topic is an error, and no
+	    longer says that such topics are ignored (#96, #141 item 2).
+	  -h says that -l must be 0 or more (#142 item 10), lists the
+	    qrels_jg group and the default measures for each -R
+	    (#141 item 1), and gives the qrels level range as -127 to
+	    127 and the comment and blank-line rules of the four
+	    judgment formats (#143 items 4 and 8).
+	  The short usage message says that the default measures depend
+	    on -R, and no longer says that all_trec prints all measures
+	    (#141 item 1).
+	  -h -m rbp_resid says that rbp_resid accepts gains and ignores
+	    them (#142 item 6).
+	Memory errors and leaks, with no change in printed values:
+	  bpref and gm_bpref no longer read past their table of grade
+	    counts when -l exceeds a topic's highest grade by more than
+	    1 (#102).
+	  rbp no longer leaks its gain table for each topic, and under
+	    -c relstring no longer leaks a buffer for each missing topic
+	    (#144 items 2 and 3).
+	  Rprec_mult and Rprec_mult_avgjg keep a cutoff as a double, and
+	    utility counts the documents not retrieved without overflow,
+	    so a huge multiple or a -N near LONG_MAX no longer gives
+	    undefined behaviour (#142 items 2 and 3).
+	  Malloc, Realloc, the sorts and the rank comparators no longer
+	    cut a size, count or rank to 32 bits, which needed 2^31 or
+	    more items or 4 GiB or more (#143 item 9, #144 item 4).
+	Removed:
+	  The function clear_relstr and its declaration in functions.h
+	    (#144 item 3).
+	  m_ndcg_p.c, which the Makefile did not build (#141 item 9).
+	Build:
+	  make quicktest also builds and runs three test programs and
+	    the scripts in test/regress. make clean removes the
+	    programs.
 6/18/26 Version 10.0
 	Breaking fix: change uses of int truncation to round/floor.
 	-c mode now prints out skipped queries in -q mode.
