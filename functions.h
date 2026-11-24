@@ -13,6 +13,7 @@
 
 /* Utility functions */
 long te_mul_counts(const long a, const long b);
+long te_str_count(const char *s);
 void *te_chk_and_malloc(void *ptr, long *current_bound,
                         const long needed, const size_t size);
 void *te_chk_and_realloc(void *ptr, long *current_bound,

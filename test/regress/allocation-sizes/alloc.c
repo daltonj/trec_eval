@@ -2,7 +2,7 @@
    The macros return NULL when that does not fit in size_t. The pool
    helpers refuse negative requests and a bound beyond LONG_MAX, and
    allocate at least one element. te_mul_counts refuses a product beyond
-   LONG_MAX.
+   LONG_MAX, and te_str_count counts a string and its NUL.
    A stub allocator records requested sizes without allocating them. */
 #include <limits.h>
 #include <stdint.h>
@@ -48,6 +48,7 @@ int main(void)
     CHECK(te_mul_counts(LONG_MAX / 2 + 1, 2) == -1);
     CHECK(te_mul_counts(0, LONG_MAX) == 0 && te_mul_counts(LONG_MAX, 0) == 0);
     CHECK(te_mul_counts(-1, 0) == -1 && te_mul_counts(0, -1) == -1);
+    CHECK(te_str_count("") == 1 && te_str_count("abc") == 4);
     /* A request within a large bound is met; one that would take the
        bound beyond LONG_MAX is refused before the old space is freed */
     bound = LONG_MAX / 2 + 2;

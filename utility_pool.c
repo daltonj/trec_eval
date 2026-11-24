@@ -36,6 +36,15 @@ long te_mul_counts(const long a, const long b)
     return (a * b);
 }
 
+/* The space for a copy of string s, as a count for a pool request, or -1,
+   which the procedures refuse, if it does not fit in a long */
+long te_str_count(const char *s)
+{
+    size_t len = strlen(s);
+
+    return (len < LONG_MAX ? (long) len + 1 : -1);
+}
+
 /* Utility malloc procedures for handling a malloc'd reusable object list that
    may need to be resized.
    Procedures take a current pointer, the current bound on the number of

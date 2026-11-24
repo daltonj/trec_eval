@@ -81,7 +81,7 @@ te_form_res_rels(const EPI * epi, const REL_INFO * rel_info,
     }
 
     /* Make sure enough space for query and save copy */
-    i = strlen(results->qid) + 1;
+    i = te_str_count(results->qid);
     if (NULL == (current_query =
                  te_chk_and_malloc(current_query, &max_current_query,
                                    i, sizeof(char))))
