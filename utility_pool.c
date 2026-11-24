@@ -26,6 +26,16 @@ void *te_realloc_array(void *ptr, size_t n, size_t size)
     return (realloc(ptr, n * size));
 }
 
+/* The product of two counts for a pool request, or -1, which the
+   procedures refuse, if either count is negative or the product does not
+   fit in a long, which has 32 bits on Windows */
+long te_mul_counts(const long a, const long b)
+{
+    if (a < 0 || b < 0 || (a > 0 && b > LONG_MAX / a))
+        return (-1);
+    return (a * b);
+}
+
 /* Utility malloc procedures for handling a malloc'd reusable object list that
    may need to be resized.
    Procedures take a current pointer, the current bound on the number of
@@ -39,16 +49,6 @@ void *te_realloc_array(void *ptr, size_t n, size_t size)
    Procedures assume that if current bound is 0, the space has not been
    allocated at all yet.
 */
-
-/* The product of two counts for a pool request, or -1, which the
-   procedures refuse, if either count is negative or the product does not
-   fit in a long, which has 32 bits on Windows */
-long te_mul_counts(const long a, const long b)
-{
-    if (a < 0 || b < 0 || (a > 0 && b > LONG_MAX / a))
-        return (-1);
-    return (a * b);
-}
 
 void *te_chk_and_malloc(void *ptr, long *current_bound,
                         const long needed, const size_t size)

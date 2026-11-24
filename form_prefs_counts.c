@@ -312,8 +312,8 @@ form_prefs_counts(const EPI * epi, const REL_INFO * rel_info,
                                        sizeof(double))) ||
             NULL == (pa_pool =
                      te_chk_and_malloc(pa_pool, &max_pa_pool,
-                                       te_mul_counts(te_mul_counts
-                                                     (num_judged, num_judged),
+                                       te_mul_counts(te_mul_counts(num_judged,
+                                                                   num_judged),
                                                      num_jgs_with_subgroups),
                                        sizeof(unsigned char)))
             || NULL == (pa_ptr_pool =
@@ -603,19 +603,18 @@ static int add_transitives(PREFS_ARRAY * pa)
 
     long i, j;
     PREFS_ARRAY *array_in, *array_out, *temp;
+    long two_judged = te_mul_counts(2, (long) pa->num_judged);
 
     /* Need two temporary arrays of same size as pa. Reserve space and
        zero out arrays */
     if (NULL == (temp_pa_pool =
                  te_chk_and_malloc(temp_pa_pool, &max_temp_pa_pool,
-                                   te_mul_counts(2, te_mul_counts
-                                                 ((long) pa->num_judged,
-                                                  (long) pa->num_judged)),
+                                   te_mul_counts(two_judged,
+                                                 (long) pa->num_judged),
                                    sizeof(unsigned char))) ||
         NULL == (temp_pa_ptr_pool =
                  te_chk_and_malloc(temp_pa_ptr_pool, &max_temp_pa_ptr_pool,
-                                   te_mul_counts(2, (long) pa->num_judged),
-                                   sizeof(unsigned char *))))
+                                   two_judged, sizeof(unsigned char *))))
         return (UNDEF);
 
     m1 = (PREFS_ARRAY) {
