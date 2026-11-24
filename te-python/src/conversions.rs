@@ -83,12 +83,14 @@ pub fn ingest_qrels(
     if let Some(path_str) = extract_path_string(obj) {
         let path = Path::new(&path_str);
         if path.is_file() {
+            // Before a warning, whose handler may change the working directory
+            let file = InputFile::new(path_str.clone());
             let qrels = parse_trec_qrels(path).map_err(|e| {
                 PyValueError::new_err(format!("Failed to parse qrels file '{}': {}", path_str, e))
             })?;
             let warnings = qrels.warnings.iter().map(|w| format!("qrels file '{}': {}", path_str, w));
             warn_all(obj.py(), warnings)?;
-            return Ok((qrels, Some(InputFile::new(path_str))));
+            return Ok((qrels, Some(file)));
         }
         return Err(PyFileNotFoundError::new_err(format!(
             "Qrels file not found: '{}'",
@@ -301,12 +303,14 @@ pub fn ingest_run(
     if let Some(path_str) = extract_path_string(obj) {
         let path = Path::new(&path_str);
         if path.is_file() {
+            // Before a warning, whose handler may change the working directory
+            let file = InputFile::new(path_str.clone());
             let run = parse_trec_run(path).map_err(|e| {
                 PyValueError::new_err(format!("Failed to parse run file '{}': {}", path_str, e))
             })?;
             let warnings = run.warnings.iter().map(|w| format!("run file '{}': {}", path_str, w));
             warn_all(obj.py(), warnings)?;
-            return Ok((run, Some(InputFile::new(path_str))));
+            return Ok((run, Some(file)));
         }
         return Err(PyFileNotFoundError::new_err(format!(
             "Run file not found: '{}'",

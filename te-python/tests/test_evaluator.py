@@ -1,5 +1,6 @@
 import math
 import os
+import warnings
 import pytest
 from pathlib import Path
 import trec_eval
@@ -427,6 +428,21 @@ def test_repeated_document_messages_name_the_file_that_was_read(tmp_path, monkey
     with pytest.raises(ValueError) as error:
         evaluator.evaluate({"q": {"a": 1.0}})
     assert str(error.value) == f"Error in qrels file 'qrels': {expected}"
+    # A warning handler that changes the working directory while a file is read
+    (tmp_path / "a" / "qrels").write_text("q 0 a 0.5\nq 0 a 1\n")
+    (tmp_path / "a" / "run").write_text("q Q0 a 1 2x r\nq Q0 a 2 1 r\n")
+    (tmp_path / "b" / "run").write_text("# b\n# b\nq Q0 a 1 2 r\nq Q0 a 2 1 r\n")
+    monkeypatch.chdir(tmp_path / "a")
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        warnings.showwarning = lambda *args, **kwargs: os.chdir(tmp_path / "b")
+        with pytest.raises(ValueError) as error:
+            Evaluator("qrels", ["map"]).evaluate({"q": {"a": 1.0}})
+        assert str(error.value) == f"Error in qrels file 'qrels': {expected}"
+        os.chdir(tmp_path / "a")
+        with pytest.raises(ValueError) as error:
+            Evaluator({"q": {"a": 1}}, ["map"]).evaluate("run")
+        assert str(error.value) == f"Error in run file 'run': {expected}"
 
 
 def test_unusable_global_gains_are_refused():
