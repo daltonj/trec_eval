@@ -126,6 +126,7 @@ static int form_jg_pa(const PREFS_AND_RANKS * prefs, const long num_prefs,
                       JG * jg, RESULTS_PREFS * results_prefs);
 static int add_transitives(PREFS_ARRAY * pa);
 static int add_pa_pref_to_jg(JG * jg, RESULTS_PREFS * results_prefs);
+static int count_pref(unsigned short **counts, const long i, const long j);
 static int mult_and_check_change(const PREFS_ARRAY * a1, const PREFS_ARRAY * a2,
                                  PREFS_ARRAY * res);
 
@@ -502,7 +503,8 @@ static int add_ec_pref_to_jg(JG * jg, RESULTS_PREFS * results_prefs)
                      ptr2 < &jg->ecs[ec2].docid_ranks[jg->ecs[ec2].num_in_ec];
                      ptr2++) {
                     /* Add pref to summary info */
-                    pc[*ptr1][*ptr2]++;
+                    if (UNDEF == count_pref(pc, *ptr1, *ptr2))
+                        return (UNDEF);
                     /* check for inconsistency: same doc in multiple ec */
                     if (*ptr1 == *ptr2) {
                         fprintf(stderr,
@@ -715,21 +717,24 @@ static int add_pa_pref_to_jg(JG * jg, RESULTS_PREFS * results_prefs)
         for (j = 0; j < i; j++) {
             if (a[i][j]) {
                 /* Pref not fulfilled.  Area A2 (see comment at top) */
-                c[i][j]++;
+                if (UNDEF == count_pref(c, i, j))
+                    return (UNDEF);
                 jg->num_prefs_possible_ret++;
             }
         }
         for (j = i + 1; j < num_judged_ret; j++) {
             if (a[i][j]) {
                 /* Pref fulfilled.  Area A1 (see comment at top) */
-                c[i][j]++;
+                if (UNDEF == count_pref(c, i, j))
+                    return (UNDEF);
                 jg->num_prefs_fulfilled_ret++;
             }
         }
         for (j = num_judged_ret; j < num_judged; j++) {
             if (a[i][j]) {
                 /* Pref fulfilled implied.  Area A3 (see comment at top) */
-                c[i][j]++;
+                if (UNDEF == count_pref(c, i, j))
+                    return (UNDEF);
                 jg->num_prefs_fulfilled_imp++;
             }
         }
@@ -738,14 +743,16 @@ static int add_pa_pref_to_jg(JG * jg, RESULTS_PREFS * results_prefs)
         for (j = 0; j < num_judged_ret; j++) {
             if (a[i][j]) {
                 /* Pref not fulfilled implied.  Area A4 (see comment at top) */
-                c[i][j]++;
+                if (UNDEF == count_pref(c, i, j))
+                    return (UNDEF);
                 jg->num_prefs_possible_imp++;
             }
         }
         for (j = num_judged_ret; j < num_judged; j++) {
             if (a[i][j]) {
                 /* Pref not occur at all.  Area A5 (see comment at top) */
-                c[i][j]++;
+                if (UNDEF == count_pref(c, i, j))
+                    return (UNDEF);
                 jg->num_prefs_possible_notoccur++;
             }
         }
@@ -753,6 +760,20 @@ static int add_pa_pref_to_jg(JG * jg, RESULTS_PREFS * results_prefs)
 
     jg->num_prefs_possible_ret += jg->num_prefs_fulfilled_ret;
     jg->num_prefs_possible_imp += jg->num_prefs_fulfilled_imp;
+    return (1);
+}
+
+/* Count one more JG that prefers internal docid i to j. A count is an
+   unsigned short, so a pair on which more JGs agree cannot be counted */
+static int count_pref(unsigned short **counts, const long i, const long j)
+{
+    if (counts[i][j] == USHRT_MAX) {
+        fprintf(stderr, "trec_eval.form_prefs_counts: more than %u "
+                "judgment groups prefer one document to another\n",
+                (unsigned) USHRT_MAX);
+        return (UNDEF);
+    }
+    counts[i][j]++;
     return (1);
 }
 
