@@ -477,6 +477,14 @@ def test_parallel_inputs_of_different_lengths_are_refused():
         evaluator.evaluate_arrays(["q"], ["a"], scores())
 
 
+def test_a_file_name_is_read_as_open_reads_it(tmp_path):
+    # A lone surrogate cannot be encoded, so open() fails; its lossy UTF-8 form
+    # names another file, which must not be read instead.
+    (tmp_path / ("q" + "\ufffd" * 3)).write_text("q 0 a 1\n")
+    with pytest.raises((UnicodeError, FileNotFoundError)):
+        Evaluator(str(tmp_path / "q\ud800"), ["map"])
+
+
 def test_unusable_global_gains_are_refused():
     message = "invalid gain 'x' for relevance level 1"
     with pytest.raises(ValueError, match=f"Invalid global_gains: {message}"):

@@ -2,25 +2,26 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use pyo3::exceptions::{PyFileNotFoundError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyIterator, PyLong, PySequence, PyString};
+use pyo3::types::{PyBytes, PyDict, PyIterator, PyLong, PySequence, PyString};
 use te_rust::eval::check_rel_level;
 use te_rust::io::parsers::REL_LEVELS;
 use te_rust::io::{parse_trec_qrels, parse_trec_run, QrelsData, QrelsQuery, QrelsRecord, RunData, RunQuery, RunRecord};
 use crate::errors::{evaluation_error, warn_all};
 
-/// Extract a file path string from a Python object if it is a `str` or `os.PathLike`.
-fn extract_path_string(obj: &Bound<'_, PyAny>) -> Option<String> {
-    if let Ok(py_str) = obj.downcast::<PyString>() {
-        return Some(py_str.to_string_lossy().into_owned());
+/// The file path that a `str` or `os.PathLike` names, encoded by `os.fsencode` as `open` encodes
+/// it, so that a name that is not UTF-8 opens the file it names and a name that cannot be encoded
+/// raises `open`'s error; None for another object.
+fn extract_path(obj: &Bound<'_, PyAny>) -> PyResult<Option<PathBuf>> {
+    if !obj.is_instance_of::<PyString>() && !obj.hasattr("__fspath__").unwrap_or(false) {
+        return Ok(None);
     }
-    if obj.hasattr("__fspath__").unwrap_or(false) {
-        if let Ok(res) = obj.call_method0("__fspath__") {
-            if let Ok(py_str) = res.downcast::<PyString>() {
-                return Some(py_str.to_string_lossy().into_owned());
-            }
-        }
-    }
-    None
+    let encoded = obj.py().import_bound("os")?.call_method1("fsencode", (obj,))?;
+    let bytes = encoded.downcast::<PyBytes>()?.as_bytes();
+    #[cfg(unix)]
+    let path = PathBuf::from(<std::ffi::OsStr as std::os::unix::ffi::OsStrExt>::from_bytes(bytes));
+    #[cfg(not(unix))]
+    let path = PathBuf::from(std::str::from_utf8(bytes).map_err(|e| PyValueError::new_err(e.to_string()))?);
+    Ok(Some(path))
 }
 
 /// The file that an input was read from: its name as given, for messages, and its absolute path,
@@ -31,9 +32,11 @@ pub struct InputFile {
 }
 
 impl InputFile {
-    fn new(name: String) -> Self {
-        let path = std::path::absolute(&name).unwrap_or_else(|_| PathBuf::from(&name));
-        Self { name, path }
+    fn new(path: &Path) -> Self {
+        Self {
+            name: path.display().to_string(),
+            path: std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf()),
+        }
     }
 }
 
@@ -80,21 +83,21 @@ pub fn ingest_qrels(
     mapping: Option<&ColumnMapping>,
 ) -> PyResult<(QrelsData, Option<InputFile>)> {
     // 1. File path / PathLike
-    if let Some(path_str) = extract_path_string(obj) {
-        let path = Path::new(&path_str);
+    if let Some(path) = extract_path(obj)? {
+        let file = InputFile::new(&path);
         if path.is_file() {
-            // Before a warning, whose handler may change the working directory
-            let file = InputFile::new(path_str.clone());
-            let qrels = parse_trec_qrels(path).map_err(|e| {
-                PyValueError::new_err(format!("Failed to parse qrels file '{}': {}", path_str, e))
+            // The absolute path is taken before a warning, whose handler may change the
+            // working directory.
+            let qrels = parse_trec_qrels(&path).map_err(|e| {
+                PyValueError::new_err(format!("Failed to parse qrels file '{}': {}", file.name, e))
             })?;
-            let warnings = qrels.warnings.iter().map(|w| format!("qrels file '{}': {}", path_str, w));
+            let warnings = qrels.warnings.iter().map(|w| format!("qrels file '{}': {}", file.name, w));
             warn_all(obj.py(), warnings)?;
             return Ok((qrels, Some(file)));
         }
         return Err(PyFileNotFoundError::new_err(format!(
             "Qrels file not found: '{}'",
-            path_str
+            file.name
         )));
     }
     ingest_qrels_value(obj, mapping).map(|qrels| (qrels, None))
@@ -318,21 +321,21 @@ pub fn ingest_run(
     mapping: Option<&ColumnMapping>,
 ) -> PyResult<(RunData, Option<InputFile>)> {
     // 1. File path / PathLike
-    if let Some(path_str) = extract_path_string(obj) {
-        let path = Path::new(&path_str);
+    if let Some(path) = extract_path(obj)? {
+        let file = InputFile::new(&path);
         if path.is_file() {
-            // Before a warning, whose handler may change the working directory
-            let file = InputFile::new(path_str.clone());
-            let run = parse_trec_run(path).map_err(|e| {
-                PyValueError::new_err(format!("Failed to parse run file '{}': {}", path_str, e))
+            // The absolute path is taken before a warning, whose handler may change the
+            // working directory.
+            let run = parse_trec_run(&path).map_err(|e| {
+                PyValueError::new_err(format!("Failed to parse run file '{}': {}", file.name, e))
             })?;
-            let warnings = run.warnings.iter().map(|w| format!("run file '{}': {}", path_str, w));
+            let warnings = run.warnings.iter().map(|w| format!("run file '{}': {}", file.name, w));
             warn_all(obj.py(), warnings)?;
             return Ok((run, Some(file)));
         }
         return Err(PyFileNotFoundError::new_err(format!(
             "Run file not found: '{}'",
-            path_str
+            file.name
         )));
     }
     ingest_run_value(obj, mapping).map(|run| (run, None))
