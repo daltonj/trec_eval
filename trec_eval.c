@@ -150,9 +150,9 @@ int main(int argc, char * argv[])
     char *zscores_file = NULL;
     ALL_ZSCORES all_zscores;
 
-    /* Bogus results for a missing topic */
-    TEXT_RESULTS_INFO bogus_info = { 0, 0, NULL };
-    RESULTS bogus_ranking = { NULL, NULL, "trec_results", &bogus_info };
+    /* Empty ranking for a qrels topic missing from the results, under -c */
+    TEXT_RESULTS_INFO empty_info = { 0, 0, NULL };
+    RESULTS empty_ranking = { NULL, NULL, "trec_results", &empty_info };
     RESULTS *this_result;
     RESULTS **topic_results;
 
@@ -427,9 +427,9 @@ int main(int argc, char * argv[])
         }
     }
 
-    /* For each topic which has both qrels and top results information,
-       calculate, possibly print (if query_flag), and accumulate
-       evaluation measures. */
+    /* For each qrels topic, calculate, possibly print (if query_flag), and
+       accumulate evaluation measures; under -c a topic missing from the
+       results is evaluated as an empty ranking. */
     for (i = 0; i < all_rel_info.num_q_rels; i++) {
         /* If debugging a particular query, then skip all others */
         if (epi.debug_query &&
@@ -438,9 +438,9 @@ int main(int argc, char * argv[])
         /* Find results for this query */
         this_result = topic_results[i];
         if (this_result == NULL) {
-            bogus_ranking.qid = all_rel_info.rel_info[i].qid;
-            bogus_ranking.run_id = all_results.results[0].run_id;
-            this_result = &bogus_ranking;
+            empty_ranking.qid = all_rel_info.rel_info[i].qid;
+            empty_ranking.run_id = all_results.results[0].run_id;
+            this_result = &empty_ranking;
         }
 
         /* zero out all measures for new query */
