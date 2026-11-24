@@ -138,7 +138,7 @@ Lines in either file end with LF or CRLF. A NUL byte, or a CR that is not follow
 
 ## Output Formats
 
-On Unix, a closed output pipe terminates `te-rust` through SIGPIPE without a diagnostic, as in `trec_eval`. Other output write failures produce a diagnostic and exit status `8`; `trec_eval` 10.x ignores these failures and exits `0`.
+On Unix, a closed output pipe terminates `te-rust` through SIGPIPE without a diagnostic, as in `trec_eval`. Other output write failures produce a diagnostic and exit status `8`; `trec_eval` 10.x ignores these failures and exits `0`. A standard output that is already closed when `te-rust` starts (`>&-`) is opened on `/dev/null` by the Rust runtime before `te-rust` runs, so `te-rust` cannot tell it from `> /dev/null` and exits `0`.
 
 ### Standard Relational Output
 
