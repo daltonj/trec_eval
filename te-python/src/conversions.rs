@@ -202,9 +202,10 @@ fn ingest_qrels_value(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -
 
 /// Reads a grade as an `i64`. An integer too large for one, an `int` or another integer such as a
 /// NumPy integer, is refused with the `ValueError` that `check_rel_level` gives for a grade outside
-/// the range that te-rust reads. Another integer is read through `__index__` once.
+/// the range that te-rust reads. Any other integer, a subclass of `int` included, is read once
+/// through `operator.index`, which gives an `int`.
 fn extract_grade(obj: &Bound<'_, PyAny>, qid: &str, docno: &str) -> PyResult<i64> {
-    let value = if obj.is_instance_of::<PyLong>() {
+    let value = if obj.is_exact_instance_of::<PyLong>() {
         obj.clone()
     } else {
         obj.py().import_bound("operator")?.call_method1("index", (obj,))?

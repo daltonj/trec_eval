@@ -313,6 +313,13 @@ def test_a_grade_is_read_through_index_once():
         Evaluator({"q": {"d": ChangingGrade()}}, measures=["map"])
     assert ChangingGrade.calls == 1
 
+    class Grade(int):
+        def __str__(self):
+            return "1"
+
+    with pytest.raises(ValueError, match=f"relevance level {2**63} "):
+        Evaluator({"q": {"d": Grade(2**63)}}, measures=["map"])
+
 
 def test_in_memory_qrels_accept_grade_boundaries():
     for grade, expected in [(-127, 0.0), (127, 1.0)]:
