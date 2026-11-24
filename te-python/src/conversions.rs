@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use pyo3::exceptions::{PyFileNotFoundError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyIterator, PyLong, PySequence, PyString};
+use pyo3::types::{PyDict, PyIterator, PySequence, PyString};
 use te_rust::eval::check_rel_level;
 use te_rust::io::parsers::REL_LEVELS;
 use te_rust::io::{parse_trec_qrels, parse_trec_run, QrelsData, QrelsQuery, QrelsRecord, RunData, RunQuery, RunRecord};
@@ -98,7 +98,7 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
                     PyTypeError::new_err("Expected doc_id to be a string in qrels dict")
                 })?;
                 let rel = extract_grade(&rel_obj, &qid, &docno).map_err(|e| {
-                    if rel_obj.is_instance_of::<PyLong>() {
+                    if e.is_instance_of::<PyValueError>(obj.py()) {
                         e
                     } else {
                         PyTypeError::new_err("Expected relevance judgment to be an integer in qrels dict")
@@ -176,16 +176,18 @@ pub fn ingest_qrels(obj: &Bound<'_, PyAny>, mapping: Option<&ColumnMapping>) -> 
 }
 
 
-/// Reads a grade as an `i64`, refusing an integer too large for one with the `ValueError` that
-/// `check_rel_level` gives for a grade outside the range that te-rust reads.
+/// Reads a grade as an `i64`. An integer too large for one, an `int` or another integer such as a
+/// NumPy integer, is refused with the `ValueError` that `check_rel_level` gives for a grade outside
+/// the range that te-rust reads.
 fn extract_grade(obj: &Bound<'_, PyAny>, qid: &str, docno: &str) -> PyResult<i64> {
     obj.extract::<i64>().map_err(|e| {
-        if !obj.is_instance_of::<PyLong>() {
+        let py = obj.py();
+        let Ok(value) = py.import_bound("operator").and_then(|operator| operator.call_method1("index", (obj,))) else {
             return e;
-        }
+        };
         PyValueError::new_err(format!(
             "relevance level {} for document '{}' in query '{}' is outside {} to {}",
-            obj,
+            value,
             docno,
             qid,
             REL_LEVELS.start(),

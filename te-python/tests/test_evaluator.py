@@ -273,6 +273,33 @@ def test_in_memory_qrels_refuse_out_of_range_grades(representation, qrels_as):
             Evaluator(qrels_as(representation, [("q", "d", grade)]), measures=["map"])
 
 
+class IndexGrade:
+    """An integer that is not an int, as a NumPy integer is."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def __index__(self):
+        return self.value
+
+
+class RelItem:
+    def __init__(self, query_id, doc_id, rel):
+        self.query_id, self.doc_id, self.rel = query_id, doc_id, rel
+
+
+def test_qrels_refuse_integer_grades_beyond_64_bits_with_value_error():
+    grade = IndexGrade(2**63)
+    for qrels in [{"q": {"d": grade}}, [("q", "d", grade)], [RelItem("q", "d", grade)]]:
+        with pytest.raises(
+            ValueError, match=f"relevance level {2**63}.*outside -127 to 127"
+        ):
+            Evaluator(qrels, measures=["map"])
+    for qrels in [{"q": {"d": IndexGrade(1)}}, [("q", "d", IndexGrade(1))]]:
+        result = Evaluator(qrels, measures=["map"]).evaluate({"q": {"d": 1.0}})
+        assert result.aggregate() == {"map": 1.0}
+
+
 def test_in_memory_qrels_accept_grade_boundaries():
     for grade, expected in [(-127, 0.0), (127, 1.0)]:
         result = Evaluator({"q": {"d": grade}}, measures=["map"]).evaluate(
