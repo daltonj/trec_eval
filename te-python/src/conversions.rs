@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use pyo3::exceptions::{PyFileNotFoundError, PyTypeError, PyValueError};
+use pyo3::exceptions::{PyFileNotFoundError, PyIsADirectoryError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict, PyIterator, PyLong, PySequence, PyString};
 use te_rust::eval::check_rel_level;
@@ -84,21 +84,21 @@ pub fn ingest_qrels(
 ) -> PyResult<(QrelsData, Option<InputFile>)> {
     // 1. File path / PathLike
     if let Some(path) = extract_path(obj)? {
+        // The absolute path is taken before a warning, whose handler may change the working
+        // directory.
         let file = InputFile::new(&path);
-        if path.is_file() {
-            // The absolute path is taken before a warning, whose handler may change the
-            // working directory.
-            let qrels = parse_trec_qrels(&path).map_err(|e| {
-                PyValueError::new_err(format!("Failed to parse qrels file '{}': {}", file.name, e))
-            })?;
-            let warnings = qrels.warnings.iter().map(|w| format!("qrels file '{}': {}", file.name, w));
-            warn_all(obj.py(), warnings)?;
-            return Ok((qrels, Some(file)));
+        if path.is_dir() {
+            return Err(PyIsADirectoryError::new_err(format!("Qrels file is a directory: '{}'", file.name)));
         }
-        return Err(PyFileNotFoundError::new_err(format!(
-            "Qrels file not found: '{}'",
-            file.name
-        )));
+        if !path.exists() {
+            return Err(PyFileNotFoundError::new_err(format!("Qrels file not found: '{}'", file.name)));
+        }
+        let qrels = parse_trec_qrels(&path).map_err(|e| {
+            PyValueError::new_err(format!("Failed to parse qrels file '{}': {}", file.name, e))
+        })?;
+        let warnings = qrels.warnings.iter().map(|w| format!("qrels file '{}': {}", file.name, w));
+        warn_all(obj.py(), warnings)?;
+        return Ok((qrels, Some(file)));
     }
     ingest_qrels_value(obj, mapping).map(|qrels| (qrels, None))
 }
@@ -322,21 +322,21 @@ pub fn ingest_run(
 ) -> PyResult<(RunData, Option<InputFile>)> {
     // 1. File path / PathLike
     if let Some(path) = extract_path(obj)? {
+        // The absolute path is taken before a warning, whose handler may change the working
+        // directory.
         let file = InputFile::new(&path);
-        if path.is_file() {
-            // The absolute path is taken before a warning, whose handler may change the
-            // working directory.
-            let run = parse_trec_run(&path).map_err(|e| {
-                PyValueError::new_err(format!("Failed to parse run file '{}': {}", file.name, e))
-            })?;
-            let warnings = run.warnings.iter().map(|w| format!("run file '{}': {}", file.name, w));
-            warn_all(obj.py(), warnings)?;
-            return Ok((run, Some(file)));
+        if path.is_dir() {
+            return Err(PyIsADirectoryError::new_err(format!("Run file is a directory: '{}'", file.name)));
         }
-        return Err(PyFileNotFoundError::new_err(format!(
-            "Run file not found: '{}'",
-            file.name
-        )));
+        if !path.exists() {
+            return Err(PyFileNotFoundError::new_err(format!("Run file not found: '{}'", file.name)));
+        }
+        let run = parse_trec_run(&path).map_err(|e| {
+            PyValueError::new_err(format!("Failed to parse run file '{}': {}", file.name, e))
+        })?;
+        let warnings = run.warnings.iter().map(|w| format!("run file '{}': {}", file.name, w));
+        warn_all(obj.py(), warnings)?;
+        return Ok((run, Some(file)));
     }
     ingest_run_value(obj, mapping).map(|run| (run, None))
 }

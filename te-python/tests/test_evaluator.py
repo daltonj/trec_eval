@@ -485,6 +485,13 @@ def test_a_file_name_is_read_as_open_reads_it(tmp_path):
         Evaluator(str(tmp_path / "q\ud800"), ["map"])
 
 
+def test_a_directory_is_not_reported_as_a_missing_file(tmp_path):
+    with pytest.raises(IsADirectoryError, match="Qrels file is a directory"):
+        Evaluator(str(tmp_path), ["map"])
+    with pytest.raises(IsADirectoryError, match="Run file is a directory"):
+        Evaluator({"q": {"a": 1}}, ["map"]).evaluate(tmp_path)
+
+
 def test_unusable_global_gains_are_refused():
     message = "invalid gain 'x' for relevance level 1"
     with pytest.raises(ValueError, match=f"Invalid global_gains: {message}"):
