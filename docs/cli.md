@@ -120,7 +120,7 @@ qid  iter  docno  rank  sim  run_id
 - `docno`: Unique document identifier (`str`).
 - `rank`: Rank position (recomputed during score sorting).
 - `sim`: Floating-point retrieval score / similarity (`float`).
-  `trec_eval` reads the score with `atof`, which parses as `strtod` does. As in `trec_eval`, `inf`, `-inf` and hexadecimal values such as `0x1p3` are scores. A score outside the range of a double is read as `strtod` reads it, `1e400` as inf and `1e-400` as 0, with a warning on stderr from `te-rust`. A score with characters after the number, such as `1.5x`, is read as its leading number, 1.5; `te-rust` warns on stderr. `trec_eval` 10.0 performs both conversions silently. NaN, or a score with no leading number, is an error. `trec_eval` 10.x reads a score with no leading number as 0, and it ranks a NaN score in an undefined order.
+  `trec_eval` reads the score with `atof`, which parses as `strtod` does. As in `trec_eval`, `inf`, `-inf` and hexadecimal values such as `0x1p3` are scores. A score outside the range of a double is read as `strtod` reads it, `1e400` as inf and `1e-400` as 0, with a warning on stderr from `te-rust`. A score with characters after the number, such as `1.5x`, is read as its leading number, 1.5; `te-rust` warns on stderr. A score such as `1e400x` gets both warnings. `trec_eval` 10.0 performs both conversions silently. NaN, or a score with no leading number, is an error. `trec_eval` 10.x reads a score with no leading number as 0, and it ranks a NaN score in an undefined order.
 - `run_id`: System run label (`str`).
 
 Example `run.txt`:
@@ -132,7 +132,7 @@ Example `run.txt`:
 
 Lines starting with `#` in either file are treated as comments and ignored. Comments in run files were a trec_eval 10.x feature to support including metadata and documentation about a run.
 
-Lines in either file end with LF or CRLF. A NUL byte, or a CR that is not followed by LF, as in a file with CR line endings, is an error that names the line. A CR that ends the file is accepted. A data line must be UTF-8, and the error names the first line that is not; `trec_eval` 10.x reads such lines. A comment line may hold bytes that are not UTF-8, and a NUL or a lone CR in a comment line is an error too. `trec_eval` 10.x reads a file with CR line endings as one line, and it accepts a lone CR in a comment line. A UTF-8 byte-order mark at the start of a file is skipped. `trec_eval` 10.x reads the mark as part of the first qid.
+Lines in either file end with LF or CRLF. A NUL byte, or a CR that is not followed by LF, as in a file with CR line endings, is an error that names the line. A CR that ends the file is accepted. A data line must be UTF-8, and the error names the first line that is not; `trec_eval` 10.x reads such lines. A comment line may hold bytes that are not UTF-8, and a NUL or a lone CR in a comment line is an error too. `trec_eval` 10.x reads a file with CR line endings as one line, and it accepts a lone CR in a comment line. A UTF-8 byte-order mark at the start of a file is skipped. `trec_eval` 10.x reads the mark as part of the first qid. When a file has more than one error, `te-rust` reports the first in line order. `trec_eval` with the fixes for issue #143 checks the whole file for NUL bytes and lone CRs before it reads any field, so it reports a NUL byte on line 2 before an unreadable grade on line 1.
 
 ---
 
