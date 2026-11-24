@@ -362,12 +362,32 @@ def test_repeated_run_documents_are_checked_only_within_max_docs(measure, name):
     assert cut.evaluate_arrays(*args).aggregate() == {name: 1.0}
 
 
-@pytest.mark.parametrize("representation", ["file", "tuples", "frame"])
+@pytest.mark.parametrize("representation", ["tuples", "frame"])
 def test_ingestion_preserves_repeated_judgments(representation, qrels_as):
     qrels = qrels_as(representation, [("q", "a", 0), ("q", "a", 1)])
     evaluator = Evaluator(qrels, measures=["map"])
     with pytest.raises(ValueError, match="qrels: duplicate document 'a' for query 'q'"):
         evaluator.evaluate({"q": {"a": 1.0}})
+
+
+@pytest.mark.parametrize("measure", ["map", One()])
+def test_repeated_documents_in_files_name_the_file_and_lines(tmp_path, measure):
+    qrels, repeated_qrels, run = (tmp_path / name for name in ("one", "two", "run"))
+    qrels.write_text("q 0 a 1\n")
+    repeated_qrels.write_text("q 0 a 0\n# a\nq 0 a 1\n")
+    run.write_text("q Q0 a 1 2 r\nq Q0 a 2 1 r\n")
+    with pytest.raises(ValueError) as error:
+        Evaluator(qrels, [measure]).evaluate(run)
+    assert str(error.value) == (
+        f"Error in run file '{run}': Line 2: duplicate document 'a' for query 'q', "
+        "first at line 1"
+    )
+    with pytest.raises(ValueError) as error:
+        Evaluator(repeated_qrels, [measure]).evaluate({"q": {"a": 1.0}})
+    assert str(error.value) == (
+        f"Error in qrels file '{repeated_qrels}': Line 3: duplicate document 'a' "
+        "for query 'q', first at line 1"
+    )
 
 
 def test_unusable_global_gains_are_refused():

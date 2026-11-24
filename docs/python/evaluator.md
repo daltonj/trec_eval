@@ -63,7 +63,7 @@ Evaluates 1D arrays or contiguous buffer slices directly without creating interm
 
 ## `trec_eval.evaluate`
 
-`evaluate(qrels, run, ...)` constructs an `Evaluator` and evaluates the run. It raises `ValueError` for an unusable argument or input, such as a negative `relevance_level`, an invalid measure parameter, a NaN score or a document repeated within a topic. It raises `trec_eval.NoSharedTopicError` as [`Evaluator.evaluate`](#evaluate) does. A value of the wrong type, such as a grade that is not an integer, raises `TypeError`, and a score too large for a float raises `TypeError` or `OverflowError`.
+`evaluate(qrels, run, ...)` constructs an `Evaluator` and evaluates the run. It raises `ValueError` for an unusable argument or input, such as a negative `relevance_level`, an invalid measure parameter, a NaN score or a document repeated within a topic. The message for a repeated document names the file and both lines when the input was read from a file. It raises `trec_eval.NoSharedTopicError` as [`Evaluator.evaluate`](#evaluate) does. A value of the wrong type, such as a grade that is not an integer, raises `TypeError`, and a score too large for a float raises `TypeError` or `OverflowError`.
 
 ---
 

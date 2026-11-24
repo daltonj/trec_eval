@@ -213,5 +213,9 @@ def test_compat_keeps_other_evaluation_errors(tmp_path):
     qrels = tmp_path / "duplicate.qrels"
     qrels.write_text("q1 0 d 0\nq1 0 d 1\n")
     evaluator = pytrec_eval.RelevanceEvaluator(qrels, "map")
-    with pytest.raises(ValueError, match="qrels: duplicate document"):
+    with pytest.raises(ValueError) as error:
         evaluator.evaluate({"q1": {"d": 1.0}})
+    assert str(error.value) == (
+        f"Error in qrels file '{qrels}': Line 2: duplicate document 'd' for query 'q1', "
+        "first at line 1"
+    )

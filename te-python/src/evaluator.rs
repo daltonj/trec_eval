@@ -3,12 +3,12 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyList, PySequence, PySet, PyString};
 use te_rust::eval::alignment::align_query;
-use te_rust::eval::{evaluate_run, EvaluationOutput, QueryEvaluation, SummaryEvaluation};
+use te_rust::eval::{evaluate_run, EvaluationError, EvaluationOutput, QueryEvaluation, SummaryEvaluation};
 use te_rust::io::{QrelsData, QrelsQuery, RunData, RunQuery};
 use te_rust::metrics::{registry::resolve_measures, EvalConfig, Measure, MetricValue, ValueFormat};
 
-use crate::conversions::{ingest_qrels, ingest_run, ingest_run_arrays, ColumnMapping};
-use crate::errors::{evaluation_error, warn_all};
+use crate::conversions::{extract_path_string, ingest_qrels, ingest_run, ingest_run_arrays, ColumnMapping};
+use crate::errors::{evaluation_error, evaluation_error_in, warn_all};
 use crate::query_state::QueryState;
 use crate::result::EvalResult;
 
@@ -16,6 +16,8 @@ use crate::result::EvalResult;
 #[pyclass(subclass, name = "Evaluator")]
 pub struct Evaluator {
     pub qrels: QrelsData,
+    /// The qrels file, when the qrels were read from one, for messages about it.
+    pub qrels_file: Option<String>,
     pub measures: Vec<Box<dyn Measure>>,
     pub custom_measures: Vec<PyObject>,
     pub config: EvalConfig,
@@ -87,6 +89,7 @@ impl Evaluator {
 
         Ok(Self {
             qrels: qrels_data,
+            qrels_file: extract_path_string(qrels),
             measures: resolved.measures,
             custom_measures,
             config,
@@ -110,7 +113,7 @@ impl Evaluator {
             score_or_rel: score,
         };
         let run_data = ingest_run(run, Some(&mapping))?;
-        self.evaluate_run_data(py, run_data)
+        self.evaluate_run_data(py, run_data, extract_path_string(run).as_deref())
     }
 
     /// Evaluate 1D contiguous arrays/sequences of query IDs, doc IDs, and scores.
@@ -122,20 +125,26 @@ impl Evaluator {
         scores: &Bound<'_, PyAny>,
     ) -> PyResult<EvalResult> {
         let run_data = ingest_run_arrays(query_ids, doc_ids, scores)?;
-        self.evaluate_run_data(py, run_data)
+        self.evaluate_run_data(py, run_data, None)
     }
 }
 
 impl Evaluator {
-    fn evaluate_run_data(&self, py: Python<'_>, run_data: RunData) -> PyResult<EvalResult> {
+    fn evaluate_run_data(
+        &self,
+        py: Python<'_>,
+        run_data: RunData,
+        run_file: Option<&str>,
+    ) -> PyResult<EvalResult> {
         let qrels_ref = &self.qrels;
         let measures_ref = &self.measures;
         let config_ref = &self.config;
+        let refuse = |error| evaluation_error_in(error, self.qrels_file.as_deref(), run_file);
 
         // 1. Run built-in measures with GIL released
         let mut output = py
             .allow_threads(|| evaluate_run(qrels_ref, &run_data, measures_ref, config_ref, None))
-            .map_err(evaluation_error)?;
+            .map_err(refuse)?;
 
         // 2. Run custom measures with exception sandboxing
         if !self.custom_measures.is_empty() {
@@ -146,6 +155,7 @@ impl Evaluator {
                 &self.custom_measures,
                 config_ref,
                 &mut output,
+                refuse,
             )?;
         }
 
@@ -223,6 +233,7 @@ fn evaluate_custom_measures(
     custom_measures: &[PyObject],
     config: &EvalConfig,
     output: &mut EvaluationOutput,
+    refuse: impl Fn(EvaluationError) -> PyErr,
 ) -> PyResult<()> {
     let mut qrels_by_qid: HashMap<String, &QrelsQuery> =
         HashMap::with_capacity(qrels.queries.len());
@@ -277,7 +288,7 @@ fn evaluate_custom_measures(
             config.max_num_docs_per_topic,
             config.judged_docs_only_flag,
         )
-        .map_err(evaluation_error)?;
+        .map_err(&refuse)?;
 
         let py_query_state = QueryState::from_eval_state(&q_state, config.relevance_level);
 

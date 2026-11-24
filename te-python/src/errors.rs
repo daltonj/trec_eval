@@ -1,6 +1,7 @@
 use pyo3::exceptions::{PyUserWarning, PyValueError};
 use pyo3::prelude::*;
 use te_rust::eval::{DuplicateSource, EvaluationError};
+use te_rust::io::parsers::repeated_document_lines;
 
 pyo3::create_exception!(
     trec_eval._trec_eval,
@@ -10,7 +11,8 @@ pyo3::create_exception!(
 );
 
 /// The Python exception for an evaluation error: `NoSharedTopicError` for a run that shares no
-/// topic with the qrels, otherwise `ValueError`, naming the file that repeats a document.
+/// topic with the qrels, otherwise `ValueError`, naming the input, qrels or run, that repeats a
+/// document.
 pub(crate) fn evaluation_error(error: EvaluationError) -> PyErr {
     match &error {
         EvaluationError::NoSharedTopic => NoSharedTopicError::new_err(format!(
@@ -26,6 +28,32 @@ pub(crate) fn evaluation_error(error: EvaluationError) -> PyErr {
         }
         _ => PyValueError::new_err(error.to_string()),
     }
+}
+
+/// As [`evaluation_error`], for qrels and a run that may have been read from the files given: a
+/// document repeated in a file is reported with the file and, when the file can be read again,
+/// the two lines, as the CLI reports it.
+pub(crate) fn evaluation_error_in(
+    error: EvaluationError,
+    qrels_file: Option<&str>,
+    run_file: Option<&str>,
+) -> PyErr {
+    if let EvaluationError::DuplicateDocument { source, qid, docno } = &error {
+        let (kind, file) = match source {
+            DuplicateSource::Qrels => ("qrels", qrels_file),
+            DuplicateSource::Run => ("run", run_file),
+        };
+        if let Some(file) = file {
+            return PyValueError::new_err(match repeated_document_lines(file, qid, docno) {
+                Some((first, second)) => format!(
+                    "Error in {} file '{}': Line {}: {}, first at line {}",
+                    kind, file, second, error, first
+                ),
+                None => format!("Error in {} file '{}': {}", kind, file, error),
+            });
+        }
+    }
+    evaluation_error(error)
 }
 
 /// The most warnings that one call of `warn_all` issues: a file with a problem on every line

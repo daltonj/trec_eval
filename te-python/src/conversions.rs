@@ -9,7 +9,7 @@ use te_rust::io::{parse_trec_qrels, parse_trec_run, QrelsData, QrelsQuery, Qrels
 use crate::errors::{evaluation_error, warn_all};
 
 /// Extract a file path string from a Python object if it is a `str` or `os.PathLike`.
-fn extract_path_string(obj: &Bound<'_, PyAny>) -> Option<String> {
+pub(crate) fn extract_path_string(obj: &Bound<'_, PyAny>) -> Option<String> {
     if let Ok(py_str) = obj.downcast::<PyString>() {
         return Some(py_str.to_string_lossy().into_owned());
     }
